@@ -146,6 +146,47 @@ const GlobalStyles = () => {
         .dish-card-media .dish-img { min-height: min(52vw, 220px) !important; max-height: 56vw; }
         .dish-card-media .dish-img-placeholder { min-height: min(52vw, 200px) !important; }
       }
+      .social-top-strip {
+        display: flex;
+        flex-wrap: nowrap;
+        gap: 8px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding-bottom: 2px;
+        margin-bottom: 8px;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+      }
+      .social-top-strip::-webkit-scrollbar { display: none; }
+      .social-top-link {
+        flex: 0 0 auto;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 42px;
+        min-width: 42px;
+        padding: 0 10px;
+        border-radius: 10px;
+        border: 1px solid transparent;
+        text-decoration: none;
+        font-family: var(--font-body);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.4px;
+        transition: filter 0.2s, transform 0.2s, box-shadow 0.2s;
+        -webkit-tap-highlight-color: transparent;
+        box-sizing: border-box;
+      }
+      .social-top-link--icon { width: 42px; padding: 0; }
+      .social-top-link--text { padding: 0 14px; min-width: auto; }
+      .social-top-link:hover { filter: brightness(1.08); transform: translateY(-1px); }
+      .social-top-link img {
+        width: 20px;
+        height: 20px;
+        display: block;
+        filter: brightness(0) invert(1);
+        opacity: 0.98;
+      }
       .nav-btn:hover { letter-spacing: 2.5px !important; }
       .action-btn:hover { transform: translateY(-2px); }
       .action-btn { transition: transform 0.2s ease, box-shadow 0.2s ease; }
@@ -536,6 +577,119 @@ function useStore() {
   };
 }
 
+/** Guest menu — header links (override with VITE_LINK_* in .env.local). */
+const SOCIAL_TOP_ITEMS = [
+  {
+    env: "VITE_LINK_FACEBOOK",
+    label: "Facebook",
+    brand: "facebook",
+    fallback: "https://www.facebook.com/TiflisiRestaurantBatumi/",
+    bg: "#1877F2",
+    border: "#1877F2",
+    mode: "icon",
+  },
+  {
+    env: "VITE_LINK_INSTAGRAM",
+    label: "Instagram",
+    brand: "instagram",
+    fallback: "https://www.instagram.com/tiflisirestaurantbatumi/",
+    bg: "linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)",
+    border: "rgba(255,255,255,0.25)",
+    mode: "icon",
+  },
+  {
+    env: "VITE_LINK_GOOGLE",
+    label: "Google",
+    brand: "googlemaps",
+    fallback: "https://g.page/r/CcKkKc1ypmCgEAE/review",
+    bg: "#4285F4",
+    border: "#4285F4",
+    mode: "icon",
+  },
+  {
+    env: "VITE_LINK_TRIPADVISOR",
+    label: "Tripadvisor",
+    brand: "tripadvisor",
+    fallback: "https://www.tripadvisor.com/Search?q=Tiflisi+Batumi",
+    bg: "#00AF87",
+    border: "#00AF87",
+    mode: "icon",
+  },
+  {
+    env: "VITE_LINK_WOLT",
+    label: "Wolt",
+    fallback:
+      "https://wolt.com/en/geo/batumi/restaurant/restaurant-tiflis",
+    bg: "#009FE3",
+    border: "#0088c7",
+    fg: "#ffffff",
+    text: "Wolt",
+    mode: "text",
+  },
+  {
+    env: "VITE_LINK_GLOVO",
+    label: "Glovo",
+    fallback:
+      "https://glovoapp.com/en/ge/batumi/stores/tiflisi-bat?content=pitsa-c.1421345036&section=pitsa-s.2999510380",
+    bg: "#FDBF00",
+    border: "#E5AC00",
+    fg: "#1a1204",
+    text: "Glovo",
+    mode: "text",
+  },
+  {
+    env: "VITE_LINK_BOLT",
+    label: "Bolt Food",
+    fallback: "https://food.bolt.eu/ka-ge/38-batumi/p/67460-restorani-tiplisi/",
+    bg: "#34D186",
+    border: "#2ABF75",
+    fg: "#041012",
+    text: "Bolt",
+    mode: "text",
+  },
+];
+
+function socialTopHref(envKey, fallback) {
+  const v = import.meta.env[envKey];
+  if (v != null && String(v).trim() !== "") return String(v).trim();
+  return fallback;
+}
+
+function SocialTopStrip() {
+  const iconBase = "https://cdn.jsdelivr.net/npm/simple-icons@11.6.0/icons";
+  return (
+    <div className="social-top-strip" role="navigation" aria-label="Social & delivery">
+      {SOCIAL_TOP_ITEMS.map((item) => {
+        const href = socialTopHref(item.env, item.fallback);
+        const isText = item.mode === "text";
+        return (
+          <a
+            key={item.env}
+            className={`social-top-link ${isText ? "social-top-link--text" : "social-top-link--icon"}`}
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={item.label}
+            aria-label={item.label}
+            style={{
+              background: item.bg,
+              borderColor: item.border,
+              ...(isText ? { color: item.fg } : {}),
+              boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+            }}
+          >
+            {isText ? (
+              item.text
+            ) : (
+              <img src={`${iconBase}/${item.brand}.svg`} alt="" width={20} height={20} loading="lazy" decoding="async" />
+            )}
+          </a>
+        );
+      })}
+    </div>
+  );
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
    CUSTOMER MENU
 ═══════════════════════════════════════════════════════════════════════════ */
@@ -675,6 +829,7 @@ function CustomerMenu({ tableId, store, lang, setLang }) {
       {/* STICKY NAV */}
       <div ref={headerRef} style={{ position: "sticky", top: 0, zIndex: 100, overflowAnchor: "none", background: "rgba(7,6,8,0.92)", backdropFilter: "blur(20px)", borderBottom: "1px solid rgba(61,191,176,0.12)" }}>
         <div style={{ padding:"10px 16px 0" }}>
+          <SocialTopStrip />
           {/* Lang — ზედა ხაზი, დიდი სატაპე (მობილური) */}
           <div style={{ display:"flex", justifyContent:"flex-end", alignItems:"center", gap:"8px", marginBottom:"10px", paddingTop:"2px" }}>
             {["en","ka","ru"].map((l) => (
