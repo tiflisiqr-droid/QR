@@ -80,6 +80,89 @@ export async function fetchMenuDishes() {
   return data.map(mapMenuRowToDish);
 }
 
+/* ─── Menu categories (Admin → Cuisine → Categories) ───────────────────── */
+
+export function mapMenuCategoryRow(row) {
+  return {
+    id: row.id,
+    name: {
+      en: row.name_en ?? "",
+      ka: row.name_ka ?? "",
+      ru: row.name_ru ?? "",
+    },
+    icon: typeof row.icon === "string" && row.icon ? row.icon : "◆",
+    order: Number(row.sort_order) || 0,
+  };
+}
+
+function categoryToDbRow(cat) {
+  return {
+    id: cat.id,
+    name_en: cat.name?.en ?? "",
+    name_ka: cat.name?.ka ?? "",
+    name_ru: cat.name?.ru ?? "",
+    icon: String(cat.icon ?? "◆").slice(0, 8) || "◆",
+    sort_order: Number(cat.order) || 0,
+  };
+}
+
+export async function fetchMenuCategories() {
+  if (!supabase) throw new Error("Supabase is not configured");
+  const { data, error } = await supabase
+    .from("menu_categories")
+    .select("*")
+    .order("sort_order", { ascending: true })
+    .order("id", { ascending: true });
+  if (error) throw error;
+  return (data ?? []).map(mapMenuCategoryRow);
+}
+
+export async function insertMenuCategory(cat) {
+  if (!supabase) throw new Error("Supabase is not configured");
+  const row = categoryToDbRow(cat);
+  const { data, error } = await supabase.from("menu_categories").insert(row).select("*").single();
+  if (error) throw error;
+  return mapMenuCategoryRow(data);
+}
+
+export async function updateMenuCategory(id, cat) {
+  if (!supabase) throw new Error("Supabase is not configured");
+  const row = categoryToDbRow({ ...cat, id });
+  const { data, error } = await supabase
+    .from("menu_categories")
+    .update({
+      name_en: row.name_en,
+      name_ka: row.name_ka,
+      name_ru: row.name_ru,
+      icon: row.icon,
+      sort_order: row.sort_order,
+    })
+    .eq("id", id)
+    .select("*")
+    .single();
+  if (error) throw error;
+  return mapMenuCategoryRow(data);
+}
+
+/** Persist order after ↑/↓ in admin (batch). */
+export async function updateMenuCategorySortOrders(orderById) {
+  if (!supabase) throw new Error("Supabase is not configured");
+  const entries = Object.entries(orderById).filter(([k]) => Number.isFinite(Number(k)));
+  const results = await Promise.all(
+    entries.map(([idStr, order]) =>
+      supabase.from("menu_categories").update({ sort_order: order }).eq("id", Number(idStr))
+    )
+  );
+  const firstErr = results.find((r) => r.error)?.error;
+  if (firstErr) throw firstErr;
+}
+
+export async function deleteMenuCategory(id) {
+  if (!supabase) throw new Error("Supabase is not configured");
+  const { error } = await supabase.from("menu_categories").delete().eq("id", id);
+  if (error) throw error;
+}
+
 /** Upload file to Storage bucket `menu-images`; returns public URL. */
 export async function uploadMenuImage(file) {
   if (!supabase) throw new Error("Supabase is not configured");

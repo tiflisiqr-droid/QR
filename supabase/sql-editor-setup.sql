@@ -39,6 +39,44 @@ create policy "menu_insert_anon" on public.menu for insert with check (true);
 create policy "menu_update_anon" on public.menu for update using (true) with check (true);
 create policy "menu_delete_anon" on public.menu for delete using (true);
 
+-- 1a) Menu categories (Admin → Cuisine → Categories)
+create table if not exists public.menu_categories (
+  id integer primary key,
+  name_en text not null default '',
+  name_ka text not null default '',
+  name_ru text not null default '',
+  icon text not null default '◆',
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists menu_categories_sort_order_idx on public.menu_categories (sort_order);
+
+alter table public.menu_categories enable row level security;
+
+drop policy if exists "menu_categories_select_anon" on public.menu_categories;
+drop policy if exists "menu_categories_insert_anon" on public.menu_categories;
+drop policy if exists "menu_categories_update_anon" on public.menu_categories;
+drop policy if exists "menu_categories_delete_anon" on public.menu_categories;
+
+create policy "menu_categories_select_anon" on public.menu_categories for select using (true);
+create policy "menu_categories_insert_anon" on public.menu_categories for insert with check (true);
+create policy "menu_categories_update_anon" on public.menu_categories for update using (true) with check (true);
+create policy "menu_categories_delete_anon" on public.menu_categories for delete using (true);
+
+insert into public.menu_categories (id, name_en, name_ka, name_ru, icon, sort_order)
+select v.id, v.name_en, v.name_ka, v.name_ru, v.icon, v.sort_order
+from (
+  values
+    (1, 'Khinkali', 'ხინკალი', 'Хинкали', '◈', 1),
+    (2, 'Khachapuri', 'ხაჭაპური', 'Хачапури', '◇', 2),
+    (3, 'BBQ & Grill', 'შამფური', 'Гриль', '◉', 3),
+    (4, 'Salads', 'სალათები', 'Салаты', '◌', 4),
+    (5, 'Desserts', 'დესერტები', 'Десерты', '◎', 5),
+    (6, 'Cellar', 'სასმელები', 'Погреб', '◊', 6)
+) as v(id, name_en, name_ka, name_ru, icon, sort_order)
+where not exists (select 1 from public.menu_categories limit 1);
+
 -- 1b) Seating / tables (shared across devices; see src/supabaseMenu.js)
 create table if not exists public.seating (
   id uuid primary key default gen_random_uuid(),

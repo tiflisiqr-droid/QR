@@ -3,6 +3,7 @@ import QRCode from "qrcode";
 import { supabase, isSupabaseConfigured } from "./src/supabaseClient.js";
 import {
   fetchMenuDishes,
+  fetchMenuCategories,
   uploadMenuImage,
   insertMenuItem,
   insertFullMenuDish,
@@ -16,6 +17,10 @@ import {
   insertSeatingTable,
   updateSeatingTable,
   deleteSeatingTable,
+  insertMenuCategory,
+  updateMenuCategory,
+  updateMenuCategorySortOrders,
+  deleteMenuCategory,
 } from "./src/supabaseMenu.js";
 
 /* ─── GOOGLE FONTS INJECTION ─────────────────────────────────────────────── */
@@ -247,7 +252,7 @@ const T = {
 /* ─── SHARED STATE ───────────────────────────────────────────────────────── */
 function useStore() {
   const supabaseEnabled = isSupabaseConfigured();
-  const [categories, setCategories] = useState(CATEGORIES);
+  const [categories, setCategories] = useState(() => (supabaseEnabled ? [] : CATEGORIES));
   const [dishes, setDishes] = useState(() => {
     if (supabaseEnabled) return [];
     return loadDishesFromLocalStorage() ?? DISHES;
@@ -306,16 +311,24 @@ function useStore() {
     if (!isSupabaseConfigured()) return;
     setMenuLoading(true);
     setMenuError(null);
+    let dishErr = null;
     try {
       const rows = await fetchMenuDishes();
       setDishes(rows);
-      setMenuError(null);
     } catch (e) {
-      setMenuError(e?.message || "Could not load menu");
+      dishErr = e?.message || "Could not load menu";
       setDishes([]);
-    } finally {
-      setMenuLoading(false);
     }
+    try {
+      const cats = await fetchMenuCategories();
+      setCategories(cats);
+    } catch (e) {
+      setCategories([]);
+      if (!dishErr) dishErr = e?.message || "Could not load menu categories (run SQL for public.menu_categories)";
+    }
+    if (dishErr) setMenuError(dishErr);
+    else setMenuError(null);
+    setMenuLoading(false);
   }, []);
 
   const reloadSeatingFromSupabase = useCallback(async () => {
@@ -370,27 +383,8 @@ function useStore() {
 
   useEffect(() => {
     if (!supabaseEnabled) return;
-    let cancelled = false;
-    setMenuLoading(true);
-    setMenuError(null);
-    fetchMenuDishes()
-      .then((rows) => {
-        if (!cancelled) {
-          setDishes(rows);
-          setMenuError(null);
-        }
-      })
-      .catch((e) => {
-        if (!cancelled) {
-          setMenuError(e?.message || "Could not load menu");
-          setDishes([]);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setMenuLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, [supabaseEnabled]);
+    reloadMenuFromSupabase();
+  }, [supabaseEnabled, reloadMenuFromSupabase]);
 
   /** Offline only: persist dishes in localStorage (never when Supabase env is set). */
   useEffect(() => {
@@ -561,14 +555,44 @@ function CustomerMenu({ tableId, store, lang, setLang }) {
 
   const sortedCategories = useMemo(() => [...categories].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)), [categories]);
 
-  const filtered = dishes.filter(d => {
-    const catOk = !activeCat || d.categoryId === activeCat;
-    const label = (d.name[lang] || d.name.en || "").toLowerCase();
-    const searchOk = !search || label.includes(search.toLowerCase());
-    return catOk && searchOk;
-  });
+  const ORPHAN_CAT_KEY = "__orphan__";
 
-  const grouped = sortedCategories.map(cat => ({ ...cat, dishes: filtered.filter(d => d.categoryId === cat.id) })).filter(c => c.dishes.length > 0);
+  const filtered = useMemo(
+    () =>
+      dishes.filter((d) => {
+        const isOrphan = !sortedCategories.some((c) => c.id === d.categoryId);
+        let catOk = !activeCat;
+        if (activeCat) {
+          if (activeCat === ORPHAN_CAT_KEY) catOk = isOrphan;
+          else catOk = d.categoryId === activeCat;
+        }
+        const label = (d.name[lang] || d.name.en || "").toLowerCase();
+        const searchOk = !search || label.includes(search.toLowerCase());
+        return catOk && searchOk;
+      }),
+    [dishes, activeCat, search, lang, sortedCategories]
+  );
+
+  const grouped = useMemo(() => {
+    const base = sortedCategories
+      .map((cat) => ({
+        ...cat,
+        dishes: filtered.filter((d) => d.categoryId === cat.id),
+      }))
+      .filter((c) => c.dishes.length > 0);
+    const orphan = filtered.filter((d) => !sortedCategories.some((c) => c.id === d.categoryId));
+    if (orphan.length === 0) return base;
+    return [
+      ...base,
+      {
+        id: ORPHAN_CAT_KEY,
+        name: { en: "Other", ka: "სხვა", ru: "Прочее" },
+        icon: "◇",
+        order: 999999,
+        dishes: orphan,
+      },
+    ];
+  }, [sortedCategories, filtered]);
 
   const scrollTo = id => {
     setActiveCat(id);
@@ -651,6 +675,9 @@ function CustomerMenu({ tableId, store, lang, setLang }) {
             {sortedCategories.map((c) => (
               <CatBtn key={c.id} active={activeCat === c.id} onClick={() => scrollTo(c.id)} label={c.name[lang]} icon={c.icon} />
             ))}
+            {grouped.some((g) => g.id === ORPHAN_CAT_KEY) && (
+              <CatBtn active={activeCat === ORPHAN_CAT_KEY} onClick={() => scrollTo(ORPHAN_CAT_KEY)} label={lang === "ka" ? "სხვა" : lang === "ru" ? "Прочее" : "Other"} icon="◇" />
+            )}
           </div>
         </div>
       </div>
@@ -1081,10 +1108,13 @@ function AdminLogin({ onLogin }) {
 function AdminCloudMenu({ store }) {
   const { categories, reloadMenuFromSupabase } = store;
   const sortedCats = useMemo(() => [...categories].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)), [categories]);
-  const [categoryId, setCategoryId] = useState(CATEGORIES[0]?.id ?? 1);
+  const [categoryId, setCategoryId] = useState(() => sortedCats[0]?.id ?? "");
   useEffect(() => {
     const first = sortedCats[0]?.id;
-    if (first == null) return;
+    if (first == null) {
+      setCategoryId("");
+      return;
+    }
     setCategoryId((prev) => (sortedCats.some((c) => c.id === prev) ? prev : first));
   }, [sortedCats]);
 
@@ -1107,6 +1137,14 @@ function AdminCloudMenu({ store }) {
       setErr("Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to .env.local and restart the dev server.");
       return;
     }
+    if (!sortedCats.length) {
+      setErr("ჯგუფები ცარიელია — Admin → Cuisine → Categories-დან დაამატე კატეგორია.");
+      return;
+    }
+    if (categoryId === "" || categoryId == null) {
+      setErr("აირჩიე კატეგორია.");
+      return;
+    }
     if (!name.trim()) { setErr("Name is required."); return; }
     const priceNum = parsePriceValue(price);
     if (!Number.isFinite(priceNum) || priceNum < 0) { setErr("Enter a valid price."); return; }
@@ -1115,7 +1153,7 @@ function AdminCloudMenu({ store }) {
     try {
       const imageUrl = await uploadMenuImage(file);
       await insertMenuItem({
-        categoryId,
+        categoryId: Number(categoryId),
         name: name.trim(),
         description: description.trim(),
         price: priceNum,
@@ -1155,10 +1193,21 @@ function AdminCloudMenu({ store }) {
       <form onSubmit={onSubmit} style={{ display:"flex", flexDirection:"column", gap:"20px" }}>
         <div>
           <label style={labelStyle}>Category</label>
-          <select value={categoryId} onChange={(e) => setCategoryId(Number(e.target.value))} style={{ ...inputStyle, cursor:"pointer" }}>
-            {sortedCats.map((c) => (
-              <option key={c.id} value={c.id} style={{ background:"#132220" }}>{c.name.en || c.name.ka || `Category ${c.id}`}</option>
-            ))}
+          <select
+            value={categoryId === "" || categoryId == null ? "" : String(categoryId)}
+            onChange={(e) => {
+              const v = e.target.value;
+              setCategoryId(v === "" ? "" : Number(v));
+            }}
+            style={{ ...inputStyle, cursor:"pointer" }}
+          >
+            {sortedCats.length === 0 ? (
+              <option value="" style={{ background:"#132220" }}>— ჯგუფი არაა —</option>
+            ) : (
+              sortedCats.map((c) => (
+                <option key={c.id} value={c.id} style={{ background:"#132220" }}>{c.name.en || c.name.ka || `Category ${c.id}`}</option>
+              ))
+            )}
           </select>
         </div>
         <div>
@@ -1347,6 +1396,7 @@ function AdminMenu({ store }) {
   const [catModal, setCatModal] = useState(null);
   const [catForm, setCatForm] = useState(null);
   const [categoryError, setCategoryError] = useState(null);
+  const [catSaving, setCatSaving] = useState(false);
 
   const sortedCats = useMemo(() => [...categories].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)), [categories]);
 
@@ -1365,7 +1415,7 @@ function AdminMenu({ store }) {
 
   const [form, setForm] = useState(() => ({
     id: null,
-    categoryId: CATEGORIES[0]?.id,
+    categoryId: undefined,
     name: { en: "", ka: "", ru: "" },
     description: { en: "", ka: "", ru: "" },
     price: "",
@@ -1386,12 +1436,20 @@ function AdminMenu({ store }) {
 
   const save = async () => {
     setDishCloudErr(null);
+    if (!sortedCats.length) {
+      setDishCloudErr("ჯგუფი არ გაქვს — ჯერ დაამატე კატეგორია (Categories).");
+      return;
+    }
+    if (!Number.isFinite(Number(form.categoryId))) {
+      setDishCloudErr("აირჩიე კატეგორია.");
+      return;
+    }
     const priceNum = parsePriceValue(form.price);
     if (!Number.isFinite(priceNum) || priceNum < 0) {
       setDishCloudErr("Enter a valid price.");
       return;
     }
-    const payload = { ...form, price: priceNum };
+    const payload = { ...form, price: priceNum, categoryId: Number(form.categoryId) };
 
     if (syncDishesToSupabase) {
       setDishSaving(true);
@@ -1463,12 +1521,35 @@ function AdminMenu({ store }) {
 
   const openNewCategory = () => { setCategoryError(null); setCatForm(emptyCategory()); setCatModal("new"); };
   const openEditCategory = c => { setCategoryError(null); setCatForm({ ...c, name: { ...c.name } }); setCatModal(c.id); };
-  const saveCategory = () => {
+  const saveCategory = async () => {
     setCategoryError(null);
     const hasName = [catForm.name.en, catForm.name.ka, catForm.name.ru].some(s => String(s || "").trim());
     if (!hasName) { setCategoryError("Add at least one name (EN, KA, or RU)."); return; }
     const orderNum = Number(catForm.order);
     const payload = { ...catForm, order: Number.isFinite(orderNum) ? orderNum : 0 };
+
+    if (syncDishesToSupabase) {
+      setCatSaving(true);
+      try {
+        if (catModal === "new") {
+          const nid = categories.length ? Math.max(...categories.map((c) => c.id)) + 1 : 1;
+          const created = await insertMenuCategory({ ...payload, id: nid });
+          setCategories((p) => [...p, created]);
+        } else {
+          const updated = await updateMenuCategory(catModal, { ...payload, id: catModal });
+          setCategories((p) => p.map((c) => (c.id === catModal ? updated : c)));
+        }
+        clearMenuError();
+        setCatModal(null);
+        setCatForm(null);
+      } catch (e) {
+        setCategoryError(e?.message || "Could not save category to Supabase");
+      } finally {
+        setCatSaving(false);
+      }
+      return;
+    }
+
     if (catModal === "new") {
       const nid = categories.length ? Math.max(...categories.map(c => c.id)) + 1 : 1;
       setCategories(p => [...p, { ...payload, id: nid }]);
@@ -1478,10 +1559,24 @@ function AdminMenu({ store }) {
     setCatModal(null);
     setCatForm(null);
   };
-  const delCategory = id => {
+  const delCategory = async (id) => {
     setCategoryError(null);
     if (dishes.some(d => d.categoryId === id)) {
       setCategoryError("Reassign or remove dishes in this category before deleting.");
+      return;
+    }
+    if (syncDishesToSupabase) {
+      setCatSaving(true);
+      try {
+        await deleteMenuCategory(id);
+        setCategories((p) => p.filter((c) => c.id !== id));
+        if (filter === id) setFilter(null);
+        clearMenuError();
+      } catch (e) {
+        setCategoryError(e?.message || "Could not delete category");
+      } finally {
+        setCatSaving(false);
+      }
       return;
     }
     setCategories(p => p.filter(c => c.id !== id));
@@ -1489,20 +1584,34 @@ function AdminMenu({ store }) {
   };
 
   /** Swap position in sorted list, then renumber order 1…n so guest menu & nav stay consistent. */
-  const moveCategory = useCallback((id, delta) => {
-    setCategoryError(null);
-    setCategories((prev) => {
-      const sorted = [...prev].sort((a, b) => ((a.order ?? 0) - (b.order ?? 0)) || a.id - b.id);
-      const idx = sorted.findIndex((x) => x.id === id);
-      const j = idx + delta;
-      if (idx < 0 || j < 0 || j >= sorted.length) return prev;
-      const copy = [...sorted];
-      [copy[idx], copy[j]] = [copy[j], copy[idx]];
-      const orderById = {};
-      copy.forEach((cat, i) => { orderById[cat.id] = i + 1; });
-      return prev.map((c) => ({ ...c, order: orderById[c.id] ?? c.order }));
-    });
-  }, [setCategories]);
+  const moveCategory = useCallback(
+    async (id, delta) => {
+      setCategoryError(null);
+      let orderById = null;
+      setCategories((prev) => {
+        const sorted = [...prev].sort((a, b) => ((a.order ?? 0) - (b.order ?? 0)) || a.id - b.id);
+        const idx = sorted.findIndex((x) => x.id === id);
+        const j = idx + delta;
+        if (idx < 0 || j < 0 || j >= sorted.length) return prev;
+        const copy = [...sorted];
+        [copy[idx], copy[j]] = [copy[j], copy[idx]];
+        const map = {};
+        copy.forEach((cat, i) => {
+          map[cat.id] = i + 1;
+        });
+        orderById = map;
+        return prev.map((c) => ({ ...c, order: map[c.id] ?? c.order }));
+      });
+      if (!syncDishesToSupabase || !orderById) return;
+      try {
+        await updateMenuCategorySortOrders(orderById);
+        clearMenuError();
+      } catch (e) {
+        setCategoryError(e?.message || "Could not save category order");
+      }
+    },
+    [setCategories, syncDishesToSupabase, clearMenuError]
+  );
 
   const shown = filter ? dishes.filter(d => d.categoryId === filter) : dishes;
 
@@ -1540,6 +1649,11 @@ function AdminMenu({ store }) {
           {categoryError && (
             <div style={{ marginBottom:"16px", padding:"12px 14px", border:"1px solid rgba(239,68,68,0.35)", background:"rgba(239,68,68,0.08)", color:"#fca5a5", fontSize:"11px", letterSpacing:"0.3px" }}>{categoryError}</div>
           )}
+          {syncDishesToSupabase && (
+            <div style={{ marginBottom:"16px", padding:"10px 14px", border:"1px solid rgba(16,185,129,0.25)", background:"rgba(16,185,129,0.06)", color:"#86efac", fontSize:"10px", letterSpacing:"0.3px", lineHeight:1.5 }}>
+              კატეგორიები იტვირთება და ინახება Supabase-ში — ცხრილი <code style={{ color:"var(--gold)" }}>public.menu_categories</code> (SQL: <code style={{ color:"var(--gold)" }}>supabase/schema.sql</code>).
+            </div>
+          )}
           <div style={{ fontSize:"10px", color:"var(--muted)", marginBottom:"12px", letterSpacing:"0.3px", lineHeight:1.5 }}>
             ↑ / ↓ — ჯგუფების თანმიმდევრობა სტუმრის მენიუში; ყოველი გადაადგილების შემდეგ ნომრები (order) აივსება 1-დან ბოლომდე.
           </div>
@@ -1558,16 +1672,16 @@ function AdminMenu({ store }) {
                   </div>
                 </div>
                 <div style={{ display:"flex", gap:"6px", marginTop:"16px", flexWrap:"wrap" }}>
-                  <button type="button" aria-label="Move up" disabled={idx === 0} onClick={() => moveCategory(c.id, -1)} style={{
-                    padding:"8px 12px", background: idx === 0 ? "rgba(255,255,255,0.02)" : "rgba(61,191,176,0.08)", border:`1px solid ${idx === 0 ? "rgba(255,255,255,0.06)" : "rgba(61,191,176,0.25)"}`,
-                    color: idx === 0 ? "var(--subtle)" : "var(--gold)", fontSize:"14px", cursor: idx === 0 ? "not-allowed" : "pointer", lineHeight:1, opacity: idx === 0 ? 0.45 : 1,
+                  <button type="button" aria-label="Move up" disabled={idx === 0 || catSaving} onClick={() => moveCategory(c.id, -1)} style={{
+                    padding:"8px 12px", background: idx === 0 || catSaving ? "rgba(255,255,255,0.02)" : "rgba(61,191,176,0.08)", border:`1px solid ${idx === 0 || catSaving ? "rgba(255,255,255,0.06)" : "rgba(61,191,176,0.25)"}`,
+                    color: idx === 0 || catSaving ? "var(--subtle)" : "var(--gold)", fontSize:"14px", cursor: idx === 0 || catSaving ? "not-allowed" : "pointer", lineHeight:1, opacity: idx === 0 || catSaving ? 0.45 : 1,
                   }}>↑</button>
-                  <button type="button" aria-label="Move down" disabled={idx === sortedCats.length - 1} onClick={() => moveCategory(c.id, 1)} style={{
-                    padding:"8px 12px", background: idx === sortedCats.length - 1 ? "rgba(255,255,255,0.02)" : "rgba(61,191,176,0.08)", border:`1px solid ${idx === sortedCats.length - 1 ? "rgba(255,255,255,0.06)" : "rgba(61,191,176,0.25)"}`,
-                    color: idx === sortedCats.length - 1 ? "var(--subtle)" : "var(--gold)", fontSize:"14px", cursor: idx === sortedCats.length - 1 ? "not-allowed" : "pointer", lineHeight:1, opacity: idx === sortedCats.length - 1 ? 0.45 : 1,
+                  <button type="button" aria-label="Move down" disabled={idx === sortedCats.length - 1 || catSaving} onClick={() => moveCategory(c.id, 1)} style={{
+                    padding:"8px 12px", background: idx === sortedCats.length - 1 || catSaving ? "rgba(255,255,255,0.02)" : "rgba(61,191,176,0.08)", border:`1px solid ${idx === sortedCats.length - 1 || catSaving ? "rgba(255,255,255,0.06)" : "rgba(61,191,176,0.25)"}`,
+                    color: idx === sortedCats.length - 1 || catSaving ? "var(--subtle)" : "var(--gold)", fontSize:"14px", cursor: idx === sortedCats.length - 1 || catSaving ? "not-allowed" : "pointer", lineHeight:1, opacity: idx === sortedCats.length - 1 || catSaving ? 0.45 : 1,
                   }}>↓</button>
-                  <button type="button" onClick={() => openEditCategory(c)} style={{ flex:1, minWidth:"100px", padding:"8px", background:"rgba(61,191,176,0.08)", border:"1px solid rgba(61,191,176,0.2)", color:"var(--gold)", fontSize:"9px", letterSpacing:"1.5px", cursor:"pointer", fontFamily:"var(--font-body)" }}>EDIT</button>
-                  <button type="button" onClick={() => delCategory(c.id)} style={{ padding:"8px 12px", background:"rgba(239,68,68,0.06)", border:"1px solid rgba(239,68,68,0.15)", color:"rgba(239,68,68,0.75)", fontSize:"11px", cursor:"pointer" }}>✕</button>
+                  <button type="button" disabled={catSaving} onClick={() => openEditCategory(c)} style={{ flex:1, minWidth:"100px", padding:"8px", background:"rgba(61,191,176,0.08)", border:"1px solid rgba(61,191,176,0.2)", color:"var(--gold)", fontSize:"9px", letterSpacing:"1.5px", cursor: catSaving ? "wait" : "pointer", fontFamily:"var(--font-body)", opacity: catSaving ? 0.6 : 1 }}>EDIT</button>
+                  <button type="button" disabled={catSaving} onClick={() => delCategory(c.id)} style={{ padding:"8px 12px", background:"rgba(239,68,68,0.06)", border:"1px solid rgba(239,68,68,0.15)", color:"rgba(239,68,68,0.75)", fontSize:"11px", cursor: catSaving ? "wait" : "pointer", opacity: catSaving ? 0.6 : 1 }}>✕</button>
                 </div>
               </div>
             ))}
@@ -1584,7 +1698,7 @@ function AdminMenu({ store }) {
       )}
       {syncDishesToSupabase && !menuError && (
         <div style={{ marginBottom:"16px", padding:"10px 14px", border:"1px solid rgba(16,185,129,0.25)", background:"rgba(16,185,129,0.06)", color:"#86efac", fontSize:"10px", letterSpacing:"0.3px" }}>
-          მენიუ იტვირთება Supabase-იდან — Save / წაშლა / Active ყველა ჩანაწერს ცვლის <code style={{ color:"var(--gold)" }}>public.menu</code> ცხრილში.
+          მენიუ იტვირთება Supabase-იდან — კერძები: <code style={{ color:"var(--gold)" }}>public.menu</code>; კატეგორიები (ჩანართი Categories): <code style={{ color:"var(--gold)" }}>public.menu_categories</code>.
         </div>
       )}
       <div style={{ display:"flex", gap:"6px", marginBottom:"24px", flexWrap:"wrap" }}>
@@ -1634,8 +1748,8 @@ function AdminMenu({ store }) {
             {categoryError && <div style={{ marginBottom:"14px", fontSize:"11px", color:"#fca5a5" }}>{categoryError}</div>}
             <CategoryFormAdmin form={catForm} setForm={setCatForm} />
             <div style={{ display:"flex", gap:"10px", marginTop:"24px" }}>
-              <button type="button" onClick={saveCategory} style={{ flex:1, padding:"13px", background:"linear-gradient(135deg,rgba(61,191,176,0.2),rgba(61,191,176,0.08))", border:"1px solid var(--gold)", color:"var(--gold-pale)", fontSize:"9px", letterSpacing:"3px", textTransform:"uppercase", cursor:"pointer", fontFamily:"var(--font-body)" }}>SAVE</button>
-              <button type="button" onClick={() => { setCatModal(null); setCatForm(null); setCategoryError(null); }} style={{ flex:1, padding:"13px", background:"transparent", border:"1px solid rgba(255,255,255,0.1)", color:"var(--muted)", fontSize:"9px", letterSpacing:"3px", textTransform:"uppercase", cursor:"pointer", fontFamily:"var(--font-body)" }}>CANCEL</button>
+              <button type="button" disabled={catSaving} onClick={() => saveCategory()} style={{ flex:1, padding:"13px", background: catSaving ? "rgba(255,255,255,0.06)" : "linear-gradient(135deg,rgba(61,191,176,0.2),rgba(61,191,176,0.08))", border:"1px solid var(--gold)", color:"var(--gold-pale)", fontSize:"9px", letterSpacing:"3px", textTransform:"uppercase", cursor: catSaving ? "wait" : "pointer", fontFamily:"var(--font-body)" }}>SAVE</button>
+              <button type="button" disabled={catSaving} onClick={() => { setCatModal(null); setCatForm(null); setCategoryError(null); }} style={{ flex:1, padding:"13px", background:"transparent", border:"1px solid rgba(255,255,255,0.1)", color:"var(--muted)", fontSize:"9px", letterSpacing:"3px", textTransform:"uppercase", cursor: catSaving ? "not-allowed" : "pointer", fontFamily:"var(--font-body)" }}>CANCEL</button>
             </div>
           </div>
         </div>
@@ -1698,9 +1812,21 @@ function DishFormAdmin({ form, setForm, categories }) {
     <div style={{ display:"flex", flexDirection:"column", gap:"18px" }}>
       <div>
         <label style={labelStyle}>Category</label>
-        <select value={form.categoryId} onChange={e=>set("categoryId",Number(e.target.value))}
-          style={{...inputStyle, fontFamily:"var(--font-body)", fontSize:"12px"}}>
-          {categories.map(c=><option key={c.id} value={c.id} style={{background:"var(--charcoal)"}}>{c.name.en}</option>)}
+        <select
+          value={form.categoryId === undefined || form.categoryId === null ? "" : String(form.categoryId)}
+          onChange={(e) => {
+            const v = e.target.value;
+            set("categoryId", v === "" ? undefined : Number(v));
+          }}
+          style={{ ...inputStyle, fontFamily: "var(--font-body)", fontSize: "12px" }}
+        >
+          {categories.length === 0 ? (
+            <option value="" style={{ background: "var(--charcoal)" }}>— ჯგუფი არაა —</option>
+          ) : (
+            categories.map((c) => (
+              <option key={c.id} value={c.id} style={{ background: "var(--charcoal)" }}>{c.name.en}</option>
+            ))
+          )}
         </select>
       </div>
       {["en","ka","ru"].map(l=>(
