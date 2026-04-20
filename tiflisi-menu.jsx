@@ -985,8 +985,25 @@ function DishRow({ dish, lang, t, expanded, onToggle, style, cartQty = 0, onAddT
             <div style={{ fontFamily:"var(--font-display)", fontSize:"18px", fontWeight:400, color:"var(--cream)", letterSpacing:"-0.3px", lineHeight:1.2 }}>
               {title}
             </div>
-            <div style={{ marginTop:"4px", fontSize:"10px", color:"var(--muted)", lineHeight:1.5, fontWeight:300, letterSpacing:"0.3px",
-              overflow:"hidden", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical" }}>
+            <div
+              style={{
+                marginTop: "4px",
+                fontSize: "10px",
+                color: "var(--muted)",
+                lineHeight: 1.5,
+                fontWeight: 300,
+                letterSpacing: "0.3px",
+                whiteSpace: expanded ? "pre-wrap" : "normal",
+                ...(expanded
+                  ? { overflow: "visible" }
+                  : {
+                      overflow: "hidden",
+                      display: "-webkit-box",
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: "vertical",
+                    }),
+              }}
+            >
               {blurb}
             </div>
           </div>
