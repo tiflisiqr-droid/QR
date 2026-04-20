@@ -178,7 +178,7 @@ export async function uploadMenuImage(file) {
   return pub.publicUrl;
 }
 
-/** Insert one row into public.menu (English fields filled; ka/ru empty). */
+/** Insert one row into public.menu. `description` may be a string (EN only) or { en, ka, ru }. */
 export async function insertMenuItem({
   categoryId,
   name,
@@ -189,10 +189,18 @@ export async function insertMenuItem({
   featured = false,
 }) {
   if (!supabase) throw new Error("Supabase is not configured");
+  const desc =
+    typeof description === "string"
+      ? { en: description, ka: "", ru: "" }
+      : {
+          en: description?.en ?? "",
+          ka: description?.ka ?? "",
+          ru: description?.ru ?? "",
+        };
   const row = dishToDbInsert({
     categoryId,
     name: { en: name, ka: "", ru: "" },
-    description: { en: description, ka: "", ru: "" },
+    description: desc,
     price,
     image: imageUrl,
     ingredients: [],

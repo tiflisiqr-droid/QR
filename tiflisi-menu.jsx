@@ -1160,7 +1160,9 @@ function AdminCloudMenu({ store }) {
   }, [sortedCats, existingDishId, selectedDish]);
 
   const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
+  const [descriptionEn, setDescriptionEn] = useState("");
+  const [descriptionKa, setDescriptionKa] = useState("");
+  const [descriptionRu, setDescriptionRu] = useState("");
   const [price, setPrice] = useState("");
   const [file, setFile] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -1227,13 +1229,19 @@ function AdminCloudMenu({ store }) {
       await insertMenuItem({
         categoryId: Number(categoryId),
         name: name.trim(),
-        description: description.trim(),
+        description: {
+          en: descriptionEn.trim(),
+          ka: descriptionKa.trim(),
+          ru: descriptionRu.trim(),
+        },
         price: priceNum,
         imageUrl,
       });
       setMsg("Saved to Supabase. Menu refreshed.");
       setName("");
-      setDescription("");
+      setDescriptionEn("");
+      setDescriptionKa("");
+      setDescriptionRu("");
       setPrice("");
       setFile(null);
       await reloadMenuFromSupabase();
@@ -1280,7 +1288,9 @@ function AdminCloudMenu({ store }) {
               setFile(null);
               if (v) {
                 setName("");
-                setDescription("");
+                setDescriptionEn("");
+                setDescriptionKa("");
+                setDescriptionRu("");
                 setPrice("");
               }
             }}
@@ -1387,18 +1397,24 @@ function AdminCloudMenu({ store }) {
             disabled={updateMode}
           />
         </div>
-        <div>
-          <label style={labelStyle}>Description</label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={3}
-            style={{ ...inputStyle, resize:"vertical", fontFamily:"var(--font-display)", opacity: updateMode ? 0.5 : 1 }}
-            placeholder="Short description"
-            readOnly={updateMode}
-            disabled={updateMode}
-          />
-        </div>
+        {[
+          { key: "en", label: "Description (EN)", val: descriptionEn, set: setDescriptionEn, ph: "Short description (English)" },
+          { key: "ka", label: "აღწერა (KA)", val: descriptionKa, set: setDescriptionKa, ph: "მოკლე აღწერა ქართულად" },
+          { key: "ru", label: "Описание (RU)", val: descriptionRu, set: setDescriptionRu, ph: "Краткое описание по-русски" },
+        ].map((f) => (
+          <div key={f.key}>
+            <label style={labelStyle}>{f.label}</label>
+            <textarea
+              value={f.val}
+              onChange={(e) => f.set(e.target.value)}
+              rows={3}
+              style={{ ...inputStyle, resize: "vertical", fontFamily: "var(--font-display)", opacity: updateMode ? 0.5 : 1 }}
+              placeholder={f.ph}
+              readOnly={updateMode}
+              disabled={updateMode}
+            />
+          </div>
+        ))}
         <div>
           <label style={labelStyle}>Price (₾)</label>
           <input
@@ -2026,11 +2042,19 @@ function DishFormAdmin({ form, setForm, categories }) {
           <input value={form.name[l]} onChange={e=>setL("name",l,e.target.value)} style={inputStyle} />
         </div>
       ))}
-      <div>
-        <label style={labelStyle}>Description (EN)</label>
-        <textarea value={form.description.en} onChange={e=>setL("description","en",e.target.value)} rows={2}
-          style={{...inputStyle, resize:"vertical"}} />
-      </div>
+      {["en", "ka", "ru"].map((l) => (
+        <div key={l}>
+          <label style={labelStyle}>
+            {l === "en" ? "Description (EN)" : l === "ka" ? "აღწერა (KA)" : "Описание (RU)"}
+          </label>
+          <textarea
+            value={form.description[l] ?? ""}
+            onChange={(e) => setL("description", l, e.target.value)}
+            rows={2}
+            style={{ ...inputStyle, resize: "vertical" }}
+          />
+        </div>
+      ))}
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"16px" }}>
         <div><label style={labelStyle}>Price (₾)</label><input type="number" min={0} step="any" inputMode="decimal" value={form.price === "" || form.price == null ? "" : form.price} onChange={(e) => set("price", e.target.value)} style={inputStyle} /></div>
         <div><label style={labelStyle}>Image URL</label><input value={form.image} onChange={e=>set("image",e.target.value)} style={inputStyle} /></div>
