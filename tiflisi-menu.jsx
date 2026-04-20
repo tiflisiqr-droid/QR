@@ -151,8 +151,41 @@ const TABLES = [
 /** Shared across tabs so guest menu (/) and admin (/admin) see the same alerts. */
 const NOTIF_STORAGE_KEY = "tiflisi_notifications_v1";
 
+/** Admin seating: persisted per browser (not in Supabase). */
+const TABLES_STORAGE_KEY = "tiflisi_tables_v1";
+
 /** Offline / no-Supabase: persist dish list so admin edits survive refresh (not used when live Supabase menu loads). */
 const MENU_DISHES_STORAGE_KEY = "tiflisi_menu_dishes_v1";
+
+function normalizeTableRows(arr) {
+  if (!Array.isArray(arr)) return [];
+  return arr
+    .map((t) => ({
+      id: Number(t?.id) || 0,
+      name: typeof t?.name === "string" ? t.name : "",
+      zone: typeof t?.zone === "string" ? t.zone : "Hall",
+      active: t?.active !== false,
+    }))
+    .filter((t) => t.id > 0 && t.name.length > 0);
+}
+
+function loadTablesFromLocalStorage() {
+  try {
+    const raw = localStorage.getItem(TABLES_STORAGE_KEY);
+    if (!raw) return null;
+    const arr = JSON.parse(raw);
+    const rows = normalizeTableRows(arr);
+    return rows.length > 0 ? rows : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function saveTablesToStorage(list) {
+  try {
+    localStorage.setItem(TABLES_STORAGE_KEY, JSON.stringify(list));
+  } catch (_) {}
+}
 
 function loadDishesFromLocalStorage() {
   try {
@@ -217,7 +250,7 @@ function useStore() {
   });
   const [menuLoading, setMenuLoading] = useState(supabaseEnabled);
   const [menuError, setMenuError] = useState(null);
-  const [tables, setTables] = useState(TABLES);
+  const [tables, setTables] = useState(() => loadTablesFromLocalStorage() ?? TABLES);
   const [notifications, setNotificationsState] = useState(loadNotificationsFromStorage);
   const [analytics, setAnalytics] = useState({ scans: 247, views: { 1:18, 2:24, 3:31, 5:42, 9:28 } });
 
@@ -325,6 +358,22 @@ function useStore() {
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
   }, [supabaseEnabled]);
+
+  useEffect(() => {
+    saveTablesToStorage(tables);
+  }, [tables]);
+
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (e.key !== TABLES_STORAGE_KEY || e.newValue == null) return;
+      try {
+        const rows = normalizeTableRows(JSON.parse(e.newValue));
+        if (rows.length > 0) setTables(rows);
+      } catch (_) {}
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
 
   return {
     categories,
