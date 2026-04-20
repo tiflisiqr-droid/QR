@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import QRCode from "qrcode";
 
 /* ─── GOOGLE FONTS INJECTION ─────────────────────────────────────────────── */
 const FontLoader = () => {
@@ -171,24 +172,6 @@ const T = {
   ka:{menu:"მენიუ",callWaiter:"მიმტანის გამოძახება",requestBill:"ანგარიშის მოთხოვნა",ingredients:"წარმომავლობა",soldOut:"მიუწვდომელი",table:"მაგიდა",waiterCalled:"მიმტანი მოდის.",billRequested:"ანგარიში მზადდება.",search:"მოძებნეთ…",all:"ყველა",adminLogin:"პერსონალი",login:"შესვლა",dashboard:"მიმოხილვა",menuMgmt:"სამზარეულო",tables:"მოსასვლელი",notifications:"შეტყობინებები",analytics:"ანალიტიკა",logout:"გამოსვლა",addDish:"ახალი კერძი",save:"შენახვა",cancel:"გაუქმება",available:"ხელმისაწვდომი",featured:"რეკომენდებული",badges:"გამოჩენილი",cart:"კალათა",cartTotal:"ჯამი",addToCart:"დამატება",cartHint:"არჩეული კერძების სავარაუდო ჯამი (საინფორმაციოდ).",emptyCart:"კალათა ცარიელია.",cartQty:"რაოდ.",cartClose:"დახურვა"},
   ru:{menu:"Меню",callWaiter:"Позвать Официанта",requestBill:"Попросить Счёт",ingredients:"Происхождение",soldOut:"Недоступно",table:"Стол",waiterCalled:"Официант уже идёт.",billRequested:"Счёт готовится.",search:"Поиск…",all:"Все",adminLogin:"Персонал",login:"Войти",dashboard:"Обзор",menuMgmt:"Кухня",tables:"Места",notifications:"Оповещения",analytics:"Аналитика",logout:"Выйти",addDish:"Новое Блюдо",save:"Сохранить",cancel:"Отмена",available:"Доступно",featured:"Рекомендуем",badges:"Отличия",cart:"Корзина",cartTotal:"Итого",addToCart:"В корзину",cartHint:"Ориентировочная сумма выбранных блюд (справочно).",emptyCart:"Корзина пуста.",cartQty:"Кол-во",cartClose:"Закрыть"},
 };
-
-/* ─── QR Generator ───────────────────────────────────────────────────────── */
-function makeQR(text, size = 180) {
-  const n = 21, cell = size / n;
-  const hash = text.split("").reduce((a,c) => ((a << 5) - a + c.charCodeAt(0)) | 0, 0);
-  let rects = "";
-  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) {
-    const corner = (r<7&&c<7)||(r<7&&c>=n-7)||(r>=n-7&&c<7);
-    const border = ((r===0||r===6)&&c<7)||((r===0||r===6)&&c>=n-7)||((r>=n-7&&(r===n-7||r===n-1))&&c<7)||(r<7&&(c===0||c===6))||(r<7&&(c===n-7||c===n-1))||(r>=n-7&&(c===0||c===6));
-    const inner = (r>=2&&r<5&&c>=2&&c<5)||(r>=2&&r<5&&c>=n-5&&c<n-2)||(r>=n-5&&r<n-2&&c>=2&&c<5);
-    let fill = null;
-    if (border||inner) fill="#c9a84c";
-    else if (!corner && ((Math.abs(hash*r+c*7+r*3)%5)<2)) fill="#1a1620";
-    if (fill) rects += `<rect x="${c*cell}" y="${r*cell}" width="${cell}" height="${cell}" fill="${fill}" rx="0.5"/>`;
-  }
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}"><rect width="${size}" height="${size}" fill="#f5e4b0" rx="8"/>${rects}</svg>`;
-  return `data:image/svg+xml;base64,${btoa(svg)}`;
-}
 
 /* ─── SHARED STATE ───────────────────────────────────────────────────────── */
 function useStore() {
@@ -1205,6 +1188,55 @@ function DishFormAdmin({ form, setForm, categories }) {
   );
 }
 
+/** Full URL to guest menu with table (for QR scanners). */
+function menuUrlForTable(tableId) {
+  const base = import.meta.env.BASE_URL || "/";
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  try {
+    return new URL(`?table=${encodeURIComponent(String(tableId))}`, origin + base).href;
+  } catch {
+    const b = String(base).replace(/\/?$/, "/");
+    return `${origin}${b}?table=${encodeURIComponent(String(tableId))}`;
+  }
+}
+
+function TableQrImage({ tableId, tableName, zone }) {
+  const [dataUrl, setDataUrl] = useState("");
+  const [failed, setFailed] = useState(false);
+  const url = useMemo(() => menuUrlForTable(tableId), [tableId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setDataUrl("");
+    setFailed(false);
+    QRCode.toDataURL(url, {
+      width: 240,
+      margin: 2,
+      color: { dark: "#1a1620", light: "#f5e4b0" },
+      errorCorrectionLevel: "M",
+    })
+      .then((d) => { if (!cancelled) setDataUrl(d); })
+      .catch(() => { if (!cancelled) setFailed(true); });
+    return () => { cancelled = true; };
+  }, [url]);
+
+  return (
+    <div style={{ textAlign:"center", padding:"16px", background:"#f5e4b0", marginBottom:"14px" }}>
+      {dataUrl && (
+        <img src={dataUrl} alt={`QR: ${tableName}`} style={{ width:"160px", height:"160px", display:"block", margin:"0 auto", imageRendering:"pixelated" }} />
+      )}
+      {!dataUrl && !failed && (
+        <div style={{ fontSize:"10px", color:"#333", padding:"48px 8px" }}>…</div>
+      )}
+      {failed && <div style={{ fontSize:"10px", color:"#991b1b" }}>QR failed</div>}
+      <div style={{ marginTop:"10px", fontSize:"8px", color:"#444", letterSpacing:"0.3px", fontFamily:"var(--font-body)", wordBreak:"break-all", lineHeight:1.4 }}>
+        {url}
+      </div>
+      <div style={{ marginTop:"6px", fontSize:"9px", color:"#555" }}>{tableName} · {zone}</div>
+    </div>
+  );
+}
+
 /* ─── Tables ──────────────────────────────────────────────────────────── */
 function AdminTables({ store }) {
   const { tables, setTables } = store;
@@ -1242,7 +1274,7 @@ function AdminTables({ store }) {
               <div>
                 <div style={{ fontFamily:"var(--font-display)", fontSize:"20px", fontStyle:"italic", color:"var(--cream)" }}>{tb.name}</div>
                 <div style={{ fontSize:"9px", color:"var(--muted)", letterSpacing:"2px", marginTop:"2px" }}>{tb.zone}</div>
-                <div style={{ fontSize:"8px", color:"var(--subtle)", marginTop:"6px", letterSpacing:"1px" }}>tiflisi.ge/?table={tb.id}</div>
+                <div style={{ fontSize:"8px", color:"var(--subtle)", marginTop:"6px", letterSpacing:"1px", wordBreak:"break-all" }}>{menuUrlForTable(tb.id)}</div>
               </div>
               <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:"4px" }}>
                 <div style={{ width:"8px", height:"8px", borderRadius:"50%", background:tb.active?"#10b981":"var(--subtle)", animation:tb.active?"pulse 2s infinite":"none" }} />
@@ -1250,12 +1282,7 @@ function AdminTables({ store }) {
               </div>
             </div>
 
-            {qr===tb.id && (
-              <div style={{ textAlign:"center", padding:"16px", background:"#f5e4b0", marginBottom:"14px" }}>
-                <img src={makeQR(`tiflisi.ge/?table=${tb.id}`)} alt="QR" style={{ width:"140px", height:"140px" }} />
-                <div style={{ marginTop:"8px", fontSize:"9px", color:"#333", letterSpacing:"1px", fontFamily:"var(--font-body)" }}>{tb.name} · {tb.zone}</div>
-              </div>
-            )}
+            {qr===tb.id && <TableQrImage tableId={tb.id} tableName={tb.name} zone={tb.zone} />}
 
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr auto", gap:"6px" }}>
               <button onClick={()=>setQr(qr===tb.id?null:tb.id)} style={{ padding:"8px", background:"rgba(139,92,246,0.08)", border:"1px solid rgba(139,92,246,0.2)", color:"#a78bfa", fontSize:"8px", letterSpacing:"1.5px", textTransform:"uppercase", cursor:"pointer", fontFamily:"var(--font-body)" }}>
@@ -1390,6 +1417,17 @@ function getRouteSegment() {
   const p = (window.location.pathname || "/").replace(/\/+$/, "") || "/";
   const admin = APP_ADMIN_PATH.replace(/\/+$/, "");
   return p === admin ? "admin" : "customer";
+}
+
+function readTableIdFromUrl() {
+  try {
+    const q = new URLSearchParams(window.location.search).get("table");
+    if (q == null || q === "") return null;
+    const n = Number(q);
+    return Number.isFinite(n) ? n : null;
+  } catch {
+    return null;
+  }
 }
 
 function readSavedWelcomeLang() {
@@ -1528,22 +1566,28 @@ export default function App() {
   const [routeSeg, setRouteSeg] = useState(() => getRouteSegment());
   const isAdminRoute = routeSeg === "admin";
 
-  const navigate = useCallback((path) => {
-    window.history.pushState({}, "", path);
-    setRouteSeg(getRouteSegment());
-  }, []);
-
-  useEffect(() => {
-    const sync = () => setRouteSeg(getRouteSegment());
-    window.addEventListener("popstate", sync);
-    return () => window.removeEventListener("popstate", sync);
-  }, []);
-
   const savedLang = readSavedWelcomeLang();
   const [enteredMenu, setEnteredMenu] = useState(() => savedLang !== null || getRouteSegment() === "admin");
   const [lang, setLang] = useState(savedLang ?? "ka");
-  const [tableId, setTableId] = useState(1);
+  const [tableId, setTableId] = useState(() => readTableIdFromUrl() ?? 1);
   const [adminAuth, setAdminAuth] = useState(false);
+
+  const navigate = useCallback((path) => {
+    window.history.pushState({}, "", path);
+    setRouteSeg(getRouteSegment());
+    const t = readTableIdFromUrl();
+    if (t != null) setTableId(t);
+  }, []);
+
+  useEffect(() => {
+    const sync = () => {
+      setRouteSeg(getRouteSegment());
+      const t = readTableIdFromUrl();
+      if (t != null) setTableId(t);
+    };
+    window.addEventListener("popstate", sync);
+    return () => window.removeEventListener("popstate", sync);
+  }, []);
 
   useEffect(() => {
     document.documentElement.lang = lang === "ka" ? "ka" : lang === "ru" ? "ru" : "en";
@@ -1563,7 +1607,15 @@ export default function App() {
 
       {enteredMenu && !isAdminRoute && (
         <div style={{ position:"fixed", bottom:"16px", left:"50%", transform:"translateX(-50%)", zIndex:9999, display:"flex", gap:"6px", background:"rgba(7,6,8,0.92)", padding:"8px 10px", border:"1px solid rgba(201,168,76,0.2)", backdropFilter:"blur(20px)" }}>
-          <select value={tableId} onChange={e=>{ setTableId(Number(e.target.value)); }}
+          <select value={tableId} onChange={(e) => {
+            const id = Number(e.target.value);
+            setTableId(id);
+            try {
+              const u = new URL(window.location.href);
+              u.searchParams.set("table", String(id));
+              window.history.replaceState({}, "", `${u.pathname}${u.search}${u.hash}`);
+            } catch {}
+          }}
             style={{ padding:"5px 8px", background:"var(--charcoal)", border:"1px solid rgba(201,168,76,0.2)", color:"var(--gold)", fontSize:"9px", letterSpacing:"1px", fontFamily:"var(--font-body)" }}>
             {store.tables.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}
           </select>
