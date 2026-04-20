@@ -142,6 +142,21 @@ const TABLES = [
 /** Shared across tabs so guest menu (/) and admin (/admin) see the same alerts. */
 const NOTIF_STORAGE_KEY = "tiflisi_notifications_v1";
 
+/** Offline / no-Supabase: persist dish list so admin edits survive refresh (not used when live Supabase menu loads). */
+const MENU_DISHES_STORAGE_KEY = "tiflisi_menu_dishes_v1";
+
+function loadDishesFromLocalStorage() {
+  try {
+    const raw = localStorage.getItem(MENU_DISHES_STORAGE_KEY);
+    if (!raw) return null;
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr) || arr.length === 0) return null;
+    return arr;
+  } catch (_) {
+    return null;
+  }
+}
+
 function saveNotificationsToStorage(list) {
   try {
     const serializable = list.map((n) => ({
@@ -187,11 +202,12 @@ const T = {
 function useStore() {
   const supabaseEnabled = isSupabaseConfigured();
   const [categories, setCategories] = useState(CATEGORIES);
-  const [dishes, setDishes] = useState(() => (supabaseEnabled ? [] : DISHES));
+  const [dishes, setDishes] = useState(() => {
+    if (supabaseEnabled) return [];
+    return loadDishesFromLocalStorage() ?? DISHES;
+  });
   const [menuLoading, setMenuLoading] = useState(supabaseEnabled);
   const [menuError, setMenuError] = useState(null);
-  /** `"supabase"` = list from DB (Cuisine edits sync to Supabase). `"local"` = built-in DISHES (offline / fetch failed). */
-  const [menuDataSource, setMenuDataSource] = useState(() => (!supabaseEnabled ? "local" : "supabase"));
   const [tables, setTables] = useState(TABLES);
   const [notifications, setNotificationsState] = useState(loadNotificationsFromStorage);
   const [analytics, setAnalytics] = useState({ scans: 247, views: { 1:18, 2:24, 3:31, 5:42, 9:28 } });
@@ -236,6 +252,8 @@ function useStore() {
     setAnalytics(prev => ({ ...prev, scans: prev.scans+1, views: { ...prev.views, [id]: (prev.views[id]||0)+1 } }));
   }, []);
 
+  const clearMenuError = useCallback(() => setMenuError(null), []);
+
   const reloadMenuFromSupabase = useCallback(async () => {
     if (!isSupabaseConfigured()) return;
     setMenuLoading(true);
@@ -243,11 +261,10 @@ function useStore() {
     try {
       const rows = await fetchMenuDishes();
       setDishes(rows);
-      setMenuDataSource("supabase");
+      setMenuError(null);
     } catch (e) {
       setMenuError(e?.message || "Could not load menu");
-      setDishes(DISHES);
-      setMenuDataSource("local");
+      setDishes([]);
     } finally {
       setMenuLoading(false);
     }
@@ -262,20 +279,42 @@ function useStore() {
       .then((rows) => {
         if (!cancelled) {
           setDishes(rows);
-          setMenuDataSource("supabase");
+          setMenuError(null);
         }
       })
       .catch((e) => {
         if (!cancelled) {
           setMenuError(e?.message || "Could not load menu");
-          setDishes(DISHES);
-          setMenuDataSource("local");
+          setDishes([]);
         }
       })
       .finally(() => {
         if (!cancelled) setMenuLoading(false);
       });
     return () => { cancelled = true; };
+  }, [supabaseEnabled]);
+
+  /** Offline only: persist dishes in localStorage (never when Supabase env is set). */
+  useEffect(() => {
+    if (supabaseEnabled) return;
+    try {
+      localStorage.setItem(MENU_DISHES_STORAGE_KEY, JSON.stringify(dishes));
+    } catch (_) {}
+  }, [dishes, supabaseEnabled]);
+
+  /** Offline: other tabs pick up localStorage menu changes. */
+  useEffect(() => {
+    if (supabaseEnabled) return;
+    const onStorage = (e) => {
+      if (e.key !== MENU_DISHES_STORAGE_KEY || e.newValue == null) return;
+      try {
+        const arr = JSON.parse(e.newValue);
+        if (!Array.isArray(arr)) return;
+        setDishes(arr);
+      } catch (_) {}
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
   }, [supabaseEnabled]);
 
   return {
@@ -292,7 +331,7 @@ function useStore() {
     trackView,
     menuLoading,
     menuError,
-    menuDataSource,
+    clearMenuError,
     reloadMenuFromSupabase,
   };
 }
@@ -303,6 +342,7 @@ function useStore() {
 function CustomerMenu({ tableId, store, lang, setLang }) {
   const t = T[lang];
   const { categories, dishes, tables, addNotification, trackView, menuLoading, menuError } = store;
+  const supabaseMenu = isSupabaseConfigured();
   const [activeCat, setActiveCat] = useState(null);
   const [search, setSearch] = useState("");
   const [toast, setToast] = useState(null);
@@ -454,7 +494,9 @@ function CustomerMenu({ tableId, store, lang, setLang }) {
         )}
         {!menuLoading && dishes.length === 0 && (
           <div style={{ textAlign:"center", padding:"60px 20px", fontSize:"13px", color:"var(--muted)", lineHeight:1.6 }}>
-            No dishes to show. If you use Supabase, add rows in the <strong style={{ color:"var(--cream)" }}>Admin → Cloud</strong> tab or run the SQL in <code style={{ color:"var(--gold)" }}>supabase/schema.sql</code>.
+            {supabaseMenu
+              ? "მენიუ იტვირთება Supabase-იდან — ცარიელია ან ჩატვირთვა ვერ მოხერხდა. შეამოწმე SQL/RLS ან დაამატე კერძები Admin → Cuisine / Cloud-იდან."
+              : <>No dishes to show. Add dishes in <strong style={{ color:"var(--cream)" }}>Admin → Cuisine</strong> (stored in this browser) or enable Supabase.</>}
           </div>
         )}
         {grouped.map((cat, gi) => (
@@ -1076,8 +1118,8 @@ function AdminDash({ store }) {
 
 /* ─── Menu Management ─────────────────────────────────────────────────── */
 function AdminMenu({ store }) {
-  const { categories, setCategories, dishes, setDishes, menuDataSource } = store;
-  const syncDishesToSupabase = isSupabaseConfigured() && menuDataSource === "supabase";
+  const { categories, setCategories, dishes, setDishes, menuError, clearMenuError } = store;
+  const syncDishesToSupabase = isSupabaseConfigured();
   const [adminTab, setAdminTab] = useState("dishes");
   const [filter, setFilter] = useState(null);
   const [modal, setModal] = useState(null);
@@ -1138,10 +1180,12 @@ function AdminMenu({ store }) {
         if (modal === "new") {
           const created = await insertFullMenuDish(payload);
           setDishes((p) => [...p, created]);
+          setFilter(null);
         } else {
           const updated = await updateFullMenuDish(modal, payload);
           setDishes((p) => p.map((d) => (String(d.id) === String(modal) ? updated : d)));
         }
+        clearMenuError();
         setModal(null);
       } catch (e) {
         setDishCloudErr(e?.message || "Could not save to Supabase");
@@ -1151,8 +1195,12 @@ function AdminMenu({ store }) {
       return;
     }
 
-    if (modal === "new") setDishes((p) => [...p, { ...payload, id: Date.now() }]);
-    else setDishes((p) => p.map((d) => (String(d.id) === String(modal) ? { ...payload, id: modal } : d)));
+    if (modal === "new") {
+      setDishes((p) => [...p, { ...payload, id: Date.now() }]);
+      setFilter(null);
+    } else {
+      setDishes((p) => p.map((d) => (String(d.id) === String(modal) ? { ...payload, id: modal } : d)));
+    }
     setModal(null);
   };
 
@@ -1163,6 +1211,7 @@ function AdminMenu({ store }) {
       try {
         await deleteMenuDishById(id);
         setDishes((p) => p.filter((d) => String(d.id) !== String(id)));
+        clearMenuError();
       } catch (e) {
         setDishCloudErr(e?.message || "Could not delete");
       } finally {
@@ -1182,6 +1231,7 @@ function AdminMenu({ store }) {
       try {
         await setMenuDishAvailable(id, !row.available);
         setDishes((p) => p.map((d) => (String(d.id) === String(id) ? { ...d, available: !d.available } : d)));
+        clearMenuError();
       } catch (e) {
         setDishCloudErr(e?.message || "Could not update availability");
       } finally {
@@ -1308,14 +1358,14 @@ function AdminMenu({ store }) {
 
       {adminTab === "dishes" && (
       <>
-      {isSupabaseConfigured() && menuDataSource === "local" && (
+      {syncDishesToSupabase && menuError && (
         <div style={{ marginBottom:"20px", padding:"12px 14px", border:"1px solid rgba(234,179,8,0.35)", background:"rgba(234,179,8,0.08)", color:"#fde68a", fontSize:"11px", lineHeight:1.55, letterSpacing:"0.2px" }}>
-          Supabase did not load the menu (check RLS, table <code style={{ color:"var(--gold)" }}>menu</code>, and <code style={{ color:"var(--gold)" }}>.env.local</code>). You are editing the built-in sample list — changes stay in this browser only until the cloud menu loads.
+          Supabase-მდე მენიუ ვერ ჩაიტვირთა: <strong style={{ color:"#fef3c7" }}>{menuError}</strong> — შეამოწმე ცხრილი <code style={{ color:"var(--gold)" }}>menu</code>, RLS და <code style={{ color:"var(--gold)" }}>.env.local</code>. Cuisine-ის ცვლილებები მაინც ინახება მხოლოდ Supabase-ში (ლოკალური სია აღარ გამოიყენება).
         </div>
       )}
-      {syncDishesToSupabase && (
+      {syncDishesToSupabase && !menuError && (
         <div style={{ marginBottom:"16px", padding:"10px 14px", border:"1px solid rgba(16,185,129,0.25)", background:"rgba(16,185,129,0.06)", color:"#86efac", fontSize:"10px", letterSpacing:"0.3px" }}>
-          Dish list is synced with Supabase — Save / delete / Active toggle update the <code style={{ color:"var(--gold)" }}>menu</code> table.
+          მენიუ იტვირთება Supabase-იდან — Save / წაშლა / Active ყველა ჩანაწერს ცვლის <code style={{ color:"var(--gold)" }}>public.menu</code> ცხრილში.
         </div>
       )}
       <div style={{ display:"flex", gap:"6px", marginBottom:"24px", flexWrap:"wrap" }}>
