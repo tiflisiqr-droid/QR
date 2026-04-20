@@ -2,6 +2,12 @@ name: Deploy to GitHub Pages
 
 # Builds Vite dist (base /QR/) and pushes it to branch `gh-pages`.
 # In repo Settings → Pages: choose "Deploy from a branch" → Branch gh-pages, folder / (root).
+#
+# Supabase (სავალდებულო სხვა მოწყობილობებზე იგივე მენიუსთვის):
+# Repo → Settings → Secrets and variables → Actions → New repository secret:
+#   VITE_SUPABASE_URL      = https://xxxx.supabase.co
+#   VITE_SUPABASE_ANON_KEY = (anon / publishable key)
+# Vite ჩასვამს მათ bundle-ში build დროს — ლოკალური .env.local GitHub-ზე არ მოდის.
 
 on:
   push:
@@ -33,6 +39,8 @@ jobs:
         env:
           GITHUB_ACTIONS: "true"
           GITHUB_REPOSITORY: ${{ github.repository }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
 
       - name: Publish dist to gh-pages branch
         uses: peaceiris/actions-gh-pages@v4
