@@ -47,6 +47,10 @@ export function dishToDbInsert(dish) {
 export function mapMenuRowToDish(row) {
   const ingredients = Array.isArray(row.ingredients) ? row.ingredients : [];
   const badges = Array.isArray(row.badges) ? row.badges : [];
+  const desc =
+    row.description && typeof row.description === "object" && !Array.isArray(row.description)
+      ? row.description
+      : null;
   return {
     id: row.id,
     categoryId: row.category_id,
@@ -55,11 +59,17 @@ export function mapMenuRowToDish(row) {
       ka: row.name_ka ?? "",
       ru: row.name_ru ?? "",
     },
-    description: {
-      en: row.description_en ?? "",
-      ka: row.description_ka ?? "",
-      ru: row.description_ru ?? "",
-    },
+    description: desc
+      ? {
+          en: String(desc.en ?? ""),
+          ka: String(desc.ka ?? ""),
+          ru: String(desc.ru ?? ""),
+        }
+      : {
+          en: String(row.description_en ?? ""),
+          ka: String(row.description_ka ?? ""),
+          ru: String(row.description_ru ?? ""),
+        },
     price: Number(row.price) || 0,
     image: row.image_url ?? "",
     ingredients,

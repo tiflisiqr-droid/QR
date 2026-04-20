@@ -101,8 +101,51 @@ const GlobalStyles = () => {
         from { transform: rotate(0deg); } to { transform: rotate(360deg); }
       }
       .dish-card { animation: fadeUp 0.5s ease both; }
-      .dish-card:hover .dish-img { transform: scale(1.04); }
-      .dish-img { transition: transform 0.6s cubic-bezier(0.25,0.46,0.45,0.94); }
+      .dish-card-inner { display: flex; align-items: stretch; gap: 0; }
+      .dish-card-media {
+        flex-shrink: 0;
+        width: 156px;
+        min-height: 132px;
+        position: relative;
+        overflow: hidden;
+        align-self: stretch;
+        background: linear-gradient(160deg, rgba(30,52,48,0.75), rgba(6,10,10,0.98));
+        border-right: 1px solid rgba(61,191,176,0.12);
+      }
+      .dish-card-media .dish-img {
+        width: 100%;
+        height: 100%;
+        min-height: 132px;
+        object-fit: cover;
+        object-position: center;
+        display: block;
+        transition: transform 0.6s cubic-bezier(0.25,0.46,0.45,0.94);
+      }
+      .dish-card:hover .dish-card-media .dish-img { transform: scale(1.05); }
+      .dish-card-media .dish-img-placeholder {
+        width: 100%;
+        min-height: 132px;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: rgba(109,143,137,0.55);
+        font-size: 11px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+      }
+      @media (max-width: 520px) {
+        .dish-card-inner { flex-direction: column; }
+        .dish-card-media {
+          width: 100% !important;
+          min-height: min(52vw, 220px) !important;
+          max-height: 56vw;
+          border-right: none;
+          border-bottom: 1px solid rgba(61,191,176,0.1);
+        }
+        .dish-card-media .dish-img { min-height: min(52vw, 220px) !important; max-height: 56vw; }
+        .dish-card-media .dish-img-placeholder { min-height: min(52vw, 200px) !important; }
+      }
       .nav-btn:hover { letter-spacing: 2.5px !important; }
       .action-btn:hover { transform: translateY(-2px); }
       .action-btn { transition: transform 0.2s ease, box-shadow 0.2s ease; }
@@ -943,9 +986,22 @@ const cartStepBtn = {
   WebkitTapHighlightColor: "transparent",
 };
 
+function dishBlurbText(dish, lang) {
+  const d = dish?.description && typeof dish.description === "object" ? dish.description : {};
+  const order = lang === "ka" ? ["ka", "en", "ru"] : lang === "ru" ? ["ru", "en", "ka"] : ["en", "ka", "ru"];
+  for (const k of order) {
+    const s = String(d[k] ?? "").trim();
+    if (s) return s;
+  }
+  return "";
+}
+
 function DishRow({ dish, lang, t, expanded, onToggle, style, cartQty = 0, onAddToCart, onBumpCartQty }) {
-  const title = dish.name[lang] || dish.name.en || "—";
-  const blurb = dish.description[lang] || dish.description.en || "";
+  const nameObj = dish.name && typeof dish.name === "object" ? dish.name : {};
+  const title = String(nameObj[lang] || nameObj.en || nameObj.ka || "—").trim() || "—";
+  const blurb = dishBlurbText(dish, lang);
+  const badges = Array.isArray(dish.badges) ? dish.badges : [];
+  const ingredients = Array.isArray(dish.ingredients) ? dish.ingredients : [];
   return (
     <div className="dish-card" onClick={onToggle} style={{
       background: expanded ? "rgba(61,191,176,0.04)" : "transparent",
@@ -953,18 +1009,30 @@ function DishRow({ dish, lang, t, expanded, onToggle, style, cartQty = 0, onAddT
       cursor:"pointer", transition:"all 0.3s", overflow:"hidden",
       opacity: dish.available ? 1 : 0.45, ...style,
     }}>
-      <div style={{ display:"flex", gap:"0" }}>
-        {/* Image */}
-        <div style={{ width:"120px", flexShrink:0, overflow:"hidden", position:"relative" }}>
-          <img src={dish.image} alt={title} className="dish-img"
-            style={{ width:"120px", height:"100px", objectFit:"cover", display:"block", filter: dish.available ? "none" : "grayscale(1)" }} />
+      <div className="dish-card-inner">
+        {/* Image — larger desktop strip; full-width hero on narrow screens (see GlobalStyles) */}
+        <div className="dish-card-media">
+          {dish.image ? (
+            <img
+              src={dish.image}
+              alt={title}
+              className="dish-img"
+              loading="lazy"
+              decoding="async"
+              style={{
+                filter: dish.available ? "none" : "grayscale(1)",
+              }}
+            />
+          ) : (
+            <div className="dish-img-placeholder">IMG</div>
+          )}
           {!dish.available && (
-            <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", background:"rgba(7,6,8,0.75)" }}>
+            <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", background:"rgba(7,6,8,0.78)", pointerEvents:"none" }}>
               <span style={{ fontSize:"9px", letterSpacing:"2px", color:"var(--muted)", textTransform:"uppercase" }}>{t.soldOut}</span>
             </div>
           )}
           {dish.featured && (
-            <div style={{ position:"absolute", top:"6px", left:"6px", width:"6px", height:"6px", background:"var(--gold)", borderRadius:"50%", animation:"pulse 2s infinite" }} />
+            <div style={{ position:"absolute", top:"8px", left:"8px", width:"7px", height:"7px", background:"var(--gold)", borderRadius:"50%", animation:"pulse 2s infinite", boxShadow:"0 0 0 2px rgba(7,12,12,0.6)" }} />
           )}
         </div>
 
@@ -972,7 +1040,7 @@ function DishRow({ dish, lang, t, expanded, onToggle, style, cartQty = 0, onAddT
         <div style={{ flex:1, padding:"14px 16px", display:"flex", flexDirection:"column", justifyContent:"space-between", minWidth:0 }}>
           <div>
             <div style={{ display:"flex", gap:"5px", flexWrap:"wrap", marginBottom:"6px" }}>
-              {dish.badges.map(b => (
+              {badges.map(b => (
                 <span key={b} className="tag" style={{
                   background: BADGE_CFG[b]?.bg || "#333", color: BADGE_CFG[b]?.color || "#fff",
                   fontSize:"8px", fontWeight:"700", padding:"2px 8px",
@@ -985,27 +1053,30 @@ function DishRow({ dish, lang, t, expanded, onToggle, style, cartQty = 0, onAddT
             <div style={{ fontFamily:"var(--font-display)", fontSize:"18px", fontWeight:400, color:"var(--cream)", letterSpacing:"-0.3px", lineHeight:1.2 }}>
               {title}
             </div>
-            <div
-              style={{
-                marginTop: "4px",
-                fontSize: "10px",
-                color: "var(--muted)",
-                lineHeight: 1.5,
-                fontWeight: 300,
-                letterSpacing: "0.3px",
-                whiteSpace: expanded ? "pre-wrap" : "normal",
-                ...(expanded
-                  ? { overflow: "visible" }
-                  : {
-                      overflow: "hidden",
-                      display: "-webkit-box",
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: "vertical",
-                    }),
-              }}
-            >
-              {blurb}
-            </div>
+            {blurb ? (
+              <div
+                style={{
+                  marginTop: "4px",
+                  fontSize: "10px",
+                  color: "var(--muted)",
+                  lineHeight: 1.5,
+                  fontWeight: 300,
+                  letterSpacing: "0.3px",
+                  wordBreak: "break-word",
+                  overflowWrap: "anywhere",
+                  whiteSpace: expanded ? "pre-wrap" : "normal",
+                  ...(expanded
+                    ? { overflow: "visible", maxHeight: "none", display: "block" }
+                    : {
+                        overflow: "hidden",
+                        display: "block",
+                        maxHeight: "3.1em",
+                      }),
+                }}
+              >
+                {blurb}
+              </div>
+            ) : null}
           </div>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginTop:"8px", gap:"8px" }}>
             <div style={{ fontFamily:"var(--font-display)", fontSize:"22px", fontWeight:300, color:"var(--gold-light)", letterSpacing:"-0.5px" }}>
@@ -1062,7 +1133,7 @@ function DishRow({ dish, lang, t, expanded, onToggle, style, cartQty = 0, onAddT
             ✦ &nbsp;{t.ingredients}
           </div>
           <div style={{ display:"flex", flexWrap:"wrap", gap:"6px" }}>
-            {dish.ingredients.map(ing => (
+            {ingredients.map((ing) => (
               <span key={ing} style={{
                 padding:"4px 12px", border:"1px solid rgba(61,191,176,0.2)",
                 fontSize:"10px", color:"var(--gold-pale)", letterSpacing:"0.5px",
