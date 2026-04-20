@@ -30,22 +30,28 @@ const GlobalStyles = () => {
     style.textContent = `
       * { margin:0; padding:0; box-sizing:border-box; }
       :root {
-        --obsidian: #070608;
-        --void: #0c0a0d;
-        --charcoal: #141118;
-        --surface: #1a1620;
-        --surface2: #221e2a;
-        --gold: #c9a84c;
-        --gold-light: #e8c96a;
-        --gold-pale: #f5e4b0;
-        --amber: #d4824a;
-        --cream: #f0e6d3;
-        --muted: #7a6e8a;
-        --subtle: #3a3348;
+        /* Deep teal-tinted base (ფირუზისთან შეხამებული) */
+        --obsidian: #050a0a;
+        --void: #081012;
+        --charcoal: #0f1818;
+        --surface: #132220;
+        --surface2: #1a2c2a;
+        /* Primary accent = ფირუზა (turquoise) — იგივე სემანტიკური სახელები რაც var(--gold) */
+        --gold: #3dbfb0;
+        --gold-light: #6ee7d8;
+        --gold-pale: #d4f7f2;
+        /* Warm accent = აგური (terracotta / brick) */
+        --amber: #c45844;
+        --brick: #c45844;
+        --brick-light: #e07a62;
+        --brick-pale: #ffd6cc;
+        --cream: #eef6f4;
+        --muted: #6d8f89;
+        --subtle: #2a4542;
         --font-display: 'Cormorant Garamond', Georgia, serif;
         --font-body: 'Montserrat', system-ui, sans-serif;
       }
-      html { scroll-behavior: smooth; }
+      html { scroll-behavior: auto; }
       body { background: var(--obsidian); }
       ::-webkit-scrollbar { width: 4px; }
       ::-webkit-scrollbar-track { background: var(--void); }
@@ -62,8 +68,8 @@ const GlobalStyles = () => {
         100% { background-position: 400px 0; }
       }
       @keyframes glow {
-        0%,100% { box-shadow: 0 0 20px rgba(201,168,76,0.15); }
-        50%      { box-shadow: 0 0 40px rgba(201,168,76,0.3); }
+        0%,100% { box-shadow: 0 0 20px rgba(61,191,176,0.2); }
+        50%      { box-shadow: 0 0 40px rgba(61,191,176,0.38); }
       }
       @keyframes pulse {
         0%,100% { opacity:1; } 50% { opacity:0.4; }
@@ -88,7 +94,7 @@ const GlobalStyles = () => {
       .nav-btn:hover { letter-spacing: 2.5px !important; }
       .action-btn:hover { transform: translateY(-2px); }
       .action-btn { transition: transform 0.2s ease, box-shadow 0.2s ease; }
-      .admin-nav-item:hover { background: rgba(201,168,76,0.08) !important; }
+      .admin-nav-item:hover { background: rgba(61,191,176,0.1) !important; }
       .gold-line::after {
         content: ''; display: block; width: 40px; height: 1px;
         background: linear-gradient(90deg, var(--gold), transparent);
@@ -185,12 +191,12 @@ function loadNotificationsFromStorage() {
 }
 
 const BADGE_CFG = {
-  "Signature":    { bg:"linear-gradient(135deg,#c9a84c,#8a6820)", color:"#fff2cc" },
-  "Popular":      { bg:"linear-gradient(135deg,#9b4e2a,#d4824a)", color:"#ffe8d6" },
-  "Chef's Table": { bg:"linear-gradient(135deg,#2d1b69,#6b46c1)", color:"#e9d5ff" },
-  "New":          { bg:"linear-gradient(135deg,#064e3b,#10b981)", color:"#d1fae5" },
-  "Seasonal":     { bg:"linear-gradient(135deg,#1e3a5f,#3b82f6)", color:"#dbeafe" },
-  "Rare":         { bg:"linear-gradient(135deg,#4a1942,#a855f7)", color:"#f3e8ff" },
+  "Signature":    { bg:"linear-gradient(135deg,#3dbfb0,#1a6b62)", color:"#ecfffb" },
+  "Popular":      { bg:"linear-gradient(135deg,#a84830,#e07a62)", color:"#fff0eb" },
+  "Chef's Table": { bg:"linear-gradient(135deg,#1a5c56,#2d8a7e)", color:"#d4f7f2" },
+  "New":          { bg:"linear-gradient(135deg,#0d4a42,#3dbfb0)", color:"#d1fae5" },
+  "Seasonal":     { bg:"linear-gradient(135deg,#1e4a45,#2fb89a)", color:"#dbeafe" },
+  "Rare":         { bg:"linear-gradient(135deg,#5c2a22,#c45844)", color:"#ffe8e3" },
 };
 
 const T = {
@@ -348,7 +354,6 @@ function CustomerMenu({ tableId, store, lang, setLang }) {
   const [search, setSearch] = useState("");
   const [toast, setToast] = useState(null);
   const [expanded, setExpanded] = useState(null);
-  const [heroVisible, setHeroVisible] = useState(true);
   const [cart, setCart] = useState({});
   const [cartOpen, setCartOpen] = useState(false);
   const catRefs = useRef({});
@@ -394,12 +399,6 @@ function CustomerMenu({ tableId, store, lang, setLang }) {
   const callWaiter = () => { addNotification({ type:"waiter", tableId, tableName:table.name, message:"Waiter Request" }); showToast(t.waiterCalled); };
   const requestBill = () => { addNotification({ type:"bill", tableId, tableName:table.name, message:"Bill Request" }); showToast(t.billRequested); };
 
-  useEffect(() => {
-    const onScroll = () => setHeroVisible(window.scrollY < 80);
-    window.addEventListener("scroll", onScroll);
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
   const sortedCategories = useMemo(() => [...categories].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)), [categories]);
 
   const filtered = dishes.filter(d => {
@@ -413,7 +412,11 @@ function CustomerMenu({ tableId, store, lang, setLang }) {
 
   const scrollTo = id => {
     setActiveCat(id);
-    catRefs.current[id]?.scrollIntoView({ behavior:"smooth", block:"start" });
+    const el = catRefs.current[id];
+    if (!el) return;
+    const pad = (headerRef.current?.offsetHeight ?? 0) + 12;
+    el.style.scrollMarginTop = `${pad}px`;
+    el.scrollIntoView({ behavior: "auto", block: "start" });
   };
 
   return (
@@ -421,10 +424,11 @@ function CustomerMenu({ tableId, store, lang, setLang }) {
       <GlobalStyles /><FontLoader />
       <div className="noise" />
 
-      {/* HERO HEADER */}
-      <div style={{ position:"relative", height: heroVisible ? "200px" : "0", overflow:"hidden", transition:"height 0.6s cubic-bezier(0.4,0,0.2,1)" }}>
+      {/* HERO HEADER — fixed height (no JS collapse) for stable scroll */}
+      <div style={{ position: "relative", height: "200px", overflow: "hidden", overflowAnchor: "none" }}>
         <div style={{ position:"absolute", inset:0, background:"linear-gradient(180deg, rgba(7,6,8,0) 0%, var(--obsidian) 100%)", zIndex:2 }} />
-        <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse at 50% 0%, rgba(201,168,76,0.12) 0%, transparent 70%)", zIndex:1 }} />
+        <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse at 82% 15%, rgba(196,88,68,0.14) 0%, transparent 55%)", zIndex:1 }} />
+        <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse at 50% 0%, rgba(61,191,176,0.14) 0%, transparent 70%)", zIndex:1 }} />
         <div style={{ position:"relative", zIndex:3, height:"100%", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", paddingTop:"20px", animation:"fadeIn 1s ease" }}>
           <div style={{ fontSize:"10px", letterSpacing:"6px", color:"var(--gold)", textTransform:"uppercase", marginBottom:"10px", fontFamily:"var(--font-body)", fontWeight:500 }}>
             GEORGIAN FINE DINING
@@ -441,41 +445,52 @@ function CustomerMenu({ tableId, store, lang, setLang }) {
       </div>
 
       {/* STICKY NAV */}
-      <div ref={headerRef} style={{ position:"sticky", top:0, zIndex:100, background:"rgba(7,6,8,0.92)", backdropFilter:"blur(20px)", borderBottom:"1px solid rgba(201,168,76,0.12)" }}>
-        {!heroVisible && (
-          <div style={{ padding:"10px 20px 0", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-            <div style={{ fontFamily:"var(--font-display)", fontSize:"22px", fontStyle:"italic", color:"var(--cream)", letterSpacing:"-0.5px" }}>Tiflisi</div>
-            <div style={{ fontSize:"10px", color:"var(--muted)", letterSpacing:"2px" }}>{table.name}</div>
+      <div ref={headerRef} style={{ position: "sticky", top: 0, zIndex: 100, overflowAnchor: "none", background: "rgba(7,6,8,0.92)", backdropFilter: "blur(20px)", borderBottom: "1px solid rgba(61,191,176,0.12)" }}>
+        <div style={{ padding:"10px 16px 0" }}>
+          {/* Lang — ზედა ხაზი, დიდი სატაპე (მობილური) */}
+          <div style={{ display:"flex", justifyContent:"flex-end", alignItems:"center", gap:"8px", marginBottom:"10px", paddingTop:"2px" }}>
+            {["en","ka","ru"].map((l) => (
+              <button
+                key={l}
+                type="button"
+                onClick={() => setLang(l)}
+                className="nav-btn"
+                style={{
+                  minWidth: "48px",
+                  minHeight: "44px",
+                  padding: "0 10px",
+                  borderRadius: "4px",
+                  border: `1px solid ${lang === l ? "var(--gold)" : "rgba(61,191,176,0.2)"}`,
+                  background: lang === l ? "var(--gold)" : "transparent",
+                  color: lang === l ? "var(--obsidian)" : "var(--muted)",
+                  fontSize: "11px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  letterSpacing: "0.5px",
+                  textTransform: "uppercase",
+                  fontFamily: "var(--font-body)",
+                  transition: "all 0.2s",
+                  WebkitTapHighlightColor: "transparent",
+                }}
+              >
+                {l}
+              </button>
+            ))}
           </div>
-        )}
 
-        <div style={{ padding:"12px 20px 0" }}>
           {/* Search */}
           <div style={{ position:"relative", marginBottom:"12px" }}>
-            <div style={{ position:"absolute", left:"14px", top:"50%", transform:"translateY(-50%)", color:"var(--muted)", fontSize:"13px" }}>✦</div>
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t.search}
-              style={{ width:"100%", padding:"11px 14px 11px 34px", background:"rgba(255,255,255,0.04)", border:"1px solid rgba(201,168,76,0.15)", borderRadius:"2px", color:"var(--cream)", fontSize:"12px", fontFamily:"var(--font-body)", letterSpacing:"0.5px", outline:"none", boxSizing:"border-box" }} />
+            <div style={{ position:"absolute", left:"16px", top:"50%", transform:"translateY(-50%)", color:"var(--muted)", fontSize:"14px" }}>✦</div>
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t.search}
+              style={{ width:"100%", minHeight:"46px", padding:"12px 14px 12px 40px", background:"rgba(255,255,255,0.04)", border:"1px solid rgba(61,191,176,0.15)", borderRadius:"4px", color:"var(--cream)", fontSize:"14px", fontFamily:"var(--font-body)", letterSpacing:"0.5px", outline:"none", boxSizing:"border-box" }} />
           </div>
 
-          {/* Lang + Categories */}
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"0" }}>
-            <div style={{ display:"flex", gap:"6px", overflowX:"auto", scrollbarWidth:"none", paddingBottom:"12px" }}>
-              <CatBtn active={!activeCat} onClick={() => setActiveCat(null)} label={t.all} />
-              {sortedCategories.map(c => <CatBtn key={c.id} active={activeCat===c.id} onClick={() => scrollTo(c.id)} label={c.name[lang]} icon={c.icon} />)}
-            </div>
-            <div style={{ display:"flex", gap:"4px", flexShrink:0, paddingBottom:"12px", marginLeft:"12px" }}>
-              {["en","ka","ru"].map(l => (
-                <button key={l} onClick={() => setLang(l)} className="nav-btn" style={{
-                  width:"32px", height:"28px", borderRadius:"2px", border:`1px solid ${lang===l?"var(--gold)":"rgba(201,168,76,0.15)"}`,
-                  background: lang===l ? "var(--gold)" : "transparent",
-                  color: lang===l ? "var(--obsidian)" : "var(--muted)",
-                  fontSize:"9px", fontWeight:"700", cursor:"pointer", letterSpacing:"1px", textTransform:"uppercase",
-                  fontFamily:"var(--font-body)", transition:"all 0.2s",
-                }}>
-                  {l}
-                </button>
-              ))}
-            </div>
+          {/* Categories — სრული სიგანე */}
+          <div style={{ display:"flex", gap:"8px", overflowX:"auto", scrollbarWidth:"none", paddingBottom:"14px", WebkitOverflowScrolling:"touch" }}>
+            <CatBtn active={!activeCat} onClick={() => setActiveCat(null)} label={t.all} />
+            {sortedCategories.map((c) => (
+              <CatBtn key={c.id} active={activeCat === c.id} onClick={() => scrollTo(c.id)} label={c.name[lang]} icon={c.icon} />
+            ))}
           </div>
         </div>
       </div>
@@ -507,7 +522,7 @@ function CustomerMenu({ tableId, store, lang, setLang }) {
               <h2 style={{ fontFamily:"var(--font-display)", fontSize:"28px", fontWeight:300, color:"var(--cream)", letterSpacing:"-0.5px", fontStyle:"italic", margin:0 }}>
                 {cat.name[lang]}
               </h2>
-              <div style={{ flex:1, height:"1px", background:"linear-gradient(90deg, rgba(201,168,76,0.3), transparent)" }} />
+              <div style={{ flex:1, height:"1px", background:"linear-gradient(90deg, rgba(61,191,176,0.3), transparent)" }} />
             </div>
             <div style={{ display:"flex", flexDirection:"column", gap:"2px" }}>
               {cat.dishes.map((dish, di) => (
@@ -550,7 +565,7 @@ function CustomerMenu({ tableId, store, lang, setLang }) {
             aria-labelledby="cart-sheet-title"
             style={{
               position:"fixed", left:0, right:0, bottom:0, zIndex:10130, maxHeight:"72vh",
-              background:"var(--charcoal)", borderTop:"1px solid rgba(201,168,76,0.35)",
+              background:"var(--charcoal)", borderTop:"1px solid rgba(61,191,176,0.35)",
               borderRadius:"12px 12px 0 0", boxShadow:"0 -24px 80px rgba(0,0,0,0.65)",
               display:"flex", flexDirection:"column", animation:"slideIn 0.28s ease",
             }}
@@ -558,7 +573,7 @@ function CustomerMenu({ tableId, store, lang, setLang }) {
             <div style={{ padding:"14px 18px 10px", borderBottom:"1px solid rgba(255,255,255,0.06)", display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0 }}>
               <div id="cart-sheet-title" style={{ fontFamily:"var(--font-display)", fontSize:"22px", fontStyle:"italic", color:"var(--cream)" }}>{t.cart}</div>
               <button type="button" onClick={() => setCartOpen(false)} className="action-btn" style={{
-                padding:"6px 12px", border:"1px solid rgba(201,168,76,0.25)", background:"transparent",
+                padding:"6px 12px", border:"1px solid rgba(61,191,176,0.25)", background:"transparent",
                 color:"var(--muted)", fontSize:"9px", letterSpacing:"2px", textTransform:"uppercase", cursor:"pointer", fontFamily:"var(--font-body)", borderRadius:"2px",
               }}>{t.cancel}</button>
             </div>
@@ -578,13 +593,13 @@ function CustomerMenu({ tableId, store, lang, setLang }) {
                     </div>
                     <div onClick={(e) => e.stopPropagation()} style={{ display:"flex", alignItems:"center", gap:"6px", flexShrink:0 }}>
                       <button type="button" onClick={() => bumpCartQty(dish.id, -1)} style={{
-                        width:"30px", height:"30px", borderRadius:"2px", border:"1px solid rgba(201,168,76,0.25)",
+                        width:"30px", height:"30px", borderRadius:"2px", border:"1px solid rgba(61,191,176,0.25)",
                         background:"rgba(255,255,255,0.04)", color:"var(--cream)", fontSize:"16px", cursor:"pointer", lineHeight:1, padding:0,
                       }}>−</button>
                       <span style={{ minWidth:"22px", textAlign:"center", fontSize:"12px", color:"var(--gold-pale)", fontWeight:600 }}>{qty}</span>
                       <button type="button" onClick={() => dish.available && bumpCartQty(dish.id, 1)} disabled={!dish.available} style={{
-                        width:"30px", height:"30px", borderRadius:"2px", border:"1px solid rgba(201,168,76,0.35)",
-                        background:"rgba(201,168,76,0.12)", color:"var(--gold)", fontSize:"16px", cursor: dish.available ? "pointer" : "not-allowed", opacity: dish.available ? 1 : 0.35, lineHeight:1, padding:0,
+                        width:"30px", height:"30px", borderRadius:"2px", border:"1px solid rgba(61,191,176,0.35)",
+                        background:"rgba(61,191,176,0.12)", color:"var(--gold)", fontSize:"16px", cursor: dish.available ? "pointer" : "not-allowed", opacity: dish.available ? 1 : 0.35, lineHeight:1, padding:0,
                       }}>+</button>
                     </div>
                     <div style={{ fontFamily:"var(--font-display)", fontSize:"17px", color:"var(--gold-light)", flexShrink:0, minWidth:"56px", textAlign:"right" }}>₾{lineTotal}</div>
@@ -593,7 +608,7 @@ function CustomerMenu({ tableId, store, lang, setLang }) {
               )}
             </div>
             {cartLines.length > 0 && (
-              <div style={{ padding:"16px 18px 22px", borderTop:"1px solid rgba(201,168,76,0.12)", flexShrink:0, background:"rgba(7,6,8,0.5)" }}>
+              <div style={{ padding:"16px 18px 22px", borderTop:"1px solid rgba(61,191,176,0.12)", flexShrink:0, background:"rgba(7,6,8,0.5)" }}>
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:"10px" }}>
                   <span style={{ fontSize:"10px", letterSpacing:"3px", textTransform:"uppercase", color:"var(--gold)" }}>{t.cartTotal}</span>
                   <span style={{ fontFamily:"var(--font-display)", fontSize:"32px", fontWeight:300, color:"var(--gold-light)" }}>₾{cartGrandTotal}</span>
@@ -614,10 +629,21 @@ function CustomerMenu({ tableId, store, lang, setLang }) {
               onClick={() => setCartOpen(true)}
               className="action-btn"
               style={{
-                width:"100%", marginBottom:"10px", padding:"12px 16px", border:"1px solid rgba(201,168,76,0.35)",
-                background:"linear-gradient(135deg, rgba(201,168,76,0.2), rgba(201,168,76,0.06))",
-                color:"var(--gold-pale)", cursor:"pointer", borderRadius:"2px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:"12px",
-                fontFamily:"var(--font-body)",
+                width: "100%",
+                minHeight: "48px",
+                marginBottom: "10px",
+                padding: "14px 16px",
+                border: "1px solid rgba(61,191,176,0.35)",
+                background: "linear-gradient(135deg, rgba(61,191,176,0.2), rgba(61,191,176,0.06))",
+                color: "var(--gold-pale)",
+                cursor: "pointer",
+                borderRadius: "4px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "12px",
+                fontFamily: "var(--font-body)",
+                WebkitTapHighlightColor: "transparent",
               }}
             >
               <span style={{ fontSize:"10px", letterSpacing:"2px", textTransform:"uppercase", color:"var(--gold)" }}>{t.cart}</span>
@@ -626,22 +652,38 @@ function CustomerMenu({ tableId, store, lang, setLang }) {
               <span style={{ fontSize:"10px", color:"var(--subtle)" }}>▴</span>
             </button>
           )}
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"10px" }}>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"12px" }}>
             <button type="button" onClick={callWaiter} className="action-btn" style={{
-              padding:"15px", border:"1px solid var(--gold)",
-              background:"linear-gradient(135deg, rgba(201,168,76,0.15), rgba(201,168,76,0.05))",
-              color:"var(--gold-pale)", fontSize:"11px", fontWeight:"600",
-              cursor:"pointer", letterSpacing:"2px", textTransform:"uppercase",
-              fontFamily:"var(--font-body)", borderRadius:"2px",
+              minHeight: "52px",
+              padding: "14px 12px",
+              border: "1px solid var(--gold)",
+              background: "linear-gradient(135deg, rgba(61,191,176,0.15), rgba(61,191,176,0.05))",
+              color: "var(--gold-pale)",
+              fontSize: "12px",
+              fontWeight: 600,
+              cursor: "pointer",
+              letterSpacing: "1.5px",
+              textTransform: "uppercase",
+              fontFamily: "var(--font-body)",
+              borderRadius: "4px",
+              WebkitTapHighlightColor: "transparent",
             }}>
               ✦ &nbsp;{t.callWaiter}
             </button>
             <button type="button" onClick={requestBill} className="action-btn" style={{
-              padding:"15px", border:"1px solid rgba(201,168,76,0.25)",
-              background:"rgba(255,255,255,0.03)",
-              color:"var(--muted)", fontSize:"11px", fontWeight:"600",
-              cursor:"pointer", letterSpacing:"2px", textTransform:"uppercase",
-              fontFamily:"var(--font-body)", borderRadius:"2px",
+              minHeight: "52px",
+              padding: "14px 12px",
+              border: "1px solid rgba(196,88,68,0.42)",
+              background: "linear-gradient(135deg, rgba(196,88,68,0.14), rgba(196,88,68,0.04))",
+              color: "var(--brick-pale)",
+              fontSize: "12px",
+              fontWeight: 600,
+              cursor: "pointer",
+              letterSpacing: "1.5px",
+              textTransform: "uppercase",
+              fontFamily: "var(--font-body)",
+              borderRadius: "4px",
+              WebkitTapHighlightColor: "transparent",
             }}>
               ◇ &nbsp;{t.requestBill}
             </button>
@@ -654,7 +696,7 @@ function CustomerMenu({ tableId, store, lang, setLang }) {
         <div style={{
           position:"fixed", top:"100px", left:"50%",
           transform:"translateX(-50%)", zIndex:10140,
-          background:"var(--charcoal)", border:"1px solid rgba(201,168,76,0.4)",
+          background:"var(--charcoal)", border:"1px solid rgba(61,191,176,0.4)",
           color:"var(--gold-pale)", padding:"14px 28px",
           fontFamily:"var(--font-body)", fontSize:"12px", letterSpacing:"1.5px",
           boxShadow:"0 20px 60px rgba(0,0,0,0.8)", whiteSpace:"nowrap",
@@ -669,27 +711,40 @@ function CustomerMenu({ tableId, store, lang, setLang }) {
 
 function CatBtn({ active, onClick, label, icon }) {
   return (
-    <button onClick={onClick} className="nav-btn" style={{
-      flexShrink:0, padding:"6px 14px", border:`1px solid ${active?"var(--gold)":"rgba(201,168,76,0.12)"}`,
-      background: active ? "rgba(201,168,76,0.12)" : "transparent",
+    <button type="button" onClick={onClick} className="nav-btn" style={{
+      flexShrink: 0,
+      minHeight: "44px",
+      padding: "10px 16px",
+      border: `1px solid ${active ? "var(--gold)" : "rgba(61,191,176,0.15)"}`,
+      background: active ? "rgba(61,191,176,0.14)" : "transparent",
       color: active ? "var(--gold)" : "var(--muted)",
-      fontSize:"9px", fontWeight:"600", cursor:"pointer",
-      letterSpacing:"2px", textTransform:"uppercase", whiteSpace:"nowrap",
-      fontFamily:"var(--font-body)", transition:"all 0.3s", borderRadius:"2px",
+      fontSize: "11px",
+      fontWeight: 600,
+      cursor: "pointer",
+      letterSpacing: "1px",
+      textTransform: "uppercase",
+      whiteSpace: "nowrap",
+      fontFamily: "var(--font-body)",
+      transition: "all 0.3s",
+      borderRadius: "4px",
+      WebkitTapHighlightColor: "transparent",
     }}>
-      {icon && <span style={{ marginRight:"5px", opacity:0.7 }}>{icon}</span>}{label}
+      {icon && <span style={{ marginRight: "6px", opacity: 0.75 }}>{icon}</span>}
+      {label}
     </button>
   );
 }
 
 const cartStepBtn = {
-  width: "28px",
-  height: "28px",
-  borderRadius: "2px",
-  border: "1px solid rgba(201,168,76,0.28)",
+  width: "40px",
+  height: "40px",
+  minWidth: "40px",
+  minHeight: "40px",
+  borderRadius: "4px",
+  border: "1px solid rgba(61,191,176,0.28)",
   background: "rgba(255,255,255,0.04)",
   color: "var(--cream)",
-  fontSize: "15px",
+  fontSize: "18px",
   lineHeight: 1,
   padding: 0,
   cursor: "pointer",
@@ -697,6 +752,7 @@ const cartStepBtn = {
   alignItems: "center",
   justifyContent: "center",
   flexShrink: 0,
+  WebkitTapHighlightColor: "transparent",
 };
 
 function DishRow({ dish, lang, t, expanded, onToggle, style, cartQty = 0, onAddToCart, onBumpCartQty }) {
@@ -704,8 +760,8 @@ function DishRow({ dish, lang, t, expanded, onToggle, style, cartQty = 0, onAddT
   const blurb = dish.description[lang] || dish.description.en || "";
   return (
     <div className="dish-card" onClick={onToggle} style={{
-      background: expanded ? "rgba(201,168,76,0.04)" : "transparent",
-      border:`1px solid ${expanded ? "rgba(201,168,76,0.2)" : "rgba(255,255,255,0.05)"}`,
+      background: expanded ? "rgba(61,191,176,0.04)" : "transparent",
+      border:`1px solid ${expanded ? "rgba(61,191,176,0.2)" : "rgba(255,255,255,0.05)"}`,
       cursor:"pointer", transition:"all 0.3s", overflow:"hidden",
       opacity: dish.available ? 1 : 0.45, ...style,
     }}>
@@ -760,7 +816,7 @@ function DishRow({ dish, lang, t, expanded, onToggle, style, cartQty = 0, onAddT
                   <>
                     <button type="button" aria-label={t.cartQty + " −"} onClick={() => onBumpCartQty(dish.id, -1)} style={cartStepBtn}>−</button>
                     <span style={{ minWidth:"18px", textAlign:"center", fontSize:"11px", fontWeight:600, color:"var(--gold-pale)" }}>{cartQty}</span>
-                    <button type="button" aria-label={t.cartQty + " +"} disabled={!dish.available} onClick={() => dish.available && onBumpCartQty(dish.id, 1)} style={{ ...cartStepBtn, opacity: dish.available ? 1 : 0.35, cursor: dish.available ? "pointer" : "not-allowed", borderColor: "rgba(201,168,76,0.4)", background: "rgba(201,168,76,0.1)", color: "var(--gold)" }}>+</button>
+                    <button type="button" aria-label={t.cartQty + " +"} disabled={!dish.available} onClick={() => dish.available && onBumpCartQty(dish.id, 1)} style={{ ...cartStepBtn, opacity: dish.available ? 1 : 0.35, cursor: dish.available ? "pointer" : "not-allowed", borderColor: "rgba(61,191,176,0.4)", background: "rgba(61,191,176,0.1)", color: "var(--gold)" }}>+</button>
                   </>
                 )}
                 {cartQty === 0 && (
@@ -769,17 +825,19 @@ function DishRow({ dish, lang, t, expanded, onToggle, style, cartQty = 0, onAddT
                     disabled={!dish.available}
                     onClick={() => dish.available && onAddToCart(dish)}
                     style={{
-                      padding: "5px 10px",
-                      borderRadius: "2px",
-                      border: `1px solid ${dish.available ? "var(--gold)" : "rgba(201,168,76,0.15)"}`,
-                      background: dish.available ? "rgba(201,168,76,0.12)" : "transparent",
+                      minHeight: "44px",
+                      padding: "10px 14px",
+                      borderRadius: "4px",
+                      border: `1px solid ${dish.available ? "var(--gold)" : "rgba(61,191,176,0.15)"}`,
+                      background: dish.available ? "rgba(61,191,176,0.14)" : "transparent",
                       color: dish.available ? "var(--gold-pale)" : "var(--subtle)",
-                      fontSize: "8px",
+                      fontSize: "10px",
                       fontWeight: 700,
-                      letterSpacing: "1.5px",
+                      letterSpacing: "1px",
                       textTransform: "uppercase",
                       cursor: dish.available ? "pointer" : "not-allowed",
                       fontFamily: "var(--font-body)",
+                      WebkitTapHighlightColor: "transparent",
                     }}
                   >
                     {t.addToCart}
@@ -794,14 +852,14 @@ function DishRow({ dish, lang, t, expanded, onToggle, style, cartQty = 0, onAddT
 
       {/* Expanded */}
       {expanded && (
-        <div onClick={(e) => e.stopPropagation()} style={{ padding:"14px 16px", borderTop:"1px solid rgba(201,168,76,0.1)", background:"rgba(201,168,76,0.02)", animation:"fadeIn 0.3s ease" }}>
+        <div onClick={(e) => e.stopPropagation()} style={{ padding:"14px 16px", borderTop:"1px solid rgba(61,191,176,0.1)", background:"rgba(61,191,176,0.02)", animation:"fadeIn 0.3s ease" }}>
           <div style={{ fontSize:"8px", color:"var(--gold)", letterSpacing:"3px", textTransform:"uppercase", marginBottom:"10px", fontFamily:"var(--font-body)", fontWeight:600 }}>
             ✦ &nbsp;{t.ingredients}
           </div>
           <div style={{ display:"flex", flexWrap:"wrap", gap:"6px" }}>
             {dish.ingredients.map(ing => (
               <span key={ing} style={{
-                padding:"4px 12px", border:"1px solid rgba(201,168,76,0.2)",
+                padding:"4px 12px", border:"1px solid rgba(61,191,176,0.2)",
                 fontSize:"10px", color:"var(--gold-pale)", letterSpacing:"0.5px",
                 fontFamily:"var(--font-body)", fontWeight:300,
               }}>
@@ -826,7 +884,7 @@ function AdminLogin({ onLogin }) {
     <div style={{ minHeight:"100vh", background:"var(--obsidian)", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"var(--font-body)", position:"relative" }}>
       <GlobalStyles /><FontLoader />
       <div className="noise" />
-      <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse at 50% 30%, rgba(201,168,76,0.06) 0%, transparent 60%)" }} />
+      <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse at 20% 70%, rgba(196,88,68,0.07) 0%, transparent 50%), radial-gradient(ellipse at 50% 30%, rgba(61,191,176,0.08) 0%, transparent 60%)" }} />
 
       <div style={{ width:"380px", position:"relative", zIndex:1 }}>
         <div style={{ textAlign:"center", marginBottom:"48px" }}>
@@ -839,18 +897,18 @@ function AdminLogin({ onLogin }) {
           </div>
         </div>
 
-        <div style={{ background:"rgba(26,22,32,0.8)", border:"1px solid rgba(201,168,76,0.15)", padding:"40px", backdropFilter:"blur(20px)" }}>
+        <div style={{ background:"rgba(26,22,32,0.8)", border:"1px solid rgba(61,191,176,0.15)", padding:"40px", backdropFilter:"blur(20px)" }}>
           {[{label:"Username",val:u,set:setU,type:"text"},{label:"Password",val:p,set:setP,type:"password"}].map(f => (
             <div key={f.label} style={{ marginBottom:"20px" }}>
               <div style={{ fontSize:"8px", color:"var(--gold)", letterSpacing:"3px", textTransform:"uppercase", marginBottom:"8px" }}>{f.label}</div>
               <input value={f.val} onChange={e=>{f.set(e.target.value);setErr(false);}} type={f.type}
                 onKeyDown={e=>e.key==="Enter"&&submit()}
-                style={{ width:"100%", padding:"12px 0", background:"transparent", border:"none", borderBottom:`1px solid ${err?"#ef4444":"rgba(201,168,76,0.25)"}`, color:"var(--cream)", fontSize:"14px", fontFamily:"var(--font-display)", outline:"none", letterSpacing:"1px", boxSizing:"border-box" }} />
+                style={{ width:"100%", padding:"12px 0", background:"transparent", border:"none", borderBottom:`1px solid ${err?"#ef4444":"rgba(61,191,176,0.25)"}`, color:"var(--cream)", fontSize:"14px", fontFamily:"var(--font-display)", outline:"none", letterSpacing:"1px", boxSizing:"border-box" }} />
             </div>
           ))}
           {err && <div style={{ color:"#ef4444", fontSize:"10px", letterSpacing:"1px", marginBottom:"16px" }}>INVALID CREDENTIALS</div>}
           <div style={{ fontSize:"9px", color:"var(--muted)", marginBottom:"20px", letterSpacing:"1px" }}>admin / tiflisi2024</div>
-          <button onClick={submit} style={{ width:"100%", padding:"14px", background:"linear-gradient(135deg, rgba(201,168,76,0.2), rgba(201,168,76,0.08))", border:"1px solid var(--gold)", color:"var(--gold-pale)", fontSize:"10px", fontWeight:"600", letterSpacing:"4px", textTransform:"uppercase", cursor:"pointer", fontFamily:"var(--font-body)", transition:"all 0.3s" }}>
+          <button onClick={submit} style={{ width:"100%", padding:"14px", background:"linear-gradient(135deg, rgba(61,191,176,0.2), rgba(61,191,176,0.08))", border:"1px solid var(--gold)", color:"var(--gold-pale)", fontSize:"10px", fontWeight:"600", letterSpacing:"4px", textTransform:"uppercase", cursor:"pointer", fontFamily:"var(--font-body)", transition:"all 0.3s" }}>
             ENTER
           </button>
         </div>
@@ -878,7 +936,7 @@ function AdminCloudMenu({ store }) {
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
 
-  const inputStyle = { width:"100%", padding:"12px 14px", background:"rgba(255,255,255,0.04)", border:"1px solid rgba(201,168,76,0.2)", color:"var(--cream)", fontSize:"13px", fontFamily:"var(--font-body)", borderRadius:"2px", boxSizing:"border-box" };
+  const inputStyle = { width:"100%", padding:"12px 14px", background:"rgba(255,255,255,0.04)", border:"1px solid rgba(61,191,176,0.2)", color:"var(--cream)", fontSize:"13px", fontFamily:"var(--font-body)", borderRadius:"2px", boxSizing:"border-box" };
   const labelStyle = { fontSize:"8px", color:"var(--gold)", letterSpacing:"3px", textTransform:"uppercase", marginBottom:"8px", display:"block" };
 
   const onSubmit = async (e) => {
@@ -939,7 +997,7 @@ function AdminCloudMenu({ store }) {
           <label style={labelStyle}>Category</label>
           <select value={categoryId} onChange={(e) => setCategoryId(Number(e.target.value))} style={{ ...inputStyle, cursor:"pointer" }}>
             {sortedCats.map((c) => (
-              <option key={c.id} value={c.id} style={{ background:"#1a1620" }}>{c.name.en || c.name.ka || `Category ${c.id}`}</option>
+              <option key={c.id} value={c.id} style={{ background:"#132220" }}>{c.name.en || c.name.ka || `Category ${c.id}`}</option>
             ))}
           </select>
         </div>
@@ -959,7 +1017,7 @@ function AdminCloudMenu({ store }) {
           <label style={labelStyle}>Image file</label>
           <input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] || null)} style={{ fontSize:"12px", color:"var(--muted)" }} />
         </div>
-        <button type="submit" disabled={busy} style={{ padding:"14px", background: busy ? "rgba(255,255,255,0.06)" : "linear-gradient(135deg,rgba(201,168,76,0.2),rgba(201,168,76,0.08))", border:"1px solid var(--gold)", color:"var(--gold-pale)", fontSize:"10px", letterSpacing:"3px", textTransform:"uppercase", cursor: busy ? "wait" : "pointer", fontFamily:"var(--font-body)" }}>
+        <button type="submit" disabled={busy} style={{ padding:"14px", background: busy ? "rgba(255,255,255,0.06)" : "linear-gradient(135deg,rgba(61,191,176,0.2),rgba(61,191,176,0.08))", border:"1px solid var(--gold)", color:"var(--gold-pale)", fontSize:"10px", letterSpacing:"3px", textTransform:"uppercase", cursor: busy ? "wait" : "pointer", fontFamily:"var(--font-body)" }}>
           {busy ? "Uploading…" : "Save to Supabase"}
         </button>
       </form>
@@ -989,8 +1047,8 @@ function AdminPanel({ store, onLogout }) {
       <div className="noise" />
 
       {/* SIDEBAR */}
-      <div style={{ width:"210px", background:"var(--charcoal)", borderRight:"1px solid rgba(201,168,76,0.1)", display:"flex", flexDirection:"column", flexShrink:0, position:"relative", zIndex:10 }}>
-        <div style={{ padding:"28px 20px 24px", borderBottom:"1px solid rgba(201,168,76,0.1)" }}>
+      <div style={{ width:"210px", background:"var(--charcoal)", borderRight:"1px solid rgba(61,191,176,0.1)", display:"flex", flexDirection:"column", flexShrink:0, position:"relative", zIndex:10 }}>
+        <div style={{ padding:"28px 20px 24px", borderBottom:"1px solid rgba(61,191,176,0.1)" }}>
           <div style={{ fontFamily:"var(--font-display)", fontSize:"26px", fontStyle:"italic", fontWeight:300, color:"var(--cream)" }}>Tiflisi</div>
           <div style={{ fontSize:"8px", color:"var(--muted)", letterSpacing:"3px", textTransform:"uppercase", marginTop:"4px" }}>Admin Console</div>
         </div>
@@ -1000,7 +1058,7 @@ function AdminPanel({ store, onLogout }) {
             <button key={item.id} onClick={() => setSection(item.id)} className="admin-nav-item" style={{
               width:"100%", display:"flex", alignItems:"center", gap:"10px",
               padding:"11px 12px", border:"none",
-              background: section===item.id ? "rgba(201,168,76,0.1)" : "transparent",
+              background: section===item.id ? "rgba(61,191,176,0.1)" : "transparent",
               color: section===item.id ? "var(--gold)" : "var(--muted)",
               fontSize:"10px", fontWeight:section===item.id?"600":"400",
               cursor:"pointer", marginBottom:"2px", textAlign:"left",
@@ -1016,7 +1074,7 @@ function AdminPanel({ store, onLogout }) {
           ))}
         </nav>
 
-        <div style={{ padding:"16px 12px", borderTop:"1px solid rgba(201,168,76,0.1)" }}>
+        <div style={{ padding:"16px 12px", borderTop:"1px solid rgba(61,191,176,0.1)" }}>
           <button onClick={onLogout} style={{ width:"100%", padding:"10px 12px", background:"transparent", border:"1px solid rgba(239,68,68,0.2)", color:"rgba(239,68,68,0.6)", fontSize:"9px", letterSpacing:"2px", textTransform:"uppercase", cursor:"pointer", fontFamily:"var(--font-body)", transition:"all 0.2s" }}>
             EXIT SESSION
           </button>
@@ -1051,7 +1109,7 @@ function PageHeader({ title, sub, action }) {
 
 function Stat({ icon, label, value, trend, color="var(--gold)" }) {
   return (
-    <div style={{ background:"var(--charcoal)", border:"1px solid rgba(201,168,76,0.1)", padding:"24px 20px", position:"relative", overflow:"hidden" }}>
+    <div style={{ background:"var(--charcoal)", border:"1px solid rgba(61,191,176,0.1)", padding:"24px 20px", position:"relative", overflow:"hidden" }}>
       <div style={{ position:"absolute", top:0, right:0, width:"60px", height:"60px", background:`radial-gradient(circle at 80% 20%, ${color}15, transparent 70%)` }} />
       <div style={{ fontSize:"22px", marginBottom:"12px" }}>{icon}</div>
       <div style={{ fontFamily:"var(--font-display)", fontSize:"36px", fontWeight:300, color, letterSpacing:"-1px" }}>{value}</div>
@@ -1080,11 +1138,11 @@ function AdminDash({ store }) {
 
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"16px" }}>
         {/* Recent Alerts */}
-        <div style={{ background:"var(--charcoal)", border:"1px solid rgba(201,168,76,0.1)", padding:"24px" }}>
+        <div style={{ background:"var(--charcoal)", border:"1px solid rgba(61,191,176,0.1)", padding:"24px" }}>
           <div style={{ fontSize:"8px", color:"var(--gold)", letterSpacing:"4px", textTransform:"uppercase", marginBottom:"20px" }}>Recent Alerts</div>
           {store.notifications.slice(0,5).map(n => (
             <div key={n.id} style={{ display:"flex", gap:"12px", padding:"10px 0", borderBottom:"1px solid rgba(255,255,255,0.04)" }}>
-              <div style={{ width:"28px", height:"28px", background: n.type==="waiter"?"rgba(201,168,76,0.1)":"rgba(139,92,246,0.1)", border:`1px solid ${n.type==="waiter"?"rgba(201,168,76,0.3)":"rgba(139,92,246,0.3)"}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:"12px", flexShrink:0 }}>
+              <div style={{ width:"28px", height:"28px", background: n.type==="waiter"?"rgba(61,191,176,0.1)":"rgba(139,92,246,0.1)", border:`1px solid ${n.type==="waiter"?"rgba(61,191,176,0.3)":"rgba(139,92,246,0.3)"}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:"12px", flexShrink:0 }}>
                 {n.type==="waiter"?"◈":"◇"}
               </div>
               <div style={{ flex:1 }}>
@@ -1097,7 +1155,7 @@ function AdminDash({ store }) {
         </div>
 
         {/* Tables */}
-        <div style={{ background:"var(--charcoal)", border:"1px solid rgba(201,168,76,0.1)", padding:"24px" }}>
+        <div style={{ background:"var(--charcoal)", border:"1px solid rgba(61,191,176,0.1)", padding:"24px" }}>
           <div style={{ fontSize:"8px", color:"var(--gold)", letterSpacing:"4px", textTransform:"uppercase", marginBottom:"20px" }}>Seating Status</div>
           {store.tables.map(tb => (
             <div key={tb.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"9px 12px", marginBottom:"6px", background:"rgba(255,255,255,0.02)", border:"1px solid rgba(255,255,255,0.04)" }}>
@@ -1290,8 +1348,8 @@ function AdminMenu({ store }) {
 
   const tabBtn = (active) => ({
     padding: "8px 18px",
-    border: `1px solid ${active ? "var(--gold)" : "rgba(201,168,76,0.15)"}`,
-    background: active ? "rgba(201,168,76,0.12)" : "transparent",
+    border: `1px solid ${active ? "var(--gold)" : "rgba(61,191,176,0.15)"}`,
+    background: active ? "rgba(61,191,176,0.12)" : "transparent",
     color: active ? "var(--gold)" : "var(--muted)",
     fontSize: "9px",
     letterSpacing: "2px",
@@ -1306,9 +1364,9 @@ function AdminMenu({ store }) {
       <PageHeader title="Cuisine" sub="Menu Management"
         action={
           adminTab === "dishes" ? (
-            <button onClick={openNew} style={{ padding:"10px 22px", background:"linear-gradient(135deg,rgba(201,168,76,0.2),rgba(201,168,76,0.08))", border:"1px solid var(--gold)", color:"var(--gold)", fontSize:"9px", letterSpacing:"3px", textTransform:"uppercase", cursor:"pointer", fontFamily:"var(--font-body)" }}>+ NEW DISH</button>
+            <button onClick={openNew} style={{ padding:"10px 22px", background:"linear-gradient(135deg,rgba(61,191,176,0.2),rgba(61,191,176,0.08))", border:"1px solid var(--gold)", color:"var(--gold)", fontSize:"9px", letterSpacing:"3px", textTransform:"uppercase", cursor:"pointer", fontFamily:"var(--font-body)" }}>+ NEW DISH</button>
           ) : (
-            <button onClick={openNewCategory} style={{ padding:"10px 22px", background:"linear-gradient(135deg,rgba(201,168,76,0.2),rgba(201,168,76,0.08))", border:"1px solid var(--gold)", color:"var(--gold)", fontSize:"9px", letterSpacing:"3px", textTransform:"uppercase", cursor:"pointer", fontFamily:"var(--font-body)" }}>+ NEW CATEGORY</button>
+            <button onClick={openNewCategory} style={{ padding:"10px 22px", background:"linear-gradient(135deg,rgba(61,191,176,0.2),rgba(61,191,176,0.08))", border:"1px solid var(--gold)", color:"var(--gold)", fontSize:"9px", letterSpacing:"3px", textTransform:"uppercase", cursor:"pointer", fontFamily:"var(--font-body)" }}>+ NEW CATEGORY</button>
           )
         } />
 
@@ -1341,14 +1399,14 @@ function AdminMenu({ store }) {
                 </div>
                 <div style={{ display:"flex", gap:"6px", marginTop:"16px", flexWrap:"wrap" }}>
                   <button type="button" aria-label="Move up" disabled={idx === 0} onClick={() => moveCategory(c.id, -1)} style={{
-                    padding:"8px 12px", background: idx === 0 ? "rgba(255,255,255,0.02)" : "rgba(201,168,76,0.08)", border:`1px solid ${idx === 0 ? "rgba(255,255,255,0.06)" : "rgba(201,168,76,0.25)"}`,
+                    padding:"8px 12px", background: idx === 0 ? "rgba(255,255,255,0.02)" : "rgba(61,191,176,0.08)", border:`1px solid ${idx === 0 ? "rgba(255,255,255,0.06)" : "rgba(61,191,176,0.25)"}`,
                     color: idx === 0 ? "var(--subtle)" : "var(--gold)", fontSize:"14px", cursor: idx === 0 ? "not-allowed" : "pointer", lineHeight:1, opacity: idx === 0 ? 0.45 : 1,
                   }}>↑</button>
                   <button type="button" aria-label="Move down" disabled={idx === sortedCats.length - 1} onClick={() => moveCategory(c.id, 1)} style={{
-                    padding:"8px 12px", background: idx === sortedCats.length - 1 ? "rgba(255,255,255,0.02)" : "rgba(201,168,76,0.08)", border:`1px solid ${idx === sortedCats.length - 1 ? "rgba(255,255,255,0.06)" : "rgba(201,168,76,0.25)"}`,
+                    padding:"8px 12px", background: idx === sortedCats.length - 1 ? "rgba(255,255,255,0.02)" : "rgba(61,191,176,0.08)", border:`1px solid ${idx === sortedCats.length - 1 ? "rgba(255,255,255,0.06)" : "rgba(61,191,176,0.25)"}`,
                     color: idx === sortedCats.length - 1 ? "var(--subtle)" : "var(--gold)", fontSize:"14px", cursor: idx === sortedCats.length - 1 ? "not-allowed" : "pointer", lineHeight:1, opacity: idx === sortedCats.length - 1 ? 0.45 : 1,
                   }}>↓</button>
-                  <button type="button" onClick={() => openEditCategory(c)} style={{ flex:1, minWidth:"100px", padding:"8px", background:"rgba(201,168,76,0.08)", border:"1px solid rgba(201,168,76,0.2)", color:"var(--gold)", fontSize:"9px", letterSpacing:"1.5px", cursor:"pointer", fontFamily:"var(--font-body)" }}>EDIT</button>
+                  <button type="button" onClick={() => openEditCategory(c)} style={{ flex:1, minWidth:"100px", padding:"8px", background:"rgba(61,191,176,0.08)", border:"1px solid rgba(61,191,176,0.2)", color:"var(--gold)", fontSize:"9px", letterSpacing:"1.5px", cursor:"pointer", fontFamily:"var(--font-body)" }}>EDIT</button>
                   <button type="button" onClick={() => delCategory(c.id)} style={{ padding:"8px 12px", background:"rgba(239,68,68,0.06)", border:"1px solid rgba(239,68,68,0.15)", color:"rgba(239,68,68,0.75)", fontSize:"11px", cursor:"pointer" }}>✕</button>
                 </div>
               </div>
@@ -1393,7 +1451,7 @@ function AdminMenu({ store }) {
               <div style={{ padding:"14px 14px 10px" }}>
                 <div style={{ fontSize:"9px", color:"var(--muted)", letterSpacing:"1px", marginBottom:"10px" }}>{cat?.icon} {cat?.name.en}</div>
                 <div style={{ display:"flex", gap:"6px" }}>
-                  <button type="button" disabled={dishSaving} onClick={()=>openEdit(dish)} style={{ flex:1, padding:"7px", background:"rgba(201,168,76,0.08)", border:"1px solid rgba(201,168,76,0.2)", color:"var(--gold)", fontSize:"9px", letterSpacing:"1.5px", cursor: dishSaving ? "wait" : "pointer", fontFamily:"var(--font-body)", opacity: dishSaving ? 0.6 : 1 }}>EDIT</button>
+                  <button type="button" disabled={dishSaving} onClick={()=>openEdit(dish)} style={{ flex:1, padding:"7px", background:"rgba(61,191,176,0.08)", border:"1px solid rgba(61,191,176,0.2)", color:"var(--gold)", fontSize:"9px", letterSpacing:"1.5px", cursor: dishSaving ? "wait" : "pointer", fontFamily:"var(--font-body)", opacity: dishSaving ? 0.6 : 1 }}>EDIT</button>
                   <button type="button" disabled={dishSaving} onClick={()=>toggle(dish.id)} style={{ flex:1, padding:"7px", background:dish.available?"rgba(16,185,129,0.06)":"rgba(239,68,68,0.06)", border:`1px solid ${dish.available?"rgba(16,185,129,0.2)":"rgba(239,68,68,0.2)"}`, color:dish.available?"#10b981":"#ef4444", fontSize:"9px", letterSpacing:"1.5px", cursor: dishSaving ? "wait" : "pointer", fontFamily:"var(--font-body)", opacity: dishSaving ? 0.6 : 1 }}>
                     {dish.available?"ACTIVE":"OFF"}
                   </button>
@@ -1409,14 +1467,14 @@ function AdminMenu({ store }) {
 
       {catModal !== null && catForm && (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.85)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000, backdropFilter:"blur(8px)", padding:"20px" }}>
-          <div style={{ background:"var(--charcoal)", border:"1px solid rgba(201,168,76,0.2)", padding:"36px", width:"100%", maxWidth:"520px", maxHeight:"85vh", overflowY:"auto", animation:"slideIn 0.3s ease" }}>
+          <div style={{ background:"var(--charcoal)", border:"1px solid rgba(61,191,176,0.2)", padding:"36px", width:"100%", maxWidth:"520px", maxHeight:"85vh", overflowY:"auto", animation:"slideIn 0.3s ease" }}>
             <div style={{ fontFamily:"var(--font-display)", fontSize:"28px", fontStyle:"italic", color:"var(--cream)", marginBottom:"24px" }}>
               {catModal === "new" ? "New Category" : "Edit Category"}
             </div>
             {categoryError && <div style={{ marginBottom:"14px", fontSize:"11px", color:"#fca5a5" }}>{categoryError}</div>}
             <CategoryFormAdmin form={catForm} setForm={setCatForm} />
             <div style={{ display:"flex", gap:"10px", marginTop:"24px" }}>
-              <button type="button" onClick={saveCategory} style={{ flex:1, padding:"13px", background:"linear-gradient(135deg,rgba(201,168,76,0.2),rgba(201,168,76,0.08))", border:"1px solid var(--gold)", color:"var(--gold-pale)", fontSize:"9px", letterSpacing:"3px", textTransform:"uppercase", cursor:"pointer", fontFamily:"var(--font-body)" }}>SAVE</button>
+              <button type="button" onClick={saveCategory} style={{ flex:1, padding:"13px", background:"linear-gradient(135deg,rgba(61,191,176,0.2),rgba(61,191,176,0.08))", border:"1px solid var(--gold)", color:"var(--gold-pale)", fontSize:"9px", letterSpacing:"3px", textTransform:"uppercase", cursor:"pointer", fontFamily:"var(--font-body)" }}>SAVE</button>
               <button type="button" onClick={() => { setCatModal(null); setCatForm(null); setCategoryError(null); }} style={{ flex:1, padding:"13px", background:"transparent", border:"1px solid rgba(255,255,255,0.1)", color:"var(--muted)", fontSize:"9px", letterSpacing:"3px", textTransform:"uppercase", cursor:"pointer", fontFamily:"var(--font-body)" }}>CANCEL</button>
             </div>
           </div>
@@ -1425,7 +1483,7 @@ function AdminMenu({ store }) {
 
       {modal!==null && (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.85)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000, backdropFilter:"blur(8px)", padding:"20px" }}>
-          <div style={{ background:"var(--charcoal)", border:"1px solid rgba(201,168,76,0.2)", padding:"36px", width:"100%", maxWidth:"560px", maxHeight:"85vh", overflowY:"auto", animation:"slideIn 0.3s ease" }}>
+          <div style={{ background:"var(--charcoal)", border:"1px solid rgba(61,191,176,0.2)", padding:"36px", width:"100%", maxWidth:"560px", maxHeight:"85vh", overflowY:"auto", animation:"slideIn 0.3s ease" }}>
             <div style={{ fontFamily:"var(--font-display)", fontSize:"28px", fontStyle:"italic", color:"var(--cream)", marginBottom:"28px" }}>
               {modal==="new"?"New Dish":"Edit Dish"}
             </div>
@@ -1434,7 +1492,7 @@ function AdminMenu({ store }) {
             )}
             <DishFormAdmin form={form} setForm={setForm} categories={sortedCats} />
             <div style={{ display:"flex", gap:"10px", marginTop:"24px" }}>
-              <button type="button" disabled={dishSaving} onClick={() => save()} style={{ flex:1, padding:"13px", background: dishSaving ? "rgba(255,255,255,0.06)" : "linear-gradient(135deg,rgba(201,168,76,0.2),rgba(201,168,76,0.08))", border:"1px solid var(--gold)", color:"var(--gold-pale)", fontSize:"9px", letterSpacing:"3px", textTransform:"uppercase", cursor: dishSaving ? "wait" : "pointer", fontFamily:"var(--font-body)" }}>SAVE</button>
+              <button type="button" disabled={dishSaving} onClick={() => save()} style={{ flex:1, padding:"13px", background: dishSaving ? "rgba(255,255,255,0.06)" : "linear-gradient(135deg,rgba(61,191,176,0.2),rgba(61,191,176,0.08))", border:"1px solid var(--gold)", color:"var(--gold-pale)", fontSize:"9px", letterSpacing:"3px", textTransform:"uppercase", cursor: dishSaving ? "wait" : "pointer", fontFamily:"var(--font-body)" }}>SAVE</button>
               <button type="button" disabled={dishSaving} onClick={() => setModal(null)} style={{ flex:1, padding:"13px", background:"transparent", border:"1px solid rgba(255,255,255,0.1)", color:"var(--muted)", fontSize:"9px", letterSpacing:"3px", textTransform:"uppercase", cursor: dishSaving ? "not-allowed" : "pointer", fontFamily:"var(--font-body)" }}>CANCEL</button>
             </div>
           </div>
@@ -1448,7 +1506,7 @@ function CategoryFormAdmin({ form, setForm }) {
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
   const setL = (f, l, v) => setForm(p => ({ ...p, [f]: { ...p[f], [l]: v } }));
   const labelStyle = { fontSize:"8px", color:"var(--gold)", letterSpacing:"3px", textTransform:"uppercase", marginBottom:"6px", display:"block" };
-  const inputStyle = { width:"100%", padding:"10px 0", background:"transparent", border:"none", borderBottom:"1px solid rgba(201,168,76,0.2)", color:"var(--cream)", fontSize:"14px", fontFamily:"var(--font-display)", outline:"none", boxSizing:"border-box", letterSpacing:"0.5px" };
+  const inputStyle = { width:"100%", padding:"10px 0", background:"transparent", border:"none", borderBottom:"1px solid rgba(61,191,176,0.2)", color:"var(--cream)", fontSize:"14px", fontFamily:"var(--font-display)", outline:"none", boxSizing:"border-box", letterSpacing:"0.5px" };
 
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:"18px" }}>
@@ -1474,7 +1532,7 @@ function DishFormAdmin({ form, setForm, categories }) {
   const set = (k,v) => setForm(p=>({...p,[k]:v}));
   const setL = (f,l,v) => setForm(p=>({...p,[f]:{...p[f],[l]:v}}));
   const labelStyle = { fontSize:"8px", color:"var(--gold)", letterSpacing:"3px", textTransform:"uppercase", marginBottom:"6px", display:"block" };
-  const inputStyle = { width:"100%", padding:"10px 0", background:"transparent", border:"none", borderBottom:"1px solid rgba(201,168,76,0.2)", color:"var(--cream)", fontSize:"14px", fontFamily:"var(--font-display)", outline:"none", boxSizing:"border-box", letterSpacing:"0.5px" };
+  const inputStyle = { width:"100%", padding:"10px 0", background:"transparent", border:"none", borderBottom:"1px solid rgba(61,191,176,0.2)", color:"var(--cream)", fontSize:"14px", fontFamily:"var(--font-display)", outline:"none", boxSizing:"border-box", letterSpacing:"0.5px" };
 
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:"18px" }}>
@@ -1504,7 +1562,7 @@ function DishFormAdmin({ form, setForm, categories }) {
         <label style={labelStyle}>Distinctions</label>
         <div style={{ display:"flex", flexWrap:"wrap", gap:"6px", marginTop:"6px" }}>
           {Object.keys(BADGE_CFG).map(b=>(
-            <button key={b} onClick={()=>set("badges",form.badges.includes(b)?form.badges.filter(x=>x!==b):[...form.badges,b])} style={{ padding:"5px 12px", border:"1px solid", borderColor:form.badges.includes(b)?"var(--gold)":"rgba(201,168,76,0.15)", background:form.badges.includes(b)?"rgba(201,168,76,0.12)":"transparent", color:form.badges.includes(b)?"var(--gold)":"var(--muted)", fontSize:"9px", letterSpacing:"1px", cursor:"pointer", fontFamily:"var(--font-body)" }}>{b}</button>
+            <button key={b} onClick={()=>set("badges",form.badges.includes(b)?form.badges.filter(x=>x!==b):[...form.badges,b])} style={{ padding:"5px 12px", border:"1px solid", borderColor:form.badges.includes(b)?"var(--gold)":"rgba(61,191,176,0.15)", background:form.badges.includes(b)?"rgba(61,191,176,0.12)":"transparent", color:form.badges.includes(b)?"var(--gold)":"var(--muted)", fontSize:"9px", letterSpacing:"1px", cursor:"pointer", fontFamily:"var(--font-body)" }}>{b}</button>
           ))}
         </div>
       </div>
@@ -1543,7 +1601,7 @@ function TableQrImage({ tableId, tableName, zone }) {
     QRCode.toDataURL(url, {
       width: 240,
       margin: 2,
-      color: { dark: "#1a1620", light: "#f5e4b0" },
+      color: { dark: "#0f1818", light: "#d4f7f2" },
       errorCorrectionLevel: "M",
     })
       .then((d) => { if (!cancelled) setDataUrl(d); })
@@ -1552,7 +1610,7 @@ function TableQrImage({ tableId, tableName, zone }) {
   }, [url]);
 
   return (
-    <div style={{ textAlign:"center", padding:"16px", background:"#f5e4b0", marginBottom:"14px" }}>
+    <div style={{ textAlign:"center", padding:"16px", background:"linear-gradient(160deg, #d4f7f2, #f5ddd6)", marginBottom:"14px" }}>
       {dataUrl && (
         <img src={dataUrl} alt={`QR: ${tableName}`} style={{ width:"160px", height:"160px", display:"block", margin:"0 auto", imageRendering:"pixelated" }} />
       )}
@@ -1578,13 +1636,13 @@ function AdminTables({ store }) {
   const toggle = id => setTables(p=>p.map(t=>t.id===id?{...t,active:!t.active}:t));
   const del = id => setTables(p=>p.filter(t=>t.id!==id));
 
-  const inputStyle = { padding:"11px 0", background:"transparent", border:"none", borderBottom:"1px solid rgba(201,168,76,0.2)", color:"var(--cream)", fontSize:"14px", fontFamily:"var(--font-display)", outline:"none", width:"100%", boxSizing:"border-box" };
+  const inputStyle = { padding:"11px 0", background:"transparent", border:"none", borderBottom:"1px solid rgba(61,191,176,0.2)", color:"var(--cream)", fontSize:"14px", fontFamily:"var(--font-display)", outline:"none", width:"100%", boxSizing:"border-box" };
 
   return (
     <div style={{ padding:"40px", color:"var(--cream)" }}>
       <PageHeader title="Seating" sub="Table Management" />
 
-      <div style={{ background:"var(--charcoal)", border:"1px solid rgba(201,168,76,0.15)", padding:"28px", marginBottom:"28px" }}>
+      <div style={{ background:"var(--charcoal)", border:"1px solid rgba(61,191,176,0.15)", padding:"28px", marginBottom:"28px" }}>
         <div style={{ fontSize:"8px", color:"var(--gold)", letterSpacing:"4px", textTransform:"uppercase", marginBottom:"20px" }}>Add Table</div>
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr auto", gap:"20px", alignItems:"end" }}>
           <div><div style={{ fontSize:"8px", color:"var(--muted)", letterSpacing:"2px", marginBottom:"6px" }}>TABLE NAME</div><input value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. Salon Privé" style={inputStyle} /></div>
@@ -1594,7 +1652,7 @@ function AdminTables({ store }) {
               {["Grand Hall","VIP","Terrace","Bar","Private"].map(z=><option key={z} style={{background:"var(--charcoal)"}}>{z}</option>)}
             </select>
           </div>
-          <button onClick={add} style={{ padding:"11px 24px", background:"rgba(201,168,76,0.12)", border:"1px solid var(--gold)", color:"var(--gold)", fontSize:"9px", letterSpacing:"2px", textTransform:"uppercase", cursor:"pointer", fontFamily:"var(--font-body)", whiteSpace:"nowrap" }}>ADD</button>
+          <button onClick={add} style={{ padding:"11px 24px", background:"rgba(61,191,176,0.12)", border:"1px solid var(--gold)", color:"var(--gold)", fontSize:"9px", letterSpacing:"2px", textTransform:"uppercase", cursor:"pointer", fontFamily:"var(--font-body)", whiteSpace:"nowrap" }}>ADD</button>
         </div>
       </div>
 
@@ -1641,7 +1699,7 @@ function AdminAlerts({ store }) {
       <PageHeader title="Alerts" sub={`${unread} Unread Notifications`}
         action={
           <div style={{ display:"flex", gap:"8px" }}>
-            <button onClick={()=>setNotifications(p=>p.map(n=>({...n,read:true})))} style={{ padding:"9px 18px", background:"rgba(201,168,76,0.08)", border:"1px solid rgba(201,168,76,0.2)", color:"var(--gold)", fontSize:"9px", letterSpacing:"2px", cursor:"pointer", fontFamily:"var(--font-body)" }}>MARK READ</button>
+            <button onClick={()=>setNotifications(p=>p.map(n=>({...n,read:true})))} style={{ padding:"9px 18px", background:"rgba(61,191,176,0.08)", border:"1px solid rgba(61,191,176,0.2)", color:"var(--gold)", fontSize:"9px", letterSpacing:"2px", cursor:"pointer", fontFamily:"var(--font-body)" }}>MARK READ</button>
             <button onClick={()=>setNotifications([])} style={{ padding:"9px 18px", background:"rgba(239,68,68,0.06)", border:"1px solid rgba(239,68,68,0.15)", color:"rgba(239,68,68,0.7)", fontSize:"9px", letterSpacing:"2px", cursor:"pointer", fontFamily:"var(--font-body)" }}>CLEAR ALL</button>
           </div>
         } />
@@ -1653,12 +1711,12 @@ function AdminAlerts({ store }) {
           {notifications.map(n => (
             <div key={n.id} onClick={()=>setNotifications(p=>p.map(x=>x.id===n.id?{...x,read:true}:x))} style={{
               display:"flex", gap:"16px", alignItems:"center",
-              padding:"18px 20px", background: n.read?"rgba(255,255,255,0.015)":"rgba(201,168,76,0.04)",
-              border:`1px solid ${n.read?"rgba(255,255,255,0.05)":"rgba(201,168,76,0.15)"}`,
+              padding:"18px 20px", background: n.read?"rgba(255,255,255,0.015)":"rgba(61,191,176,0.04)",
+              border:`1px solid ${n.read?"rgba(255,255,255,0.05)":"rgba(61,191,176,0.15)"}`,
               borderLeft:`3px solid ${n.type==="waiter"?"var(--gold)":"#8b5cf6"}`,
               cursor:"pointer", transition:"all 0.2s",
             }}>
-              <div style={{ width:"36px", height:"36px", background: n.type==="waiter"?"rgba(201,168,76,0.1)":"rgba(139,92,246,0.1)", border:`1px solid ${n.type==="waiter"?"rgba(201,168,76,0.2)":"rgba(139,92,246,0.2)"}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:"14px", flexShrink:0 }}>
+              <div style={{ width:"36px", height:"36px", background: n.type==="waiter"?"rgba(61,191,176,0.1)":"rgba(139,92,246,0.1)", border:`1px solid ${n.type==="waiter"?"rgba(61,191,176,0.2)":"rgba(139,92,246,0.2)"}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:"14px", flexShrink:0 }}>
                 {n.type==="waiter"?"◈":"◇"}
               </div>
               <div style={{ flex:1 }}>
@@ -1695,7 +1753,7 @@ function AdminAnalytics({ store }) {
       </div>
 
       <div style={{ display:"grid", gridTemplateColumns:"3fr 2fr", gap:"16px" }}>
-        <div style={{ background:"var(--charcoal)", border:"1px solid rgba(201,168,76,0.1)", padding:"28px" }}>
+        <div style={{ background:"var(--charcoal)", border:"1px solid rgba(61,191,176,0.1)", padding:"28px" }}>
           <div style={{ fontSize:"8px", color:"var(--gold)", letterSpacing:"4px", textTransform:"uppercase", marginBottom:"24px" }}>Most Viewed Dishes</div>
           {top.map((dish,i) => {
             const v = analytics.views[dish.id]||0;
@@ -1717,7 +1775,7 @@ function AdminAnalytics({ store }) {
           })}
         </div>
 
-        <div style={{ background:"var(--charcoal)", border:"1px solid rgba(201,168,76,0.1)", padding:"28px" }}>
+        <div style={{ background:"var(--charcoal)", border:"1px solid rgba(61,191,176,0.1)", padding:"28px" }}>
           <div style={{ fontSize:"8px", color:"var(--gold)", letterSpacing:"4px", textTransform:"uppercase", marginBottom:"24px" }}>Category Views</div>
           {catData.sort((a,b)=>b.views-a.views).map(cat => (
             <div key={cat.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 0", borderBottom:"1px solid rgba(255,255,255,0.04)" }}>
@@ -1793,7 +1851,7 @@ function WelcomeScreen({ onChooseLang }) {
       <GlobalStyles />
       <FontLoader />
       <div className="noise" />
-      <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at 50% 20%, rgba(201,168,76,0.08) 0%, transparent 55%)", pointerEvents: "none" }} />
+      <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at 70% 75%, rgba(196,88,68,0.1) 0%, transparent 45%), radial-gradient(ellipse at 50% 18%, rgba(61,191,176,0.1) 0%, transparent 55%)", pointerEvents: "none" }} />
 
       <div style={{ position: "relative", zIndex: 1, width: "100%", maxWidth: "420px", textAlign: "center", animation: "fadeIn 0.9s ease" }}>
         <div style={{ fontSize: "10px", letterSpacing: "6px", color: "var(--gold)", textTransform: "uppercase", marginBottom: "14px", fontWeight: 500 }}>
@@ -1810,9 +1868,9 @@ function WelcomeScreen({ onChooseLang }) {
         </p>
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "12px", margin: "36px 0 28px" }}>
-          <div style={{ flex: 1, maxWidth: "80px", height: "1px", background: "linear-gradient(90deg, transparent, rgba(201,168,76,0.45))" }} />
+          <div style={{ flex: 1, maxWidth: "80px", height: "1px", background: "linear-gradient(90deg, transparent, rgba(61,191,176,0.45))" }} />
           <span style={{ fontSize: "9px", letterSpacing: "3px", textTransform: "uppercase", color: "var(--muted)" }}>ენა / Language</span>
-          <div style={{ flex: 1, maxWidth: "80px", height: "1px", background: "linear-gradient(90deg, rgba(201,168,76,0.45), transparent)" }} />
+          <div style={{ flex: 1, maxWidth: "80px", height: "1px", background: "linear-gradient(90deg, rgba(61,191,176,0.45), transparent)" }} />
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
@@ -1824,7 +1882,7 @@ function WelcomeScreen({ onChooseLang }) {
               width: "100%",
               padding: "16px 20px",
               border: "1px solid var(--gold)",
-              background: "linear-gradient(135deg, rgba(201,168,76,0.18), rgba(201,168,76,0.06))",
+              background: "linear-gradient(135deg, rgba(61,191,176,0.18), rgba(61,191,176,0.06))",
               color: "var(--gold-pale)",
               fontSize: "15px",
               fontWeight: 500,
@@ -1844,7 +1902,7 @@ function WelcomeScreen({ onChooseLang }) {
             style={{
               width: "100%",
               padding: "16px 20px",
-              border: "1px solid rgba(201,168,76,0.28)",
+              border: "1px solid rgba(196,88,68,0.35)",
               background: "rgba(255,255,255,0.03)",
               color: "var(--cream)",
               fontSize: "13px",
@@ -1865,7 +1923,7 @@ function WelcomeScreen({ onChooseLang }) {
             style={{
               width: "100%",
               padding: "16px 20px",
-              border: "1px solid rgba(201,168,76,0.28)",
+              border: "1px solid rgba(196,88,68,0.35)",
               background: "rgba(255,255,255,0.03)",
               color: "var(--cream)",
               fontSize: "13px",
@@ -1937,7 +1995,7 @@ export default function App() {
       {!enteredMenu && !isAdminRoute && <WelcomeScreen onChooseLang={enterWithLang} />}
 
       {enteredMenu && !isAdminRoute && (
-        <div style={{ position:"fixed", bottom:"16px", left:"50%", transform:"translateX(-50%)", zIndex:9999, display:"flex", gap:"6px", background:"rgba(7,6,8,0.92)", padding:"8px 10px", border:"1px solid rgba(201,168,76,0.2)", backdropFilter:"blur(20px)" }}>
+        <div style={{ position:"fixed", bottom:"16px", left:"50%", transform:"translateX(-50%)", zIndex:9999, display:"flex", gap:"6px", background:"rgba(7,6,8,0.92)", padding:"8px 10px", border:"1px solid rgba(61,191,176,0.2)", backdropFilter:"blur(20px)" }}>
           <select value={tableId} onChange={(e) => {
             const id = Number(e.target.value);
             setTableId(id);
@@ -1947,13 +2005,13 @@ export default function App() {
               window.history.replaceState({}, "", `${u.pathname}${u.search}${u.hash}`);
             } catch {}
           }}
-            style={{ padding:"5px 8px", background:"var(--charcoal)", border:"1px solid rgba(201,168,76,0.2)", color:"var(--gold)", fontSize:"9px", letterSpacing:"1px", fontFamily:"var(--font-body)" }}>
+            style={{ padding:"5px 8px", background:"var(--charcoal)", border:"1px solid rgba(61,191,176,0.2)", color:"var(--gold)", fontSize:"9px", letterSpacing:"1px", fontFamily:"var(--font-body)" }}>
             {store.tables.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}
           </select>
-          <button type="button" onClick={() => navigate(APP_HOME_URL)} style={{ padding:"5px 14px", background:"rgba(201,168,76,0.15)", border:"1px solid var(--gold)", color:"var(--gold)", fontSize:"9px", letterSpacing:"2px", cursor:"pointer", fontFamily:"var(--font-body)" }}>
+          <button type="button" onClick={() => navigate(APP_HOME_URL)} style={{ padding:"5px 14px", background:"rgba(61,191,176,0.15)", border:"1px solid var(--gold)", color:"var(--gold)", fontSize:"9px", letterSpacing:"2px", cursor:"pointer", fontFamily:"var(--font-body)" }}>
             MENU
           </button>
-          <button type="button" onClick={() => navigate(APP_ADMIN_PATH)} style={{ padding:"5px 14px", background:"transparent", border:"1px solid rgba(201,168,76,0.15)", color:"var(--muted)", fontSize:"9px", letterSpacing:"2px", cursor:"pointer", fontFamily:"var(--font-body)" }}>
+          <button type="button" onClick={() => navigate(APP_ADMIN_PATH)} style={{ padding:"5px 14px", background:"transparent", border:"1px solid rgba(61,191,176,0.15)", color:"var(--muted)", fontSize:"9px", letterSpacing:"2px", cursor:"pointer", fontFamily:"var(--font-body)" }}>
             ADMIN
           </button>
         </div>
