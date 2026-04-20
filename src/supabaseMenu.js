@@ -2,9 +2,17 @@ import { supabase } from "./supabaseClient.js";
 
 const BUCKET = "menu-images";
 
+/** Accepts admin/form input: trims, allows comma as decimal separator (e.g. 12,50). */
+export function parsePriceValue(value) {
+  if (value === "" || value == null) return NaN;
+  const s = String(value).trim().replace(/\s/g, "").replace(",", ".");
+  const n = Number(s);
+  return Number.isFinite(n) ? n : NaN;
+}
+
 /** Maps app dish shape → DB row (no `id`). */
 export function dishToDbInsert(dish) {
-  const price = Number(dish.price);
+  const price = parsePriceValue(dish.price);
   return {
     category_id: dish.categoryId,
     name_en: dish.name?.en ?? "",
@@ -13,7 +21,7 @@ export function dishToDbInsert(dish) {
     description_en: dish.description?.en ?? "",
     description_ka: dish.description?.ka ?? "",
     description_ru: dish.description?.ru ?? "",
-    price: Number.isFinite(price) ? price : 0,
+    price: Number.isFinite(price) && price >= 0 ? price : 0,
     image_url: dish.image ?? "",
     ingredients: Array.isArray(dish.ingredients) ? dish.ingredients : [],
     badges: Array.isArray(dish.badges) ? dish.badges : [],

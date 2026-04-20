@@ -1,15 +1,18 @@
 import { createClient } from "@supabase/supabase-js";
 
 /**
- * Vite reads env vars prefixed with VITE_. Create `.env.local` in the project root:
+ * Vite-ში (ამ პროექტში) გამოიყენე `import.meta.env` + npm `@supabase/supabase-js` — არა CDN `import`,
+ * რადგან bundler-ი უკეთესად ამუშავებს დამოკიდებულებას და production build-ს.
  *
+ * ლოკალურად: პროექტის ფესვში `.env.local` (gitignored):
  *   VITE_SUPABASE_URL=https://xxxx.supabase.co
  *   VITE_SUPABASE_ANON_KEY=your_anon_key
  *
- * For a plain HTML page (no bundler), use the CDN instead of this file:
- *   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
- *   const { createClient } = supabase;
- *   const client = createClient(url, anonKey);
+ * GitHub Pages: იგივე სახელები Repository Secrets-ში → Actions workflow `npm run build`-ს აძლევს env-ს.
+ *
+ * თუ მხოლოდ სტატიკური HTML გაქვს (Vite არა), ცალკე სკრიპტში შეგიძლია:
+ *   import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+ *   export const supabase = createClient(url, key); // ან url/key პირდაპირ სტრინგად (არ ატვირთო საჯარო რეპოში საიდუმლო გასაღებით)
  */
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;

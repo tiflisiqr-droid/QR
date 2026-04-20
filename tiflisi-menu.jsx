@@ -9,6 +9,7 @@ import {
   updateFullMenuDish,
   deleteMenuDishById,
   setMenuDishAvailable,
+  parsePriceValue,
 } from "./src/supabaseMenu.js";
 
 /* ─── GOOGLE FONTS INJECTION ─────────────────────────────────────────────── */
@@ -889,7 +890,7 @@ function AdminCloudMenu({ store }) {
       return;
     }
     if (!name.trim()) { setErr("Name is required."); return; }
-    const priceNum = Number(price);
+    const priceNum = parsePriceValue(price);
     if (!Number.isFinite(priceNum) || priceNum < 0) { setErr("Enter a valid price."); return; }
     if (!file) { setErr("Choose an image file."); return; }
     setBusy(true);
@@ -952,7 +953,7 @@ function AdminCloudMenu({ store }) {
         </div>
         <div>
           <label style={labelStyle}>Price (₾)</label>
-          <input type="number" min={0} step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} style={inputStyle} />
+          <input type="number" min={0} step="any" inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} style={inputStyle} />
         </div>
         <div>
           <label style={labelStyle}>Image file</label>
@@ -1167,7 +1168,7 @@ function AdminMenu({ store }) {
 
   const save = async () => {
     setDishCloudErr(null);
-    const priceNum = Number(form.price);
+    const priceNum = parsePriceValue(form.price);
     if (!Number.isFinite(priceNum) || priceNum < 0) {
       setDishCloudErr("Enter a valid price.");
       return;
@@ -1496,7 +1497,7 @@ function DishFormAdmin({ form, setForm, categories }) {
           style={{...inputStyle, resize:"vertical"}} />
       </div>
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"16px" }}>
-        <div><label style={labelStyle}>Price (₾)</label><input type="number" value={form.price} onChange={e=>set("price",e.target.value)} style={inputStyle} /></div>
+        <div><label style={labelStyle}>Price (₾)</label><input type="number" min={0} step="any" inputMode="decimal" value={form.price === "" || form.price == null ? "" : form.price} onChange={(e) => set("price", e.target.value)} style={inputStyle} /></div>
         <div><label style={labelStyle}>Image URL</label><input value={form.image} onChange={e=>set("image",e.target.value)} style={inputStyle} /></div>
       </div>
       <div>
