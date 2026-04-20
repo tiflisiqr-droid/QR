@@ -1,5 +1,15 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import QRCode from "qrcode";
+import { isSupabaseConfigured } from "./src/supabaseClient.js";
+import {
+  fetchMenuDishes,
+  uploadMenuImage,
+  insertMenuItem,
+  insertFullMenuDish,
+  updateFullMenuDish,
+  deleteMenuDishById,
+  setMenuDishAvailable,
+} from "./src/supabaseMenu.js";
 
 /* ─── GOOGLE FONTS INJECTION ─────────────────────────────────────────────── */
 const FontLoader = () => {
@@ -175,8 +185,13 @@ const T = {
 
 /* ─── SHARED STATE ───────────────────────────────────────────────────────── */
 function useStore() {
+  const supabaseEnabled = isSupabaseConfigured();
   const [categories, setCategories] = useState(CATEGORIES);
-  const [dishes, setDishes] = useState(DISHES);
+  const [dishes, setDishes] = useState(() => (supabaseEnabled ? [] : DISHES));
+  const [menuLoading, setMenuLoading] = useState(supabaseEnabled);
+  const [menuError, setMenuError] = useState(null);
+  /** `"supabase"` = list from DB (Cuisine edits sync to Supabase). `"local"` = built-in DISHES (offline / fetch failed). */
+  const [menuDataSource, setMenuDataSource] = useState(() => (!supabaseEnabled ? "local" : "supabase"));
   const [tables, setTables] = useState(TABLES);
   const [notifications, setNotificationsState] = useState(loadNotificationsFromStorage);
   const [analytics, setAnalytics] = useState({ scans: 247, views: { 1:18, 2:24, 3:31, 5:42, 9:28 } });
@@ -221,7 +236,65 @@ function useStore() {
     setAnalytics(prev => ({ ...prev, scans: prev.scans+1, views: { ...prev.views, [id]: (prev.views[id]||0)+1 } }));
   }, []);
 
-  return { categories, setCategories, dishes, setDishes, tables, setTables, notifications, setNotifications, addNotification, analytics, trackView };
+  const reloadMenuFromSupabase = useCallback(async () => {
+    if (!isSupabaseConfigured()) return;
+    setMenuLoading(true);
+    setMenuError(null);
+    try {
+      const rows = await fetchMenuDishes();
+      setDishes(rows);
+      setMenuDataSource("supabase");
+    } catch (e) {
+      setMenuError(e?.message || "Could not load menu");
+      setDishes(DISHES);
+      setMenuDataSource("local");
+    } finally {
+      setMenuLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!supabaseEnabled) return;
+    let cancelled = false;
+    setMenuLoading(true);
+    setMenuError(null);
+    fetchMenuDishes()
+      .then((rows) => {
+        if (!cancelled) {
+          setDishes(rows);
+          setMenuDataSource("supabase");
+        }
+      })
+      .catch((e) => {
+        if (!cancelled) {
+          setMenuError(e?.message || "Could not load menu");
+          setDishes(DISHES);
+          setMenuDataSource("local");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setMenuLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [supabaseEnabled]);
+
+  return {
+    categories,
+    setCategories,
+    dishes,
+    setDishes,
+    tables,
+    setTables,
+    notifications,
+    setNotifications,
+    addNotification,
+    analytics,
+    trackView,
+    menuLoading,
+    menuError,
+    menuDataSource,
+    reloadMenuFromSupabase,
+  };
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -229,7 +302,7 @@ function useStore() {
 ═══════════════════════════════════════════════════════════════════════════ */
 function CustomerMenu({ tableId, store, lang, setLang }) {
   const t = T[lang];
-  const { categories, dishes, tables, addNotification, trackView } = store;
+  const { categories, dishes, tables, addNotification, trackView, menuLoading, menuError } = store;
   const [activeCat, setActiveCat] = useState(null);
   const [search, setSearch] = useState("");
   const [toast, setToast] = useState(null);
@@ -243,10 +316,10 @@ function CustomerMenu({ tableId, store, lang, setLang }) {
 
   const cartLines = useMemo(() => {
     return Object.entries(cart)
-      .map(([idStr, qty]) => ({ id: Number(idStr), qty: Number(qty) || 0 }))
-      .filter(({ id, qty }) => qty > 0 && dishes.some(d => d.id === id && d.available))
+      .map(([idStr, qty]) => ({ id: idStr, qty: Number(qty) || 0 }))
+      .filter(({ id, qty }) => qty > 0 && dishes.some((d) => String(d.id) === id && d.available))
       .map(({ id, qty }) => {
-        const dish = dishes.find(d => d.id === id);
+        const dish = dishes.find((d) => String(d.id) === id);
         return { dish, qty, lineTotal: dish.price * qty };
       });
   }, [cart, dishes]);
@@ -290,7 +363,8 @@ function CustomerMenu({ tableId, store, lang, setLang }) {
 
   const filtered = dishes.filter(d => {
     const catOk = !activeCat || d.categoryId === activeCat;
-    const searchOk = !search || d.name[lang].toLowerCase().includes(search.toLowerCase());
+    const label = (d.name[lang] || d.name.en || "").toLowerCase();
+    const searchOk = !search || label.includes(search.toLowerCase());
     return catOk && searchOk;
   });
 
@@ -365,8 +439,24 @@ function CustomerMenu({ tableId, store, lang, setLang }) {
         </div>
       </div>
 
+      {menuError && (
+        <div style={{ margin:"0 16px 12px", padding:"12px 14px", border:"1px solid rgba(239,68,68,0.35)", background:"rgba(239,68,68,0.08)", color:"#fca5a5", fontSize:"11px", letterSpacing:"0.2px", lineHeight:1.5 }}>
+          {menuError}
+        </div>
+      )}
+
       {/* DISH SECTIONS */}
       <div style={{ padding:`0 16px ${cartItemCount > 0 ? "220px" : "140px"}` }}>
+        {menuLoading && dishes.length === 0 && (
+          <div style={{ textAlign:"center", padding:"80px 20px", fontFamily:"var(--font-display)", fontSize:"20px", fontStyle:"italic", color:"var(--muted)" }}>
+            Loading menu…
+          </div>
+        )}
+        {!menuLoading && dishes.length === 0 && (
+          <div style={{ textAlign:"center", padding:"60px 20px", fontSize:"13px", color:"var(--muted)", lineHeight:1.6 }}>
+            No dishes to show. If you use Supabase, add rows in the <strong style={{ color:"var(--cream)" }}>Admin → Cloud</strong> tab or run the SQL in <code style={{ color:"var(--gold)" }}>supabase/schema.sql</code>.
+          </div>
+        )}
         {grouped.map((cat, gi) => (
           <div key={cat.id} ref={el => catRefs.current[cat.id] = el} style={{ marginTop:"40px" }}>
             <div style={{ display:"flex", alignItems:"center", gap:"16px", marginBottom:"24px" }}>
@@ -567,6 +657,8 @@ const cartStepBtn = {
 };
 
 function DishRow({ dish, lang, t, expanded, onToggle, style, cartQty = 0, onAddToCart, onBumpCartQty }) {
+  const title = dish.name[lang] || dish.name.en || "—";
+  const blurb = dish.description[lang] || dish.description.en || "";
   return (
     <div className="dish-card" onClick={onToggle} style={{
       background: expanded ? "rgba(201,168,76,0.04)" : "transparent",
@@ -577,7 +669,7 @@ function DishRow({ dish, lang, t, expanded, onToggle, style, cartQty = 0, onAddT
       <div style={{ display:"flex", gap:"0" }}>
         {/* Image */}
         <div style={{ width:"120px", flexShrink:0, overflow:"hidden", position:"relative" }}>
-          <img src={dish.image} alt={dish.name[lang]} className="dish-img"
+          <img src={dish.image} alt={title} className="dish-img"
             style={{ width:"120px", height:"100px", objectFit:"cover", display:"block", filter: dish.available ? "none" : "grayscale(1)" }} />
           {!dish.available && (
             <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", background:"rgba(7,6,8,0.75)" }}>
@@ -604,11 +696,11 @@ function DishRow({ dish, lang, t, expanded, onToggle, style, cartQty = 0, onAddT
               ))}
             </div>
             <div style={{ fontFamily:"var(--font-display)", fontSize:"18px", fontWeight:400, color:"var(--cream)", letterSpacing:"-0.3px", lineHeight:1.2 }}>
-              {dish.name[lang]}
+              {title}
             </div>
             <div style={{ marginTop:"4px", fontSize:"10px", color:"var(--muted)", lineHeight:1.5, fontWeight:300, letterSpacing:"0.3px",
               overflow:"hidden", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical" }}>
-              {dish.description[lang]}
+              {blurb}
             </div>
           </div>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginTop:"8px", gap:"8px" }}>
@@ -724,6 +816,114 @@ function AdminLogin({ onLogin }) {
   );
 }
 
+/** Supabase: upload image to Storage, insert row into public.menu (see supabase/schema.sql). */
+function AdminCloudMenu({ store }) {
+  const { categories, reloadMenuFromSupabase } = store;
+  const sortedCats = useMemo(() => [...categories].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)), [categories]);
+  const [categoryId, setCategoryId] = useState(CATEGORIES[0]?.id ?? 1);
+  useEffect(() => {
+    const first = sortedCats[0]?.id;
+    if (first == null) return;
+    setCategoryId((prev) => (sortedCats.some((c) => c.id === prev) ? prev : first));
+  }, [sortedCats]);
+
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [price, setPrice] = useState("");
+  const [file, setFile] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
+
+  const inputStyle = { width:"100%", padding:"12px 14px", background:"rgba(255,255,255,0.04)", border:"1px solid rgba(201,168,76,0.2)", color:"var(--cream)", fontSize:"13px", fontFamily:"var(--font-body)", borderRadius:"2px", boxSizing:"border-box" };
+  const labelStyle = { fontSize:"8px", color:"var(--gold)", letterSpacing:"3px", textTransform:"uppercase", marginBottom:"8px", display:"block" };
+
+  const onSubmit = async (e) => {
+    e.preventDefault();
+    setMsg("");
+    setErr("");
+    if (!isSupabaseConfigured()) {
+      setErr("Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to .env.local and restart the dev server.");
+      return;
+    }
+    if (!name.trim()) { setErr("Name is required."); return; }
+    const priceNum = Number(price);
+    if (!Number.isFinite(priceNum) || priceNum < 0) { setErr("Enter a valid price."); return; }
+    if (!file) { setErr("Choose an image file."); return; }
+    setBusy(true);
+    try {
+      const imageUrl = await uploadMenuImage(file);
+      await insertMenuItem({
+        categoryId,
+        name: name.trim(),
+        description: description.trim(),
+        price: priceNum,
+        imageUrl,
+      });
+      setMsg("Saved to Supabase. Menu refreshed.");
+      setName("");
+      setDescription("");
+      setPrice("");
+      setFile(null);
+      await reloadMenuFromSupabase();
+    } catch (x) {
+      setErr(x?.message || "Request failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!isSupabaseConfigured()) {
+    return (
+      <div style={{ padding:"40px", color:"var(--cream)", maxWidth:"720px" }}>
+        <PageHeader title="Cloud menu" sub="Supabase" />
+        <p style={{ fontSize:"13px", color:"var(--muted)", lineHeight:1.7, marginBottom:"20px" }}>
+          Copy <code style={{ color:"var(--gold)" }}>.env.example</code> to <code style={{ color:"var(--gold)" }}>.env.local</code> and set{" "}
+          <code style={{ color:"var(--gold)" }}>VITE_SUPABASE_URL</code> and <code style={{ color:"var(--gold)" }}>VITE_SUPABASE_ANON_KEY</code>.
+          Run the SQL in <code style={{ color:"var(--gold)" }}>supabase/schema.sql</code>, create bucket <strong style={{ color:"var(--cream)" }}>menu-images</strong> (public), then restart <code style={{ color:"var(--gold)" }}>npm run dev</code>.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ padding:"40px", color:"var(--cream)", maxWidth:"560px" }}>
+      <PageHeader title="Cloud menu" sub="Upload image → Storage · Save row → Postgres" />
+      {err && <div style={{ marginBottom:"16px", padding:"12px", border:"1px solid rgba(239,68,68,0.35)", background:"rgba(239,68,68,0.08)", color:"#fca5a5", fontSize:"12px" }}>{err}</div>}
+      {msg && <div style={{ marginBottom:"16px", padding:"12px", border:"1px solid rgba(16,185,129,0.35)", background:"rgba(16,185,129,0.08)", color:"#86efac", fontSize:"12px" }}>{msg}</div>}
+      <form onSubmit={onSubmit} style={{ display:"flex", flexDirection:"column", gap:"20px" }}>
+        <div>
+          <label style={labelStyle}>Category</label>
+          <select value={categoryId} onChange={(e) => setCategoryId(Number(e.target.value))} style={{ ...inputStyle, cursor:"pointer" }}>
+            {sortedCats.map((c) => (
+              <option key={c.id} value={c.id} style={{ background:"#1a1620" }}>{c.name.en || c.name.ka || `Category ${c.id}`}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label style={labelStyle}>Name</label>
+          <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} placeholder="Dish name (English)" />
+        </div>
+        <div>
+          <label style={labelStyle}>Description</label>
+          <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} style={{ ...inputStyle, resize:"vertical", fontFamily:"var(--font-display)" }} placeholder="Short description" />
+        </div>
+        <div>
+          <label style={labelStyle}>Price (₾)</label>
+          <input type="number" min={0} step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} style={inputStyle} />
+        </div>
+        <div>
+          <label style={labelStyle}>Image file</label>
+          <input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] || null)} style={{ fontSize:"12px", color:"var(--muted)" }} />
+        </div>
+        <button type="submit" disabled={busy} style={{ padding:"14px", background: busy ? "rgba(255,255,255,0.06)" : "linear-gradient(135deg,rgba(201,168,76,0.2),rgba(201,168,76,0.08))", border:"1px solid var(--gold)", color:"var(--gold-pale)", fontSize:"10px", letterSpacing:"3px", textTransform:"uppercase", cursor: busy ? "wait" : "pointer", fontFamily:"var(--font-body)" }}>
+          {busy ? "Uploading…" : "Save to Supabase"}
+        </button>
+      </form>
+    </div>
+  );
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
    ADMIN PANEL
 ═══════════════════════════════════════════════════════════════════════════ */
@@ -734,6 +934,7 @@ function AdminPanel({ store, onLogout }) {
   const navItems = [
     { id:"dashboard", icon:"◈", label:"Overview" },
     { id:"menu",      icon:"◇", label:"Cuisine" },
+    { id:"cloud",     icon:"☁", label:"Cloud" },
     { id:"tables",    icon:"◉", label:"Seating" },
     { id:"alerts",    icon:"◌", label:"Alerts", badge:unread },
     { id:"analytics", icon:"◎", label:"Insights" },
@@ -783,6 +984,7 @@ function AdminPanel({ store, onLogout }) {
       <div style={{ flex:1, overflow:"auto", position:"relative", zIndex:1 }}>
         {section==="dashboard"  && <AdminDash store={store} />}
         {section==="menu"       && <AdminMenu store={store} />}
+        {section==="cloud"      && <AdminCloudMenu store={store} />}
         {section==="tables"     && <AdminTables store={store} />}
         {section==="alerts"     && <AdminAlerts store={store} />}
         {section==="analytics"  && <AdminAnalytics store={store} />}
@@ -874,10 +1076,13 @@ function AdminDash({ store }) {
 
 /* ─── Menu Management ─────────────────────────────────────────────────── */
 function AdminMenu({ store }) {
-  const { categories, setCategories, dishes, setDishes } = store;
+  const { categories, setCategories, dishes, setDishes, menuDataSource } = store;
+  const syncDishesToSupabase = isSupabaseConfigured() && menuDataSource === "supabase";
   const [adminTab, setAdminTab] = useState("dishes");
   const [filter, setFilter] = useState(null);
   const [modal, setModal] = useState(null);
+  const [dishCloudErr, setDishCloudErr] = useState(null);
+  const [dishSaving, setDishSaving] = useState(false);
   const [catModal, setCatModal] = useState(null);
   const [catForm, setCatForm] = useState(null);
   const [categoryError, setCategoryError] = useState(null);
@@ -915,15 +1120,77 @@ function AdminMenu({ store }) {
     return { id: null, name: { en: "", ka: "", ru: "" }, icon: "◆", order: maxOrder + 1 };
   }, [categories]);
 
-  const openNew = () => { setForm(emptyDish()); setModal("new"); };
-  const openEdit = d => { setForm({ ...d, ingredients: [...d.ingredients] }); setModal(d.id); };
-  const save = () => {
-    if (modal === "new") setDishes(p => [...p, { ...form, id: Date.now() }]);
-    else setDishes(p => p.map(d => d.id === modal ? { ...form, id: modal } : d));
+  const openNew = () => { setDishCloudErr(null); setForm(emptyDish()); setModal("new"); };
+  const openEdit = (d) => { setDishCloudErr(null); setForm({ ...d, ingredients: [...d.ingredients] }); setModal(d.id); };
+
+  const save = async () => {
+    setDishCloudErr(null);
+    const priceNum = Number(form.price);
+    if (!Number.isFinite(priceNum) || priceNum < 0) {
+      setDishCloudErr("Enter a valid price.");
+      return;
+    }
+    const payload = { ...form, price: priceNum };
+
+    if (syncDishesToSupabase) {
+      setDishSaving(true);
+      try {
+        if (modal === "new") {
+          const created = await insertFullMenuDish(payload);
+          setDishes((p) => [...p, created]);
+        } else {
+          const updated = await updateFullMenuDish(modal, payload);
+          setDishes((p) => p.map((d) => (String(d.id) === String(modal) ? updated : d)));
+        }
+        setModal(null);
+      } catch (e) {
+        setDishCloudErr(e?.message || "Could not save to Supabase");
+      } finally {
+        setDishSaving(false);
+      }
+      return;
+    }
+
+    if (modal === "new") setDishes((p) => [...p, { ...payload, id: Date.now() }]);
+    else setDishes((p) => p.map((d) => (String(d.id) === String(modal) ? { ...payload, id: modal } : d)));
     setModal(null);
   };
-  const del = id => setDishes(p => p.filter(d => d.id !== id));
-  const toggle = id => setDishes(p => p.map(d => d.id === id ? { ...d, available: !d.available } : d));
+
+  const del = async (id) => {
+    setDishCloudErr(null);
+    if (syncDishesToSupabase) {
+      setDishSaving(true);
+      try {
+        await deleteMenuDishById(id);
+        setDishes((p) => p.filter((d) => String(d.id) !== String(id)));
+      } catch (e) {
+        setDishCloudErr(e?.message || "Could not delete");
+      } finally {
+        setDishSaving(false);
+      }
+      return;
+    }
+    setDishes((p) => p.filter((d) => String(d.id) !== String(id)));
+  };
+
+  const toggle = async (id) => {
+    setDishCloudErr(null);
+    const row = dishes.find((d) => String(d.id) === String(id));
+    if (!row) return;
+    if (syncDishesToSupabase) {
+      setDishSaving(true);
+      try {
+        await setMenuDishAvailable(id, !row.available);
+        setDishes((p) => p.map((d) => (String(d.id) === String(id) ? { ...d, available: !d.available } : d)));
+      } catch (e) {
+        setDishCloudErr(e?.message || "Could not update availability");
+      } finally {
+        setDishSaving(false);
+      }
+      return;
+    }
+    setDishes((p) => p.map((d) => (String(d.id) === String(id) ? { ...d, available: !d.available } : d)));
+  };
 
   const openNewCategory = () => { setCategoryError(null); setCatForm(emptyCategory()); setCatModal("new"); };
   const openEditCategory = c => { setCategoryError(null); setCatForm({ ...c, name: { ...c.name } }); setCatModal(c.id); };
@@ -1041,6 +1308,16 @@ function AdminMenu({ store }) {
 
       {adminTab === "dishes" && (
       <>
+      {isSupabaseConfigured() && menuDataSource === "local" && (
+        <div style={{ marginBottom:"20px", padding:"12px 14px", border:"1px solid rgba(234,179,8,0.35)", background:"rgba(234,179,8,0.08)", color:"#fde68a", fontSize:"11px", lineHeight:1.55, letterSpacing:"0.2px" }}>
+          Supabase did not load the menu (check RLS, table <code style={{ color:"var(--gold)" }}>menu</code>, and <code style={{ color:"var(--gold)" }}>.env.local</code>). You are editing the built-in sample list — changes stay in this browser only until the cloud menu loads.
+        </div>
+      )}
+      {syncDishesToSupabase && (
+        <div style={{ marginBottom:"16px", padding:"10px 14px", border:"1px solid rgba(16,185,129,0.25)", background:"rgba(16,185,129,0.06)", color:"#86efac", fontSize:"10px", letterSpacing:"0.3px" }}>
+          Dish list is synced with Supabase — Save / delete / Active toggle update the <code style={{ color:"var(--gold)" }}>menu</code> table.
+        </div>
+      )}
       <div style={{ display:"flex", gap:"6px", marginBottom:"24px", flexWrap:"wrap" }}>
         <CatBtn active={!filter} onClick={()=>setFilter(null)} label="All" />
         {sortedCats.map(c=><CatBtn key={c.id} active={filter===c.id} onClick={()=>setFilter(c.id)} label={c.name.en} icon={c.icon} />)}
@@ -1065,11 +1342,11 @@ function AdminMenu({ store }) {
               <div style={{ padding:"14px 14px 10px" }}>
                 <div style={{ fontSize:"9px", color:"var(--muted)", letterSpacing:"1px", marginBottom:"10px" }}>{cat?.icon} {cat?.name.en}</div>
                 <div style={{ display:"flex", gap:"6px" }}>
-                  <button onClick={()=>openEdit(dish)} style={{ flex:1, padding:"7px", background:"rgba(201,168,76,0.08)", border:"1px solid rgba(201,168,76,0.2)", color:"var(--gold)", fontSize:"9px", letterSpacing:"1.5px", cursor:"pointer", fontFamily:"var(--font-body)" }}>EDIT</button>
-                  <button onClick={()=>toggle(dish.id)} style={{ flex:1, padding:"7px", background:dish.available?"rgba(16,185,129,0.06)":"rgba(239,68,68,0.06)", border:`1px solid ${dish.available?"rgba(16,185,129,0.2)":"rgba(239,68,68,0.2)"}`, color:dish.available?"#10b981":"#ef4444", fontSize:"9px", letterSpacing:"1.5px", cursor:"pointer", fontFamily:"var(--font-body)" }}>
+                  <button type="button" disabled={dishSaving} onClick={()=>openEdit(dish)} style={{ flex:1, padding:"7px", background:"rgba(201,168,76,0.08)", border:"1px solid rgba(201,168,76,0.2)", color:"var(--gold)", fontSize:"9px", letterSpacing:"1.5px", cursor: dishSaving ? "wait" : "pointer", fontFamily:"var(--font-body)", opacity: dishSaving ? 0.6 : 1 }}>EDIT</button>
+                  <button type="button" disabled={dishSaving} onClick={()=>toggle(dish.id)} style={{ flex:1, padding:"7px", background:dish.available?"rgba(16,185,129,0.06)":"rgba(239,68,68,0.06)", border:`1px solid ${dish.available?"rgba(16,185,129,0.2)":"rgba(239,68,68,0.2)"}`, color:dish.available?"#10b981":"#ef4444", fontSize:"9px", letterSpacing:"1.5px", cursor: dishSaving ? "wait" : "pointer", fontFamily:"var(--font-body)", opacity: dishSaving ? 0.6 : 1 }}>
                     {dish.available?"ACTIVE":"OFF"}
                   </button>
-                  <button onClick={()=>del(dish.id)} style={{ padding:"7px 10px", background:"rgba(239,68,68,0.06)", border:"1px solid rgba(239,68,68,0.15)", color:"rgba(239,68,68,0.7)", fontSize:"11px", cursor:"pointer" }}>✕</button>
+                  <button type="button" disabled={dishSaving} onClick={()=>del(dish.id)} style={{ padding:"7px 10px", background:"rgba(239,68,68,0.06)", border:"1px solid rgba(239,68,68,0.15)", color:"rgba(239,68,68,0.7)", fontSize:"11px", cursor: dishSaving ? "wait" : "pointer", opacity: dishSaving ? 0.6 : 1 }}>✕</button>
                 </div>
               </div>
             </div>
@@ -1101,10 +1378,13 @@ function AdminMenu({ store }) {
             <div style={{ fontFamily:"var(--font-display)", fontSize:"28px", fontStyle:"italic", color:"var(--cream)", marginBottom:"28px" }}>
               {modal==="new"?"New Dish":"Edit Dish"}
             </div>
+            {dishCloudErr && (
+              <div style={{ marginBottom:"16px", padding:"12px", border:"1px solid rgba(239,68,68,0.35)", background:"rgba(239,68,68,0.08)", color:"#fca5a5", fontSize:"11px" }}>{dishCloudErr}</div>
+            )}
             <DishFormAdmin form={form} setForm={setForm} categories={sortedCats} />
             <div style={{ display:"flex", gap:"10px", marginTop:"24px" }}>
-              <button onClick={save} style={{ flex:1, padding:"13px", background:"linear-gradient(135deg,rgba(201,168,76,0.2),rgba(201,168,76,0.08))", border:"1px solid var(--gold)", color:"var(--gold-pale)", fontSize:"9px", letterSpacing:"3px", textTransform:"uppercase", cursor:"pointer", fontFamily:"var(--font-body)" }}>SAVE</button>
-              <button onClick={()=>setModal(null)} style={{ flex:1, padding:"13px", background:"transparent", border:"1px solid rgba(255,255,255,0.1)", color:"var(--muted)", fontSize:"9px", letterSpacing:"3px", textTransform:"uppercase", cursor:"pointer", fontFamily:"var(--font-body)" }}>CANCEL</button>
+              <button type="button" disabled={dishSaving} onClick={() => save()} style={{ flex:1, padding:"13px", background: dishSaving ? "rgba(255,255,255,0.06)" : "linear-gradient(135deg,rgba(201,168,76,0.2),rgba(201,168,76,0.08))", border:"1px solid var(--gold)", color:"var(--gold-pale)", fontSize:"9px", letterSpacing:"3px", textTransform:"uppercase", cursor: dishSaving ? "wait" : "pointer", fontFamily:"var(--font-body)" }}>SAVE</button>
+              <button type="button" disabled={dishSaving} onClick={() => setModal(null)} style={{ flex:1, padding:"13px", background:"transparent", border:"1px solid rgba(255,255,255,0.1)", color:"var(--muted)", fontSize:"9px", letterSpacing:"3px", textTransform:"uppercase", cursor: dishSaving ? "not-allowed" : "pointer", fontFamily:"var(--font-body)" }}>CANCEL</button>
             </div>
           </div>
         </div>
