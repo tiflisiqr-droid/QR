@@ -1,0 +1,1588 @@
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+
+/* ─── GOOGLE FONTS INJECTION ─────────────────────────────────────────────── */
+const FontLoader = () => {
+  useEffect(() => {
+    const link = document.createElement("link");
+    link.href = "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Montserrat:wght@300;400;500;600;700&display=swap";
+    link.rel = "stylesheet";
+    document.head.appendChild(link);
+  }, []);
+  return null;
+};
+
+/* ─── CSS ANIMATIONS ─────────────────────────────────────────────────────── */
+const GlobalStyles = () => {
+  useEffect(() => {
+    const style = document.createElement("style");
+    style.textContent = `
+      * { margin:0; padding:0; box-sizing:border-box; }
+      :root {
+        --obsidian: #070608;
+        --void: #0c0a0d;
+        --charcoal: #141118;
+        --surface: #1a1620;
+        --surface2: #221e2a;
+        --gold: #c9a84c;
+        --gold-light: #e8c96a;
+        --gold-pale: #f5e4b0;
+        --amber: #d4824a;
+        --cream: #f0e6d3;
+        --muted: #7a6e8a;
+        --subtle: #3a3348;
+        --font-display: 'Cormorant Garamond', Georgia, serif;
+        --font-body: 'Montserrat', system-ui, sans-serif;
+      }
+      html { scroll-behavior: smooth; }
+      body { background: var(--obsidian); }
+      ::-webkit-scrollbar { width: 4px; }
+      ::-webkit-scrollbar-track { background: var(--void); }
+      ::-webkit-scrollbar-thumb { background: var(--subtle); border-radius: 2px; }
+      @keyframes fadeUp {
+        from { opacity:0; transform:translateY(20px); }
+        to   { opacity:1; transform:translateY(0); }
+      }
+      @keyframes fadeIn {
+        from { opacity:0; } to { opacity:1; }
+      }
+      @keyframes shimmer {
+        0%   { background-position: -400px 0; }
+        100% { background-position: 400px 0; }
+      }
+      @keyframes glow {
+        0%,100% { box-shadow: 0 0 20px rgba(201,168,76,0.15); }
+        50%      { box-shadow: 0 0 40px rgba(201,168,76,0.3); }
+      }
+      @keyframes pulse {
+        0%,100% { opacity:1; } 50% { opacity:0.4; }
+      }
+      @keyframes slideIn {
+        from { opacity:0; transform:translateX(30px); }
+        to   { opacity:1; transform:translateX(0); }
+      }
+      @keyframes toastIn {
+        from { opacity:0; transform:translateX(-50%) translateY(-20px) scale(0.9); }
+        to   { opacity:1; transform:translateX(-50%) translateY(0) scale(1); }
+      }
+      @keyframes scanLine {
+        0%   { top: 0; } 100% { top: 100%; }
+      }
+      @keyframes borderRotate {
+        from { transform: rotate(0deg); } to { transform: rotate(360deg); }
+      }
+      .dish-card { animation: fadeUp 0.5s ease both; }
+      .dish-card:hover .dish-img { transform: scale(1.04); }
+      .dish-img { transition: transform 0.6s cubic-bezier(0.25,0.46,0.45,0.94); }
+      .nav-btn:hover { letter-spacing: 2.5px !important; }
+      .action-btn:hover { transform: translateY(-2px); }
+      .action-btn { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+      .admin-nav-item:hover { background: rgba(201,168,76,0.08) !important; }
+      .gold-line::after {
+        content: ''; display: block; width: 40px; height: 1px;
+        background: linear-gradient(90deg, var(--gold), transparent);
+        margin-top: 8px;
+      }
+      .noise {
+        position: fixed; inset: 0; pointer-events: none; z-index: 999;
+        opacity: 0.025;
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      }
+      .tag { transition: all 0.2s; }
+      .tag:hover { transform: translateY(-1px); }
+    `;
+    document.head.appendChild(style);
+    return () => document.head.removeChild(style);
+  }, []);
+  return null;
+};
+
+/* ─── DATA ───────────────────────────────────────────────────────────────── */
+const CATEGORIES = [
+  { id: 1, name: { en: "Khinkali", ka: "ხინკალი", ru: "Хинкали" }, icon: "◈", order: 1 },
+  { id: 2, name: { en: "Khachapuri", ka: "ხაჭაპური", ru: "Хачапури" }, icon: "◇", order: 2 },
+  { id: 3, name: { en: "BBQ & Grill", ka: "შამფური", ru: "Гриль" }, icon: "◉", order: 3 },
+  { id: 4, name: { en: "Salads", ka: "სალათები", ru: "Салаты" }, icon: "◌", order: 4 },
+  { id: 5, name: { en: "Desserts", ka: "დესერტები", ru: "Десерты" }, icon: "◎", order: 5 },
+  { id: 6, name: { en: "Cellar", ka: "სასმელები", ru: "Погреб" }, icon: "◊", order: 6 },
+];
+
+const DISHES = [
+  { id:1, categoryId:1, name:{en:"Lamb Khinkali",ka:"კრავის ხინკალი",ru:"Хинкали с Ягнёнком"}, description:{en:"Hand-pleated parcels of slow-spiced mountain lamb in golden broth",ka:"ხელნაკეთი ხინკალი მთის კრავით",ru:"Лепные хинкали из горного ягнёнка"}, price:18, image:"https://images.unsplash.com/photo-1563245372-f21724e3856d?w=600&q=90", ingredients:["Mountain Lamb","Wild Herbs","Black Pepper","Onion","Saffron Broth"], badges:["Signature","Popular"], available:true, featured:true },
+  { id:2, categoryId:1, name:{en:"Truffle & Porcini",ka:"ტრიუფელის ხინკალი",ru:"Трюфель и Белый Гриб"}, description:{en:"Black truffle infused wild mushroom filling, aged parmesan crust",ka:"შავი ტრიუფელი, ველური სოკო",ru:"Чёрный трюфель с белыми грибами"}, price:32, image:"https://images.unsplash.com/photo-1551218808-94e220e084d2?w=600&q=90", ingredients:["Black Truffle","Porcini","Aged Parmesan","Thyme"], badges:["Chef's Table"], available:true, featured:true },
+  { id:3, categoryId:2, name:{en:"Adjarian Royal",ka:"აჭარული",ru:"Аджарская"}, description:{en:"Sulguni three-cheese blend, farm egg yolk, brown butter, sea salt",ka:"სამი ყველი, სოფლის კვერცხი",ru:"Три сыра, желток, масло"}, price:22, image:"https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=600&q=90", ingredients:["Sulguni","Gouda","Parmesan","Farm Egg","Brown Butter","Fleur de Sel"], badges:["Signature","Popular"], available:true, featured:true },
+  { id:4, categoryId:2, name:{en:"Imeruli Khachapuri",ka:"იმერული ხაჭაპური",ru:"Имерская Хачапури"}, description:{en:"Classic round bread, house-churned butter, fresh Imeruli cheese",ka:"იმერული ყველი, კარაქი",ru:"Классическая с имерским сыром"}, price:16, image:"https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=600&q=90", ingredients:["Imeruli Cheese","House Butter","Eggs"], badges:[], available:true, featured:false },
+  { id:5, categoryId:3, name:{en:"Wagyu Mtsvadi",ka:"ვაგიუ მწვადი",ru:"Вагю Мцвади"}, description:{en:"A5 Wagyu skewer, pomegranate reduction, smoked salt, tkemali jus",ka:"A5 ვაგიუ, ბროწეული",ru:"А5 Вагю с гранатовым жю"}, price:68, image:"https://images.unsplash.com/photo-1558030006-450675393462?w=600&q=90", ingredients:["A5 Wagyu","Pomegranate","Smoked Salt","Tkemali","Rosemary"], badges:["Chef's Table","New"], available:true, featured:true },
+  { id:6, categoryId:3, name:{en:"Lamb Short Ribs",ka:"კრავის ნეკნები",ru:"Короткие Рёбра"}, description:{en:"72-hour braised lamb ribs, walnut-herb gremolata, charcoal finish",ka:"72-საათიანი კრავი",ru:"72-часовая баранина"}, price:44, image:"https://images.unsplash.com/photo-1544025162-d76694265947?w=600&q=90", ingredients:["Lamb Ribs","Walnuts","Gremolata","Charcoal Ash"], badges:["Popular"], available:true, featured:false },
+  { id:7, categoryId:4, name:{en:"Heritage Tomato",ka:"ძველი ჯიშის პომიდვრები",ru:"Помидоры Хэритедж"}, description:{en:"Seven-variety tomatoes, walnut-tarragon vinaigrette, pressed herb oil",ka:"შვიდი ჯიშის პომიდვრები",ru:"Семь сортов томатов с эстрагоном"}, price:19, image:"https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=600&q=90", ingredients:["Heritage Tomatoes","Walnuts","Tarragon","Red Onion","Herb Oil"], badges:["Seasonal"], available:true, featured:false },
+  { id:8, categoryId:5, name:{en:"Churchkhela Parfait",ka:"ჩურჩხელა პარფე",ru:"Чурчхела Парфе"}, description:{en:"Deconstructed churchkhela, Kakhetian grape gelée, walnut praline",ka:"დეკონსტრუქცია ჩურჩხელა",ru:"Деконструированная чурчхела"}, price:18, image:"https://images.unsplash.com/photo-1587314168485-3236d6710814?w=600&q=90", ingredients:["Grape Must","Walnuts","Almond Praline","Vanilla"], badges:["New"], available:true, featured:false },
+  { id:9, categoryId:6, name:{en:"Saperavi Reserve",ka:"საფერავი რეზერვი",ru:"Саперави Резерв"}, description:{en:"Single vineyard Kakheti, 2018 vintage, 48-month oak aged",ka:"ერთი ვენახი, 2018",ru:"Односортовой Саперави 2018"}, price:28, image:"https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=600&q=90", ingredients:["Saperavi","Kakheti","2018 Vintage","48-month Oak"], badges:["Popular","Signature"], available:true, featured:true },
+  { id:10, categoryId:6, name:{en:"Rkatsiteli Natural",ka:"რქაწითელი",ru:"Ркацители Натурал"}, description:{en:"Amphora-aged skin-contact white, golden amber hue, stone fruit",ka:"ქვევრში მომწიფებული",ru:"Вино в амфоре"}, price:22, image:"https://images.unsplash.com/photo-1506377247377-2a5b3b417ebb?w=600&q=90", ingredients:["Rkatsiteli","Amphora","Kakheti","Skin-Contact"], badges:["Rare"], available:true, featured:false },
+];
+
+const TABLES = [
+  { id:1, name:"Table 01", zone:"Grand Hall", active:true },
+  { id:2, name:"Table 02", zone:"Grand Hall", active:true },
+  { id:3, name:"Salon Privé", zone:"VIP", active:true },
+  { id:4, name:"Terrace I", zone:"Terrace", active:true },
+  { id:5, name:"Terrace II", zone:"Terrace", active:false },
+  { id:6, name:"Wine Cellar", zone:"Private", active:true },
+];
+
+/** Shared across tabs so guest menu (/) and admin (/admin) see the same alerts. */
+const NOTIF_STORAGE_KEY = "tiflisi_notifications_v1";
+
+function saveNotificationsToStorage(list) {
+  try {
+    const serializable = list.map((n) => ({
+      ...n,
+      time: n.time instanceof Date ? n.time.toISOString() : n.time,
+    }));
+    localStorage.setItem(NOTIF_STORAGE_KEY, JSON.stringify(serializable));
+  } catch (_) {}
+}
+
+function loadNotificationsFromStorage() {
+  try {
+    const raw = localStorage.getItem(NOTIF_STORAGE_KEY);
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return [];
+    return arr.map((n) => ({
+      ...n,
+      time: n.time ? new Date(n.time) : new Date(),
+      read: !!n.read,
+    }));
+  } catch (_) {
+    return [];
+  }
+}
+
+const BADGE_CFG = {
+  "Signature":    { bg:"linear-gradient(135deg,#c9a84c,#8a6820)", color:"#fff2cc" },
+  "Popular":      { bg:"linear-gradient(135deg,#9b4e2a,#d4824a)", color:"#ffe8d6" },
+  "Chef's Table": { bg:"linear-gradient(135deg,#2d1b69,#6b46c1)", color:"#e9d5ff" },
+  "New":          { bg:"linear-gradient(135deg,#064e3b,#10b981)", color:"#d1fae5" },
+  "Seasonal":     { bg:"linear-gradient(135deg,#1e3a5f,#3b82f6)", color:"#dbeafe" },
+  "Rare":         { bg:"linear-gradient(135deg,#4a1942,#a855f7)", color:"#f3e8ff" },
+};
+
+const T = {
+  en:{menu:"Menu",callWaiter:"Summon Waiter",requestBill:"Request Bill",ingredients:"Provenance",soldOut:"Unavailable",table:"Table",waiterCalled:"Your waiter is on the way.",billRequested:"Your bill is being prepared.",search:"Search the menu…",all:"All",adminLogin:"Staff Access",login:"Enter",dashboard:"Overview",menuMgmt:"Cuisine",tables:"Seating",notifications:"Alerts",analytics:"Insights",logout:"Exit",addDish:"New Dish",save:"Save",cancel:"Cancel",available:"Available",featured:"Recommended",badges:"Distinctions",cart:"Basket",cartTotal:"Total",addToCart:"Add",cartHint:"Estimated total for your selection (reference only).",emptyCart:"Your basket is empty.",cartQty:"Qty",cartClose:"Close"},
+  ka:{menu:"მენიუ",callWaiter:"მიმტანის გამოძახება",requestBill:"ანგარიშის მოთხოვნა",ingredients:"წარმომავლობა",soldOut:"მიუწვდომელი",table:"მაგიდა",waiterCalled:"მიმტანი მოდის.",billRequested:"ანგარიში მზადდება.",search:"მოძებნეთ…",all:"ყველა",adminLogin:"პერსონალი",login:"შესვლა",dashboard:"მიმოხილვა",menuMgmt:"სამზარეულო",tables:"მოსასვლელი",notifications:"შეტყობინებები",analytics:"ანალიტიკა",logout:"გამოსვლა",addDish:"ახალი კერძი",save:"შენახვა",cancel:"გაუქმება",available:"ხელმისაწვდომი",featured:"რეკომენდებული",badges:"გამოჩენილი",cart:"კალათა",cartTotal:"ჯამი",addToCart:"დამატება",cartHint:"არჩეული კერძების სავარაუდო ჯამი (საინფორმაციოდ).",emptyCart:"კალათა ცარიელია.",cartQty:"რაოდ.",cartClose:"დახურვა"},
+  ru:{menu:"Меню",callWaiter:"Позвать Официанта",requestBill:"Попросить Счёт",ingredients:"Происхождение",soldOut:"Недоступно",table:"Стол",waiterCalled:"Официант уже идёт.",billRequested:"Счёт готовится.",search:"Поиск…",all:"Все",adminLogin:"Персонал",login:"Войти",dashboard:"Обзор",menuMgmt:"Кухня",tables:"Места",notifications:"Оповещения",analytics:"Аналитика",logout:"Выйти",addDish:"Новое Блюдо",save:"Сохранить",cancel:"Отмена",available:"Доступно",featured:"Рекомендуем",badges:"Отличия",cart:"Корзина",cartTotal:"Итого",addToCart:"В корзину",cartHint:"Ориентировочная сумма выбранных блюд (справочно).",emptyCart:"Корзина пуста.",cartQty:"Кол-во",cartClose:"Закрыть"},
+};
+
+/* ─── QR Generator ───────────────────────────────────────────────────────── */
+function makeQR(text, size = 180) {
+  const n = 21, cell = size / n;
+  const hash = text.split("").reduce((a,c) => ((a << 5) - a + c.charCodeAt(0)) | 0, 0);
+  let rects = "";
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) {
+    const corner = (r<7&&c<7)||(r<7&&c>=n-7)||(r>=n-7&&c<7);
+    const border = ((r===0||r===6)&&c<7)||((r===0||r===6)&&c>=n-7)||((r>=n-7&&(r===n-7||r===n-1))&&c<7)||(r<7&&(c===0||c===6))||(r<7&&(c===n-7||c===n-1))||(r>=n-7&&(c===0||c===6));
+    const inner = (r>=2&&r<5&&c>=2&&c<5)||(r>=2&&r<5&&c>=n-5&&c<n-2)||(r>=n-5&&r<n-2&&c>=2&&c<5);
+    let fill = null;
+    if (border||inner) fill="#c9a84c";
+    else if (!corner && ((Math.abs(hash*r+c*7+r*3)%5)<2)) fill="#1a1620";
+    if (fill) rects += `<rect x="${c*cell}" y="${r*cell}" width="${cell}" height="${cell}" fill="${fill}" rx="0.5"/>`;
+  }
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}"><rect width="${size}" height="${size}" fill="#f5e4b0" rx="8"/>${rects}</svg>`;
+  return `data:image/svg+xml;base64,${btoa(svg)}`;
+}
+
+/* ─── SHARED STATE ───────────────────────────────────────────────────────── */
+function useStore() {
+  const [categories, setCategories] = useState(CATEGORIES);
+  const [dishes, setDishes] = useState(DISHES);
+  const [tables, setTables] = useState(TABLES);
+  const [notifications, setNotificationsState] = useState(loadNotificationsFromStorage);
+  const [analytics, setAnalytics] = useState({ scans: 247, views: { 1:18, 2:24, 3:31, 5:42, 9:28 } });
+
+  const setNotifications = useCallback((updater) => {
+    setNotificationsState((prev) => {
+      const next = typeof updater === "function" ? updater(prev) : updater;
+      saveNotificationsToStorage(next);
+      return next;
+    });
+  }, []);
+
+  const addNotification = useCallback((note) => {
+    setNotificationsState((prev) => {
+      const id = `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+      const row = { ...note, id, time: new Date(), read: false };
+      const next = [row, ...prev].slice(0, 60);
+      saveNotificationsToStorage(next);
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (e.key !== NOTIF_STORAGE_KEY || e.newValue == null) return;
+      try {
+        const arr = JSON.parse(e.newValue);
+        if (!Array.isArray(arr)) return;
+        const next = arr.map((n) => ({
+          ...n,
+          time: n.time ? new Date(n.time) : new Date(),
+          read: !!n.read,
+        }));
+        setNotificationsState(next);
+      } catch (_) {}
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
+  const trackView = useCallback(id => {
+    setAnalytics(prev => ({ ...prev, scans: prev.scans+1, views: { ...prev.views, [id]: (prev.views[id]||0)+1 } }));
+  }, []);
+
+  return { categories, setCategories, dishes, setDishes, tables, setTables, notifications, setNotifications, addNotification, analytics, trackView };
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CUSTOMER MENU
+═══════════════════════════════════════════════════════════════════════════ */
+function CustomerMenu({ tableId, store, lang, setLang }) {
+  const t = T[lang];
+  const { categories, dishes, tables, addNotification, trackView } = store;
+  const [activeCat, setActiveCat] = useState(null);
+  const [search, setSearch] = useState("");
+  const [toast, setToast] = useState(null);
+  const [expanded, setExpanded] = useState(null);
+  const [heroVisible, setHeroVisible] = useState(true);
+  const [cart, setCart] = useState({});
+  const [cartOpen, setCartOpen] = useState(false);
+  const catRefs = useRef({});
+  const headerRef = useRef(null);
+  const table = tables.find(tb => tb.id === tableId) || { name: `Table ${tableId}`, zone: "Hall" };
+
+  const cartLines = useMemo(() => {
+    return Object.entries(cart)
+      .map(([idStr, qty]) => ({ id: Number(idStr), qty: Number(qty) || 0 }))
+      .filter(({ id, qty }) => qty > 0 && dishes.some(d => d.id === id && d.available))
+      .map(({ id, qty }) => {
+        const dish = dishes.find(d => d.id === id);
+        return { dish, qty, lineTotal: dish.price * qty };
+      });
+  }, [cart, dishes]);
+
+  const cartGrandTotal = useMemo(() => cartLines.reduce((s, l) => s + l.lineTotal, 0), [cartLines]);
+  const cartItemCount = useMemo(() => cartLines.reduce((s, l) => s + l.qty, 0), [cartLines]);
+
+  const addToCart = useCallback((dish) => {
+    if (!dish?.available) return;
+    setCart((c) => ({ ...c, [dish.id]: (c[dish.id] || 0) + 1 }));
+  }, []);
+
+  const bumpCartQty = useCallback((dishId, delta) => {
+    setCart((c) => {
+      const prev = c[dishId] || 0;
+      const next = prev + delta;
+      if (next <= 0) {
+        const { [dishId]: _, ...rest } = c;
+        return rest;
+      }
+      return { ...c, [dishId]: next };
+    });
+  }, []);
+
+  useEffect(() => {
+    if (cartItemCount === 0) setCartOpen(false);
+  }, [cartItemCount]);
+
+  const showToast = msg => { setToast(msg); setTimeout(() => setToast(null), 3500); };
+
+  const callWaiter = () => { addNotification({ type:"waiter", tableId, tableName:table.name, message:"Waiter Request" }); showToast(t.waiterCalled); };
+  const requestBill = () => { addNotification({ type:"bill", tableId, tableName:table.name, message:"Bill Request" }); showToast(t.billRequested); };
+
+  useEffect(() => {
+    const onScroll = () => setHeroVisible(window.scrollY < 80);
+    window.addEventListener("scroll", onScroll);
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const sortedCategories = useMemo(() => [...categories].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)), [categories]);
+
+  const filtered = dishes.filter(d => {
+    const catOk = !activeCat || d.categoryId === activeCat;
+    const searchOk = !search || d.name[lang].toLowerCase().includes(search.toLowerCase());
+    return catOk && searchOk;
+  });
+
+  const grouped = sortedCategories.map(cat => ({ ...cat, dishes: filtered.filter(d => d.categoryId === cat.id) })).filter(c => c.dishes.length > 0);
+
+  const scrollTo = id => {
+    setActiveCat(id);
+    catRefs.current[id]?.scrollIntoView({ behavior:"smooth", block:"start" });
+  };
+
+  return (
+    <div style={{ minHeight:"100vh", background:"var(--obsidian)", color:"var(--cream)", fontFamily:"var(--font-body)" }}>
+      <GlobalStyles /><FontLoader />
+      <div className="noise" />
+
+      {/* HERO HEADER */}
+      <div style={{ position:"relative", height: heroVisible ? "200px" : "0", overflow:"hidden", transition:"height 0.6s cubic-bezier(0.4,0,0.2,1)" }}>
+        <div style={{ position:"absolute", inset:0, background:"linear-gradient(180deg, rgba(7,6,8,0) 0%, var(--obsidian) 100%)", zIndex:2 }} />
+        <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse at 50% 0%, rgba(201,168,76,0.12) 0%, transparent 70%)", zIndex:1 }} />
+        <div style={{ position:"relative", zIndex:3, height:"100%", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", paddingTop:"20px", animation:"fadeIn 1s ease" }}>
+          <div style={{ fontSize:"10px", letterSpacing:"6px", color:"var(--gold)", textTransform:"uppercase", marginBottom:"10px", fontFamily:"var(--font-body)", fontWeight:500 }}>
+            GEORGIAN FINE DINING
+          </div>
+          <div style={{ fontFamily:"var(--font-display)", fontSize:"clamp(40px,10vw,64px)", fontWeight:300, color:"var(--cream)", letterSpacing:"-1px", lineHeight:1, fontStyle:"italic" }}>
+            Tiflisi
+          </div>
+          <div style={{ marginTop:"10px", display:"flex", alignItems:"center", gap:"10px" }}>
+            <div style={{ width:"30px", height:"1px", background:"var(--gold)", opacity:0.5 }} />
+            <span style={{ fontSize:"10px", color:"var(--muted)", letterSpacing:"3px", textTransform:"uppercase" }}>{t.table} · {table.name}</span>
+            <div style={{ width:"30px", height:"1px", background:"var(--gold)", opacity:0.5 }} />
+          </div>
+        </div>
+      </div>
+
+      {/* STICKY NAV */}
+      <div ref={headerRef} style={{ position:"sticky", top:0, zIndex:100, background:"rgba(7,6,8,0.92)", backdropFilter:"blur(20px)", borderBottom:"1px solid rgba(201,168,76,0.12)" }}>
+        {!heroVisible && (
+          <div style={{ padding:"10px 20px 0", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+            <div style={{ fontFamily:"var(--font-display)", fontSize:"22px", fontStyle:"italic", color:"var(--cream)", letterSpacing:"-0.5px" }}>Tiflisi</div>
+            <div style={{ fontSize:"10px", color:"var(--muted)", letterSpacing:"2px" }}>{table.name}</div>
+          </div>
+        )}
+
+        <div style={{ padding:"12px 20px 0" }}>
+          {/* Search */}
+          <div style={{ position:"relative", marginBottom:"12px" }}>
+            <div style={{ position:"absolute", left:"14px", top:"50%", transform:"translateY(-50%)", color:"var(--muted)", fontSize:"13px" }}>✦</div>
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t.search}
+              style={{ width:"100%", padding:"11px 14px 11px 34px", background:"rgba(255,255,255,0.04)", border:"1px solid rgba(201,168,76,0.15)", borderRadius:"2px", color:"var(--cream)", fontSize:"12px", fontFamily:"var(--font-body)", letterSpacing:"0.5px", outline:"none", boxSizing:"border-box" }} />
+          </div>
+
+          {/* Lang + Categories */}
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"0" }}>
+            <div style={{ display:"flex", gap:"6px", overflowX:"auto", scrollbarWidth:"none", paddingBottom:"12px" }}>
+              <CatBtn active={!activeCat} onClick={() => setActiveCat(null)} label={t.all} />
+              {sortedCategories.map(c => <CatBtn key={c.id} active={activeCat===c.id} onClick={() => scrollTo(c.id)} label={c.name[lang]} icon={c.icon} />)}
+            </div>
+            <div style={{ display:"flex", gap:"4px", flexShrink:0, paddingBottom:"12px", marginLeft:"12px" }}>
+              {["en","ka","ru"].map(l => (
+                <button key={l} onClick={() => setLang(l)} className="nav-btn" style={{
+                  width:"32px", height:"28px", borderRadius:"2px", border:`1px solid ${lang===l?"var(--gold)":"rgba(201,168,76,0.15)"}`,
+                  background: lang===l ? "var(--gold)" : "transparent",
+                  color: lang===l ? "var(--obsidian)" : "var(--muted)",
+                  fontSize:"9px", fontWeight:"700", cursor:"pointer", letterSpacing:"1px", textTransform:"uppercase",
+                  fontFamily:"var(--font-body)", transition:"all 0.2s",
+                }}>
+                  {l}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* DISH SECTIONS */}
+      <div style={{ padding:`0 16px ${cartItemCount > 0 ? "220px" : "140px"}` }}>
+        {grouped.map((cat, gi) => (
+          <div key={cat.id} ref={el => catRefs.current[cat.id] = el} style={{ marginTop:"40px" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:"16px", marginBottom:"24px" }}>
+              <span style={{ fontSize:"16px", color:"var(--gold)", opacity:0.7, fontFamily:"var(--font-display)" }}>{cat.icon}</span>
+              <h2 style={{ fontFamily:"var(--font-display)", fontSize:"28px", fontWeight:300, color:"var(--cream)", letterSpacing:"-0.5px", fontStyle:"italic", margin:0 }}>
+                {cat.name[lang]}
+              </h2>
+              <div style={{ flex:1, height:"1px", background:"linear-gradient(90deg, rgba(201,168,76,0.3), transparent)" }} />
+            </div>
+            <div style={{ display:"flex", flexDirection:"column", gap:"2px" }}>
+              {cat.dishes.map((dish, di) => (
+                <DishRow key={dish.id} dish={dish} lang={lang} t={t}
+                  style={{ animationDelay:`${(gi*3+di)*0.06}s` }}
+                  expanded={expanded===dish.id}
+                  onToggle={() => { setExpanded(expanded===dish.id?null:dish.id); trackView(dish.id); }}
+                  cartQty={cart[dish.id] || 0}
+                  onAddToCart={addToCart}
+                  onBumpCartQty={bumpCartQty} />
+              ))}
+            </div>
+          </div>
+        ))}
+
+        {/* Footer */}
+        <div style={{ marginTop:"60px", textAlign:"center", padding:"30px 0" }}>
+          <div style={{ width:"1px", height:"40px", background:"linear-gradient(180deg,transparent,var(--gold),transparent)", margin:"0 auto 16px" }} />
+          <div style={{ fontFamily:"var(--font-display)", fontSize:"13px", color:"var(--muted)", fontStyle:"italic", letterSpacing:"1px" }}>
+            All dishes prepared with the finest Georgian ingredients
+          </div>
+        </div>
+      </div>
+
+      {/* CART SHEET */}
+      {cartOpen && (
+        <>
+          <button
+            type="button"
+            aria-label={t.cartClose}
+            onClick={() => setCartOpen(false)}
+            style={{
+              position:"fixed", inset:0, zIndex:10120, border:"none", padding:0, margin:0,
+              background:"rgba(0,0,0,0.72)", cursor:"pointer", WebkitTapHighlightColor:"transparent",
+            }}
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="cart-sheet-title"
+            style={{
+              position:"fixed", left:0, right:0, bottom:0, zIndex:10130, maxHeight:"72vh",
+              background:"var(--charcoal)", borderTop:"1px solid rgba(201,168,76,0.35)",
+              borderRadius:"12px 12px 0 0", boxShadow:"0 -24px 80px rgba(0,0,0,0.65)",
+              display:"flex", flexDirection:"column", animation:"slideIn 0.28s ease",
+            }}
+          >
+            <div style={{ padding:"14px 18px 10px", borderBottom:"1px solid rgba(255,255,255,0.06)", display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0 }}>
+              <div id="cart-sheet-title" style={{ fontFamily:"var(--font-display)", fontSize:"22px", fontStyle:"italic", color:"var(--cream)" }}>{t.cart}</div>
+              <button type="button" onClick={() => setCartOpen(false)} className="action-btn" style={{
+                padding:"6px 12px", border:"1px solid rgba(201,168,76,0.25)", background:"transparent",
+                color:"var(--muted)", fontSize:"9px", letterSpacing:"2px", textTransform:"uppercase", cursor:"pointer", fontFamily:"var(--font-body)", borderRadius:"2px",
+              }}>{t.cancel}</button>
+            </div>
+            <div style={{ overflowY:"auto", flex:1, padding:"12px 18px" }}>
+              {cartLines.length === 0 ? (
+                <div style={{ textAlign:"center", padding:"36px 12px", color:"var(--muted)", fontSize:"13px", fontFamily:"var(--font-display)", fontStyle:"italic" }}>{t.emptyCart}</div>
+              ) : (
+                cartLines.map(({ dish, qty, lineTotal }) => (
+                  <div key={dish.id} style={{
+                    display:"flex", gap:"12px", alignItems:"center", padding:"12px 0",
+                    borderBottom:"1px solid rgba(255,255,255,0.05)",
+                  }}>
+                    <img src={dish.image} alt="" style={{ width:"52px", height:"52px", objectFit:"cover", borderRadius:"2px", flexShrink:0 }} />
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontFamily:"var(--font-display)", fontSize:"15px", color:"var(--cream)", lineHeight:1.25 }}>{dish.name[lang]}</div>
+                      <div style={{ fontSize:"10px", color:"var(--muted)", marginTop:"4px" }}>₾{dish.price} × {qty}</div>
+                    </div>
+                    <div onClick={(e) => e.stopPropagation()} style={{ display:"flex", alignItems:"center", gap:"6px", flexShrink:0 }}>
+                      <button type="button" onClick={() => bumpCartQty(dish.id, -1)} style={{
+                        width:"30px", height:"30px", borderRadius:"2px", border:"1px solid rgba(201,168,76,0.25)",
+                        background:"rgba(255,255,255,0.04)", color:"var(--cream)", fontSize:"16px", cursor:"pointer", lineHeight:1, padding:0,
+                      }}>−</button>
+                      <span style={{ minWidth:"22px", textAlign:"center", fontSize:"12px", color:"var(--gold-pale)", fontWeight:600 }}>{qty}</span>
+                      <button type="button" onClick={() => dish.available && bumpCartQty(dish.id, 1)} disabled={!dish.available} style={{
+                        width:"30px", height:"30px", borderRadius:"2px", border:"1px solid rgba(201,168,76,0.35)",
+                        background:"rgba(201,168,76,0.12)", color:"var(--gold)", fontSize:"16px", cursor: dish.available ? "pointer" : "not-allowed", opacity: dish.available ? 1 : 0.35, lineHeight:1, padding:0,
+                      }}>+</button>
+                    </div>
+                    <div style={{ fontFamily:"var(--font-display)", fontSize:"17px", color:"var(--gold-light)", flexShrink:0, minWidth:"56px", textAlign:"right" }}>₾{lineTotal}</div>
+                  </div>
+                ))
+              )}
+            </div>
+            {cartLines.length > 0 && (
+              <div style={{ padding:"16px 18px 22px", borderTop:"1px solid rgba(201,168,76,0.12)", flexShrink:0, background:"rgba(7,6,8,0.5)" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:"10px" }}>
+                  <span style={{ fontSize:"10px", letterSpacing:"3px", textTransform:"uppercase", color:"var(--gold)" }}>{t.cartTotal}</span>
+                  <span style={{ fontFamily:"var(--font-display)", fontSize:"32px", fontWeight:300, color:"var(--gold-light)" }}>₾{cartGrandTotal}</span>
+                </div>
+                <div style={{ fontSize:"10px", color:"var(--muted)", lineHeight:1.5, letterSpacing:"0.2px" }}>{t.cartHint}</div>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* BOTTOM ACTIONS */}
+      <div style={{ position:"fixed", bottom:0, left:0, right:0, zIndex:10100 }}>
+        <div style={{ background:"linear-gradient(0deg, rgba(7,6,8,1) 0%, rgba(7,6,8,0.98) 60%, transparent 100%)", padding:"12px 16px 28px" }}>
+          {cartItemCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setCartOpen(true)}
+              className="action-btn"
+              style={{
+                width:"100%", marginBottom:"10px", padding:"12px 16px", border:"1px solid rgba(201,168,76,0.35)",
+                background:"linear-gradient(135deg, rgba(201,168,76,0.2), rgba(201,168,76,0.06))",
+                color:"var(--gold-pale)", cursor:"pointer", borderRadius:"2px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:"12px",
+                fontFamily:"var(--font-body)",
+              }}
+            >
+              <span style={{ fontSize:"10px", letterSpacing:"2px", textTransform:"uppercase", color:"var(--gold)" }}>{t.cart}</span>
+              <span style={{ fontSize:"11px", color:"var(--muted)", letterSpacing:"0.5px" }}>{cartItemCount} ·</span>
+              <span style={{ fontFamily:"var(--font-display)", fontSize:"22px", fontWeight:300, color:"var(--gold-light)", marginLeft:"auto" }}>₾{cartGrandTotal}</span>
+              <span style={{ fontSize:"10px", color:"var(--subtle)" }}>▴</span>
+            </button>
+          )}
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"10px" }}>
+            <button type="button" onClick={callWaiter} className="action-btn" style={{
+              padding:"15px", border:"1px solid var(--gold)",
+              background:"linear-gradient(135deg, rgba(201,168,76,0.15), rgba(201,168,76,0.05))",
+              color:"var(--gold-pale)", fontSize:"11px", fontWeight:"600",
+              cursor:"pointer", letterSpacing:"2px", textTransform:"uppercase",
+              fontFamily:"var(--font-body)", borderRadius:"2px",
+            }}>
+              ✦ &nbsp;{t.callWaiter}
+            </button>
+            <button type="button" onClick={requestBill} className="action-btn" style={{
+              padding:"15px", border:"1px solid rgba(201,168,76,0.25)",
+              background:"rgba(255,255,255,0.03)",
+              color:"var(--muted)", fontSize:"11px", fontWeight:"600",
+              cursor:"pointer", letterSpacing:"2px", textTransform:"uppercase",
+              fontFamily:"var(--font-body)", borderRadius:"2px",
+            }}>
+              ◇ &nbsp;{t.requestBill}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* TOAST */}
+      {toast && (
+        <div style={{
+          position:"fixed", top:"100px", left:"50%",
+          transform:"translateX(-50%)", zIndex:10140,
+          background:"var(--charcoal)", border:"1px solid rgba(201,168,76,0.4)",
+          color:"var(--gold-pale)", padding:"14px 28px",
+          fontFamily:"var(--font-body)", fontSize:"12px", letterSpacing:"1.5px",
+          boxShadow:"0 20px 60px rgba(0,0,0,0.8)", whiteSpace:"nowrap",
+          animation:"toastIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both",
+        }}>
+          {toast}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CatBtn({ active, onClick, label, icon }) {
+  return (
+    <button onClick={onClick} className="nav-btn" style={{
+      flexShrink:0, padding:"6px 14px", border:`1px solid ${active?"var(--gold)":"rgba(201,168,76,0.12)"}`,
+      background: active ? "rgba(201,168,76,0.12)" : "transparent",
+      color: active ? "var(--gold)" : "var(--muted)",
+      fontSize:"9px", fontWeight:"600", cursor:"pointer",
+      letterSpacing:"2px", textTransform:"uppercase", whiteSpace:"nowrap",
+      fontFamily:"var(--font-body)", transition:"all 0.3s", borderRadius:"2px",
+    }}>
+      {icon && <span style={{ marginRight:"5px", opacity:0.7 }}>{icon}</span>}{label}
+    </button>
+  );
+}
+
+const cartStepBtn = {
+  width: "28px",
+  height: "28px",
+  borderRadius: "2px",
+  border: "1px solid rgba(201,168,76,0.28)",
+  background: "rgba(255,255,255,0.04)",
+  color: "var(--cream)",
+  fontSize: "15px",
+  lineHeight: 1,
+  padding: 0,
+  cursor: "pointer",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  flexShrink: 0,
+};
+
+function DishRow({ dish, lang, t, expanded, onToggle, style, cartQty = 0, onAddToCart, onBumpCartQty }) {
+  return (
+    <div className="dish-card" onClick={onToggle} style={{
+      background: expanded ? "rgba(201,168,76,0.04)" : "transparent",
+      border:`1px solid ${expanded ? "rgba(201,168,76,0.2)" : "rgba(255,255,255,0.05)"}`,
+      cursor:"pointer", transition:"all 0.3s", overflow:"hidden",
+      opacity: dish.available ? 1 : 0.45, ...style,
+    }}>
+      <div style={{ display:"flex", gap:"0" }}>
+        {/* Image */}
+        <div style={{ width:"120px", flexShrink:0, overflow:"hidden", position:"relative" }}>
+          <img src={dish.image} alt={dish.name[lang]} className="dish-img"
+            style={{ width:"120px", height:"100px", objectFit:"cover", display:"block", filter: dish.available ? "none" : "grayscale(1)" }} />
+          {!dish.available && (
+            <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", background:"rgba(7,6,8,0.75)" }}>
+              <span style={{ fontSize:"9px", letterSpacing:"2px", color:"var(--muted)", textTransform:"uppercase" }}>{t.soldOut}</span>
+            </div>
+          )}
+          {dish.featured && (
+            <div style={{ position:"absolute", top:"6px", left:"6px", width:"6px", height:"6px", background:"var(--gold)", borderRadius:"50%", animation:"pulse 2s infinite" }} />
+          )}
+        </div>
+
+        {/* Info */}
+        <div style={{ flex:1, padding:"14px 16px", display:"flex", flexDirection:"column", justifyContent:"space-between", minWidth:0 }}>
+          <div>
+            <div style={{ display:"flex", gap:"5px", flexWrap:"wrap", marginBottom:"6px" }}>
+              {dish.badges.map(b => (
+                <span key={b} className="tag" style={{
+                  background: BADGE_CFG[b]?.bg || "#333", color: BADGE_CFG[b]?.color || "#fff",
+                  fontSize:"8px", fontWeight:"700", padding:"2px 8px",
+                  letterSpacing:"1.5px", textTransform:"uppercase", fontFamily:"var(--font-body)",
+                }}>
+                  {b}
+                </span>
+              ))}
+            </div>
+            <div style={{ fontFamily:"var(--font-display)", fontSize:"18px", fontWeight:400, color:"var(--cream)", letterSpacing:"-0.3px", lineHeight:1.2 }}>
+              {dish.name[lang]}
+            </div>
+            <div style={{ marginTop:"4px", fontSize:"10px", color:"var(--muted)", lineHeight:1.5, fontWeight:300, letterSpacing:"0.3px",
+              overflow:"hidden", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical" }}>
+              {dish.description[lang]}
+            </div>
+          </div>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginTop:"8px", gap:"8px" }}>
+            <div style={{ fontFamily:"var(--font-display)", fontSize:"22px", fontWeight:300, color:"var(--gold-light)", letterSpacing:"-0.5px" }}>
+              ₾{dish.price}
+            </div>
+            <div style={{ display:"flex", alignItems:"center", gap:"8px", flexShrink:0 }}>
+              <div
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()}
+                style={{ display:"flex", alignItems:"center", gap:"4px" }}
+              >
+                {cartQty > 0 && (
+                  <>
+                    <button type="button" aria-label={t.cartQty + " −"} onClick={() => onBumpCartQty(dish.id, -1)} style={cartStepBtn}>−</button>
+                    <span style={{ minWidth:"18px", textAlign:"center", fontSize:"11px", fontWeight:600, color:"var(--gold-pale)" }}>{cartQty}</span>
+                    <button type="button" aria-label={t.cartQty + " +"} disabled={!dish.available} onClick={() => dish.available && onBumpCartQty(dish.id, 1)} style={{ ...cartStepBtn, opacity: dish.available ? 1 : 0.35, cursor: dish.available ? "pointer" : "not-allowed", borderColor: "rgba(201,168,76,0.4)", background: "rgba(201,168,76,0.1)", color: "var(--gold)" }}>+</button>
+                  </>
+                )}
+                {cartQty === 0 && (
+                  <button
+                    type="button"
+                    disabled={!dish.available}
+                    onClick={() => dish.available && onAddToCart(dish)}
+                    style={{
+                      padding: "5px 10px",
+                      borderRadius: "2px",
+                      border: `1px solid ${dish.available ? "var(--gold)" : "rgba(201,168,76,0.15)"}`,
+                      background: dish.available ? "rgba(201,168,76,0.12)" : "transparent",
+                      color: dish.available ? "var(--gold-pale)" : "var(--subtle)",
+                      fontSize: "8px",
+                      fontWeight: 700,
+                      letterSpacing: "1.5px",
+                      textTransform: "uppercase",
+                      cursor: dish.available ? "pointer" : "not-allowed",
+                      fontFamily: "var(--font-body)",
+                    }}
+                  >
+                    {t.addToCart}
+                  </button>
+                )}
+              </div>
+              <div style={{ fontSize:"10px", color:"var(--subtle)", transition:"all 0.3s", transform: expanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Expanded */}
+      {expanded && (
+        <div onClick={(e) => e.stopPropagation()} style={{ padding:"14px 16px", borderTop:"1px solid rgba(201,168,76,0.1)", background:"rgba(201,168,76,0.02)", animation:"fadeIn 0.3s ease" }}>
+          <div style={{ fontSize:"8px", color:"var(--gold)", letterSpacing:"3px", textTransform:"uppercase", marginBottom:"10px", fontFamily:"var(--font-body)", fontWeight:600 }}>
+            ✦ &nbsp;{t.ingredients}
+          </div>
+          <div style={{ display:"flex", flexWrap:"wrap", gap:"6px" }}>
+            {dish.ingredients.map(ing => (
+              <span key={ing} style={{
+                padding:"4px 12px", border:"1px solid rgba(201,168,76,0.2)",
+                fontSize:"10px", color:"var(--gold-pale)", letterSpacing:"0.5px",
+                fontFamily:"var(--font-body)", fontWeight:300,
+              }}>
+                {ing}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ADMIN LOGIN
+═══════════════════════════════════════════════════════════════════════════ */
+function AdminLogin({ onLogin }) {
+  const [u, setU] = useState(""); const [p, setP] = useState(""); const [err, setErr] = useState(false);
+  const submit = () => { if (u==="admin"&&p==="tiflisi2024") onLogin(); else setErr(true); };
+
+  return (
+    <div style={{ minHeight:"100vh", background:"var(--obsidian)", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"var(--font-body)", position:"relative" }}>
+      <GlobalStyles /><FontLoader />
+      <div className="noise" />
+      <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse at 50% 30%, rgba(201,168,76,0.06) 0%, transparent 60%)" }} />
+
+      <div style={{ width:"380px", position:"relative", zIndex:1 }}>
+        <div style={{ textAlign:"center", marginBottom:"48px" }}>
+          <div style={{ fontSize:"9px", letterSpacing:"5px", color:"var(--gold)", textTransform:"uppercase", marginBottom:"14px" }}>STAFF ACCESS</div>
+          <div style={{ fontFamily:"var(--font-display)", fontSize:"52px", fontWeight:300, fontStyle:"italic", color:"var(--cream)", lineHeight:1 }}>Tiflisi</div>
+          <div style={{ marginTop:"16px", display:"flex", alignItems:"center", justifyContent:"center", gap:"10px" }}>
+            <div style={{ width:"40px", height:"1px", background:"linear-gradient(90deg, transparent, var(--gold))" }} />
+            <span style={{ fontSize:"8px", color:"var(--muted)", letterSpacing:"3px" }}>ADMIN PANEL</span>
+            <div style={{ width:"40px", height:"1px", background:"linear-gradient(90deg, var(--gold), transparent)" }} />
+          </div>
+        </div>
+
+        <div style={{ background:"rgba(26,22,32,0.8)", border:"1px solid rgba(201,168,76,0.15)", padding:"40px", backdropFilter:"blur(20px)" }}>
+          {[{label:"Username",val:u,set:setU,type:"text"},{label:"Password",val:p,set:setP,type:"password"}].map(f => (
+            <div key={f.label} style={{ marginBottom:"20px" }}>
+              <div style={{ fontSize:"8px", color:"var(--gold)", letterSpacing:"3px", textTransform:"uppercase", marginBottom:"8px" }}>{f.label}</div>
+              <input value={f.val} onChange={e=>{f.set(e.target.value);setErr(false);}} type={f.type}
+                onKeyDown={e=>e.key==="Enter"&&submit()}
+                style={{ width:"100%", padding:"12px 0", background:"transparent", border:"none", borderBottom:`1px solid ${err?"#ef4444":"rgba(201,168,76,0.25)"}`, color:"var(--cream)", fontSize:"14px", fontFamily:"var(--font-display)", outline:"none", letterSpacing:"1px", boxSizing:"border-box" }} />
+            </div>
+          ))}
+          {err && <div style={{ color:"#ef4444", fontSize:"10px", letterSpacing:"1px", marginBottom:"16px" }}>INVALID CREDENTIALS</div>}
+          <div style={{ fontSize:"9px", color:"var(--muted)", marginBottom:"20px", letterSpacing:"1px" }}>admin / tiflisi2024</div>
+          <button onClick={submit} style={{ width:"100%", padding:"14px", background:"linear-gradient(135deg, rgba(201,168,76,0.2), rgba(201,168,76,0.08))", border:"1px solid var(--gold)", color:"var(--gold-pale)", fontSize:"10px", fontWeight:"600", letterSpacing:"4px", textTransform:"uppercase", cursor:"pointer", fontFamily:"var(--font-body)", transition:"all 0.3s" }}>
+            ENTER
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ADMIN PANEL
+═══════════════════════════════════════════════════════════════════════════ */
+function AdminPanel({ store, onLogout }) {
+  const [section, setSection] = useState("dashboard");
+  const unread = store.notifications.filter(n=>!n.read).length;
+
+  const navItems = [
+    { id:"dashboard", icon:"◈", label:"Overview" },
+    { id:"menu",      icon:"◇", label:"Cuisine" },
+    { id:"tables",    icon:"◉", label:"Seating" },
+    { id:"alerts",    icon:"◌", label:"Alerts", badge:unread },
+    { id:"analytics", icon:"◎", label:"Insights" },
+  ];
+
+  return (
+    <div style={{ minHeight:"100vh", background:"var(--void)", display:"flex", fontFamily:"var(--font-body)" }}>
+      <GlobalStyles /><FontLoader />
+      <div className="noise" />
+
+      {/* SIDEBAR */}
+      <div style={{ width:"210px", background:"var(--charcoal)", borderRight:"1px solid rgba(201,168,76,0.1)", display:"flex", flexDirection:"column", flexShrink:0, position:"relative", zIndex:10 }}>
+        <div style={{ padding:"28px 20px 24px", borderBottom:"1px solid rgba(201,168,76,0.1)" }}>
+          <div style={{ fontFamily:"var(--font-display)", fontSize:"26px", fontStyle:"italic", fontWeight:300, color:"var(--cream)" }}>Tiflisi</div>
+          <div style={{ fontSize:"8px", color:"var(--muted)", letterSpacing:"3px", textTransform:"uppercase", marginTop:"4px" }}>Admin Console</div>
+        </div>
+
+        <nav style={{ flex:1, padding:"16px 12px" }}>
+          {navItems.map(item => (
+            <button key={item.id} onClick={() => setSection(item.id)} className="admin-nav-item" style={{
+              width:"100%", display:"flex", alignItems:"center", gap:"10px",
+              padding:"11px 12px", border:"none",
+              background: section===item.id ? "rgba(201,168,76,0.1)" : "transparent",
+              color: section===item.id ? "var(--gold)" : "var(--muted)",
+              fontSize:"10px", fontWeight:section===item.id?"600":"400",
+              cursor:"pointer", marginBottom:"2px", textAlign:"left",
+              letterSpacing:"2px", textTransform:"uppercase", position:"relative",
+              borderLeft: section===item.id ? "1px solid var(--gold)" : "1px solid transparent",
+              transition:"all 0.2s",
+            }}>
+              <span style={{ fontSize:"14px" }}>{item.icon}</span> {item.label}
+              {item.badge>0 && (
+                <span style={{ marginLeft:"auto", background:"#7f1d1d", color:"#fca5a5", fontSize:"9px", fontWeight:"700", padding:"1px 6px", minWidth:"16px", textAlign:"center" }}>{item.badge}</span>
+              )}
+            </button>
+          ))}
+        </nav>
+
+        <div style={{ padding:"16px 12px", borderTop:"1px solid rgba(201,168,76,0.1)" }}>
+          <button onClick={onLogout} style={{ width:"100%", padding:"10px 12px", background:"transparent", border:"1px solid rgba(239,68,68,0.2)", color:"rgba(239,68,68,0.6)", fontSize:"9px", letterSpacing:"2px", textTransform:"uppercase", cursor:"pointer", fontFamily:"var(--font-body)", transition:"all 0.2s" }}>
+            EXIT SESSION
+          </button>
+        </div>
+      </div>
+
+      {/* CONTENT */}
+      <div style={{ flex:1, overflow:"auto", position:"relative", zIndex:1 }}>
+        {section==="dashboard"  && <AdminDash store={store} />}
+        {section==="menu"       && <AdminMenu store={store} />}
+        {section==="tables"     && <AdminTables store={store} />}
+        {section==="alerts"     && <AdminAlerts store={store} />}
+        {section==="analytics"  && <AdminAnalytics store={store} />}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Shared Admin Components ─────────────────────────────────────────── */
+function PageHeader({ title, sub, action }) {
+  return (
+    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginBottom:"32px" }}>
+      <div>
+        <div style={{ fontSize:"8px", color:"var(--gold)", letterSpacing:"4px", textTransform:"uppercase", marginBottom:"6px" }}>{sub}</div>
+        <h1 style={{ fontFamily:"var(--font-display)", fontSize:"36px", fontWeight:300, fontStyle:"italic", color:"var(--cream)", margin:0, letterSpacing:"-0.5px" }}>{title}</h1>
+      </div>
+      {action}
+    </div>
+  );
+}
+
+function Stat({ icon, label, value, trend, color="var(--gold)" }) {
+  return (
+    <div style={{ background:"var(--charcoal)", border:"1px solid rgba(201,168,76,0.1)", padding:"24px 20px", position:"relative", overflow:"hidden" }}>
+      <div style={{ position:"absolute", top:0, right:0, width:"60px", height:"60px", background:`radial-gradient(circle at 80% 20%, ${color}15, transparent 70%)` }} />
+      <div style={{ fontSize:"22px", marginBottom:"12px" }}>{icon}</div>
+      <div style={{ fontFamily:"var(--font-display)", fontSize:"36px", fontWeight:300, color, letterSpacing:"-1px" }}>{value}</div>
+      <div style={{ fontSize:"9px", color:"var(--muted)", letterSpacing:"2px", textTransform:"uppercase", marginTop:"4px" }}>{label}</div>
+      {trend && <div style={{ fontSize:"9px", color:"#10b981", marginTop:"6px" }}>{trend}</div>}
+    </div>
+  );
+}
+
+/* ─── Dashboard ───────────────────────────────────────────────────────── */
+function AdminDash({ store }) {
+  const active = store.tables.filter(t=>t.active).length;
+  const topDish = store.dishes.reduce((a,b) => (store.analytics.views[a.id]||0) > (store.analytics.views[b.id]||0) ? a : b, store.dishes[0]);
+  const totalViews = Object.values(store.analytics.views).reduce((a,b)=>a+b,0);
+
+  return (
+    <div style={{ padding:"40px", color:"var(--cream)" }}>
+      <PageHeader title="Overview" sub="Tiflisi · Live Dashboard" />
+
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:"12px", marginBottom:"32px" }}>
+        <Stat icon="◈" label="Scans Today" value={store.analytics.scans} color="var(--gold)" />
+        <Stat icon="◉" label="Active Tables" value={active} color="#10b981" />
+        <Stat icon="◎" label="Dish Views" value={totalViews} color="#8b5cf6" />
+        <Stat icon="◇" label="Total Dishes" value={store.dishes.length} color="var(--amber)" />
+      </div>
+
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"16px" }}>
+        {/* Recent Alerts */}
+        <div style={{ background:"var(--charcoal)", border:"1px solid rgba(201,168,76,0.1)", padding:"24px" }}>
+          <div style={{ fontSize:"8px", color:"var(--gold)", letterSpacing:"4px", textTransform:"uppercase", marginBottom:"20px" }}>Recent Alerts</div>
+          {store.notifications.slice(0,5).map(n => (
+            <div key={n.id} style={{ display:"flex", gap:"12px", padding:"10px 0", borderBottom:"1px solid rgba(255,255,255,0.04)" }}>
+              <div style={{ width:"28px", height:"28px", background: n.type==="waiter"?"rgba(201,168,76,0.1)":"rgba(139,92,246,0.1)", border:`1px solid ${n.type==="waiter"?"rgba(201,168,76,0.3)":"rgba(139,92,246,0.3)"}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:"12px", flexShrink:0 }}>
+                {n.type==="waiter"?"◈":"◇"}
+              </div>
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:"12px", color:"var(--cream)", fontWeight:500 }}>{n.tableName}</div>
+                <div style={{ fontSize:"9px", color:"var(--muted)", marginTop:"2px", letterSpacing:"0.5px" }}>{n.message} · {n.time?.toLocaleTimeString()}</div>
+              </div>
+            </div>
+          ))}
+          {store.notifications.length===0 && <div style={{ fontSize:"11px", color:"var(--subtle)", fontStyle:"italic", fontFamily:"var(--font-display)" }}>No alerts at this time</div>}
+        </div>
+
+        {/* Tables */}
+        <div style={{ background:"var(--charcoal)", border:"1px solid rgba(201,168,76,0.1)", padding:"24px" }}>
+          <div style={{ fontSize:"8px", color:"var(--gold)", letterSpacing:"4px", textTransform:"uppercase", marginBottom:"20px" }}>Seating Status</div>
+          {store.tables.map(tb => (
+            <div key={tb.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"9px 12px", marginBottom:"6px", background:"rgba(255,255,255,0.02)", border:"1px solid rgba(255,255,255,0.04)" }}>
+              <div>
+                <div style={{ fontSize:"12px", color:"var(--cream)" }}>{tb.name}</div>
+                <div style={{ fontSize:"9px", color:"var(--muted)", letterSpacing:"1px" }}>{tb.zone}</div>
+              </div>
+              <div style={{ display:"flex", alignItems:"center", gap:"6px" }}>
+                <div style={{ width:"6px", height:"6px", borderRadius:"50%", background: tb.active?"#10b981":"var(--subtle)", animation: tb.active?"pulse 2s infinite":"none" }} />
+                <span style={{ fontSize:"9px", color: tb.active?"#10b981":"var(--subtle)", letterSpacing:"1px" }}>{tb.active?"ACTIVE":"OFFLINE"}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Menu Management ─────────────────────────────────────────────────── */
+function AdminMenu({ store }) {
+  const { categories, setCategories, dishes, setDishes } = store;
+  const [adminTab, setAdminTab] = useState("dishes");
+  const [filter, setFilter] = useState(null);
+  const [modal, setModal] = useState(null);
+  const [catModal, setCatModal] = useState(null);
+  const [catForm, setCatForm] = useState(null);
+  const [categoryError, setCategoryError] = useState(null);
+
+  const sortedCats = useMemo(() => [...categories].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)), [categories]);
+
+  const emptyDish = useCallback(() => ({
+    id: null,
+    categoryId: sortedCats[0]?.id,
+    name: { en: "", ka: "", ru: "" },
+    description: { en: "", ka: "", ru: "" },
+    price: "",
+    image: "",
+    ingredients: [],
+    badges: [],
+    available: true,
+    featured: false,
+  }), [sortedCats]);
+
+  const [form, setForm] = useState(() => ({
+    id: null,
+    categoryId: CATEGORIES[0]?.id,
+    name: { en: "", ka: "", ru: "" },
+    description: { en: "", ka: "", ru: "" },
+    price: "",
+    image: "",
+    ingredients: [],
+    badges: [],
+    available: true,
+    featured: false,
+  }));
+
+  const emptyCategory = useCallback(() => {
+    const maxOrder = categories.reduce((m, c) => Math.max(m, c.order ?? 0), 0);
+    return { id: null, name: { en: "", ka: "", ru: "" }, icon: "◆", order: maxOrder + 1 };
+  }, [categories]);
+
+  const openNew = () => { setForm(emptyDish()); setModal("new"); };
+  const openEdit = d => { setForm({ ...d, ingredients: [...d.ingredients] }); setModal(d.id); };
+  const save = () => {
+    if (modal === "new") setDishes(p => [...p, { ...form, id: Date.now() }]);
+    else setDishes(p => p.map(d => d.id === modal ? { ...form, id: modal } : d));
+    setModal(null);
+  };
+  const del = id => setDishes(p => p.filter(d => d.id !== id));
+  const toggle = id => setDishes(p => p.map(d => d.id === id ? { ...d, available: !d.available } : d));
+
+  const openNewCategory = () => { setCategoryError(null); setCatForm(emptyCategory()); setCatModal("new"); };
+  const openEditCategory = c => { setCategoryError(null); setCatForm({ ...c, name: { ...c.name } }); setCatModal(c.id); };
+  const saveCategory = () => {
+    setCategoryError(null);
+    const hasName = [catForm.name.en, catForm.name.ka, catForm.name.ru].some(s => String(s || "").trim());
+    if (!hasName) { setCategoryError("Add at least one name (EN, KA, or RU)."); return; }
+    const orderNum = Number(catForm.order);
+    const payload = { ...catForm, order: Number.isFinite(orderNum) ? orderNum : 0 };
+    if (catModal === "new") {
+      const nid = categories.length ? Math.max(...categories.map(c => c.id)) + 1 : 1;
+      setCategories(p => [...p, { ...payload, id: nid }]);
+    } else {
+      setCategories(p => p.map(c => c.id === catModal ? { ...payload, id: catModal } : c));
+    }
+    setCatModal(null);
+    setCatForm(null);
+  };
+  const delCategory = id => {
+    setCategoryError(null);
+    if (dishes.some(d => d.categoryId === id)) {
+      setCategoryError("Reassign or remove dishes in this category before deleting.");
+      return;
+    }
+    setCategories(p => p.filter(c => c.id !== id));
+    if (filter === id) setFilter(null);
+  };
+
+  /** Swap position in sorted list, then renumber order 1…n so guest menu & nav stay consistent. */
+  const moveCategory = useCallback((id, delta) => {
+    setCategoryError(null);
+    setCategories((prev) => {
+      const sorted = [...prev].sort((a, b) => ((a.order ?? 0) - (b.order ?? 0)) || a.id - b.id);
+      const idx = sorted.findIndex((x) => x.id === id);
+      const j = idx + delta;
+      if (idx < 0 || j < 0 || j >= sorted.length) return prev;
+      const copy = [...sorted];
+      [copy[idx], copy[j]] = [copy[j], copy[idx]];
+      const orderById = {};
+      copy.forEach((cat, i) => { orderById[cat.id] = i + 1; });
+      return prev.map((c) => ({ ...c, order: orderById[c.id] ?? c.order }));
+    });
+  }, [setCategories]);
+
+  const shown = filter ? dishes.filter(d => d.categoryId === filter) : dishes;
+
+  const tabBtn = (active) => ({
+    padding: "8px 18px",
+    border: `1px solid ${active ? "var(--gold)" : "rgba(201,168,76,0.15)"}`,
+    background: active ? "rgba(201,168,76,0.12)" : "transparent",
+    color: active ? "var(--gold)" : "var(--muted)",
+    fontSize: "9px",
+    letterSpacing: "2px",
+    textTransform: "uppercase",
+    cursor: "pointer",
+    fontFamily: "var(--font-body)",
+    borderRadius: "2px",
+  });
+
+  return (
+    <div style={{ padding:"40px", color:"var(--cream)" }}>
+      <PageHeader title="Cuisine" sub="Menu Management"
+        action={
+          adminTab === "dishes" ? (
+            <button onClick={openNew} style={{ padding:"10px 22px", background:"linear-gradient(135deg,rgba(201,168,76,0.2),rgba(201,168,76,0.08))", border:"1px solid var(--gold)", color:"var(--gold)", fontSize:"9px", letterSpacing:"3px", textTransform:"uppercase", cursor:"pointer", fontFamily:"var(--font-body)" }}>+ NEW DISH</button>
+          ) : (
+            <button onClick={openNewCategory} style={{ padding:"10px 22px", background:"linear-gradient(135deg,rgba(201,168,76,0.2),rgba(201,168,76,0.08))", border:"1px solid var(--gold)", color:"var(--gold)", fontSize:"9px", letterSpacing:"3px", textTransform:"uppercase", cursor:"pointer", fontFamily:"var(--font-body)" }}>+ NEW CATEGORY</button>
+          )
+        } />
+
+      <div style={{ display:"flex", gap:"8px", marginBottom:"20px" }}>
+        <button type="button" onClick={() => { setCategoryError(null); setAdminTab("dishes"); }} style={tabBtn(adminTab === "dishes")}>Dishes</button>
+        <button type="button" onClick={() => { setCategoryError(null); setAdminTab("categories"); }} style={tabBtn(adminTab === "categories")}>Categories</button>
+      </div>
+
+      {adminTab === "categories" && (
+        <>
+          {categoryError && (
+            <div style={{ marginBottom:"16px", padding:"12px 14px", border:"1px solid rgba(239,68,68,0.35)", background:"rgba(239,68,68,0.08)", color:"#fca5a5", fontSize:"11px", letterSpacing:"0.3px" }}>{categoryError}</div>
+          )}
+          <div style={{ fontSize:"10px", color:"var(--muted)", marginBottom:"12px", letterSpacing:"0.3px", lineHeight:1.5 }}>
+            ↑ / ↓ — ჯგუფების თანმიმდევრობა სტუმრის მენიუში; ყოველი გადაადგილების შემდეგ ნომრები (order) აივსება 1-დან ბოლომდე.
+          </div>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))", gap:"12px", marginBottom:"24px" }}>
+            {sortedCats.map((c, idx) => (
+              <div key={c.id} style={{ background:"var(--charcoal)", border:"1px solid rgba(255,255,255,0.06)", padding:"20px" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:"12px" }}>
+                  <div style={{ fontSize:"22px", color:"var(--gold)", opacity:0.85 }}>{c.icon}</div>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontFamily:"var(--font-display)", fontSize:"20px", fontStyle:"italic", color:"var(--cream)" }}>{c.name.en || c.name.ka || c.name.ru || "—"}</div>
+                    <div style={{ fontSize:"10px", color:"var(--muted)", marginTop:"6px", lineHeight:1.5 }}>
+                      <span style={{ color:"var(--subtle)" }}>KA</span> {c.name.ka || "—"}<br />
+                      <span style={{ color:"var(--subtle)" }}>RU</span> {c.name.ru || "—"}
+                    </div>
+                    <div style={{ fontSize:"9px", color:"var(--subtle)", marginTop:"8px", letterSpacing:"1px" }}>ORDER · {c.order ?? 0} · ID {c.id}</div>
+                  </div>
+                </div>
+                <div style={{ display:"flex", gap:"6px", marginTop:"16px", flexWrap:"wrap" }}>
+                  <button type="button" aria-label="Move up" disabled={idx === 0} onClick={() => moveCategory(c.id, -1)} style={{
+                    padding:"8px 12px", background: idx === 0 ? "rgba(255,255,255,0.02)" : "rgba(201,168,76,0.08)", border:`1px solid ${idx === 0 ? "rgba(255,255,255,0.06)" : "rgba(201,168,76,0.25)"}`,
+                    color: idx === 0 ? "var(--subtle)" : "var(--gold)", fontSize:"14px", cursor: idx === 0 ? "not-allowed" : "pointer", lineHeight:1, opacity: idx === 0 ? 0.45 : 1,
+                  }}>↑</button>
+                  <button type="button" aria-label="Move down" disabled={idx === sortedCats.length - 1} onClick={() => moveCategory(c.id, 1)} style={{
+                    padding:"8px 12px", background: idx === sortedCats.length - 1 ? "rgba(255,255,255,0.02)" : "rgba(201,168,76,0.08)", border:`1px solid ${idx === sortedCats.length - 1 ? "rgba(255,255,255,0.06)" : "rgba(201,168,76,0.25)"}`,
+                    color: idx === sortedCats.length - 1 ? "var(--subtle)" : "var(--gold)", fontSize:"14px", cursor: idx === sortedCats.length - 1 ? "not-allowed" : "pointer", lineHeight:1, opacity: idx === sortedCats.length - 1 ? 0.45 : 1,
+                  }}>↓</button>
+                  <button type="button" onClick={() => openEditCategory(c)} style={{ flex:1, minWidth:"100px", padding:"8px", background:"rgba(201,168,76,0.08)", border:"1px solid rgba(201,168,76,0.2)", color:"var(--gold)", fontSize:"9px", letterSpacing:"1.5px", cursor:"pointer", fontFamily:"var(--font-body)" }}>EDIT</button>
+                  <button type="button" onClick={() => delCategory(c.id)} style={{ padding:"8px 12px", background:"rgba(239,68,68,0.06)", border:"1px solid rgba(239,68,68,0.15)", color:"rgba(239,68,68,0.75)", fontSize:"11px", cursor:"pointer" }}>✕</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {adminTab === "dishes" && (
+      <>
+      <div style={{ display:"flex", gap:"6px", marginBottom:"24px", flexWrap:"wrap" }}>
+        <CatBtn active={!filter} onClick={()=>setFilter(null)} label="All" />
+        {sortedCats.map(c=><CatBtn key={c.id} active={filter===c.id} onClick={()=>setFilter(c.id)} label={c.name.en} icon={c.icon} />)}
+      </div>
+
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))", gap:"12px" }}>
+        {shown.map(dish => {
+          const cat = categories.find(c=>c.id===dish.categoryId);
+          return (
+            <div key={dish.id} style={{ background:"var(--charcoal)", border:"1px solid rgba(255,255,255,0.06)", overflow:"hidden" }}>
+              <div style={{ position:"relative", height:"160px" }}>
+                <img src={dish.image} alt="" style={{ width:"100%", height:"160px", objectFit:"cover", display:"block", filter:dish.available?"none":"grayscale(1) opacity(0.5)" }} />
+                <div style={{ position:"absolute", inset:0, background:"linear-gradient(0deg, rgba(7,6,8,0.7) 0%, transparent 60%)" }} />
+                <div style={{ position:"absolute", bottom:"10px", left:"12px", right:"12px", display:"flex", justifyContent:"space-between", alignItems:"flex-end" }}>
+                  <div style={{ fontFamily:"var(--font-display)", fontSize:"18px", fontStyle:"italic", color:"#fff" }}>{dish.name.en}</div>
+                  <div style={{ fontFamily:"var(--font-display)", fontSize:"20px", color:"var(--gold-light)" }}>₾{dish.price}</div>
+                </div>
+                <div style={{ position:"absolute", top:"8px", right:"8px", display:"flex", gap:"4px", flexWrap:"wrap" }}>
+                  {dish.badges.map(b=><span key={b} style={{ background:BADGE_CFG[b]?.bg||"#333", color:BADGE_CFG[b]?.color||"#fff", fontSize:"7px", padding:"2px 6px", fontWeight:"700", letterSpacing:"1px" }}>{b}</span>)}
+                </div>
+              </div>
+              <div style={{ padding:"14px 14px 10px" }}>
+                <div style={{ fontSize:"9px", color:"var(--muted)", letterSpacing:"1px", marginBottom:"10px" }}>{cat?.icon} {cat?.name.en}</div>
+                <div style={{ display:"flex", gap:"6px" }}>
+                  <button onClick={()=>openEdit(dish)} style={{ flex:1, padding:"7px", background:"rgba(201,168,76,0.08)", border:"1px solid rgba(201,168,76,0.2)", color:"var(--gold)", fontSize:"9px", letterSpacing:"1.5px", cursor:"pointer", fontFamily:"var(--font-body)" }}>EDIT</button>
+                  <button onClick={()=>toggle(dish.id)} style={{ flex:1, padding:"7px", background:dish.available?"rgba(16,185,129,0.06)":"rgba(239,68,68,0.06)", border:`1px solid ${dish.available?"rgba(16,185,129,0.2)":"rgba(239,68,68,0.2)"}`, color:dish.available?"#10b981":"#ef4444", fontSize:"9px", letterSpacing:"1.5px", cursor:"pointer", fontFamily:"var(--font-body)" }}>
+                    {dish.available?"ACTIVE":"OFF"}
+                  </button>
+                  <button onClick={()=>del(dish.id)} style={{ padding:"7px 10px", background:"rgba(239,68,68,0.06)", border:"1px solid rgba(239,68,68,0.15)", color:"rgba(239,68,68,0.7)", fontSize:"11px", cursor:"pointer" }}>✕</button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      </>
+      )}
+
+      {catModal !== null && catForm && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.85)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000, backdropFilter:"blur(8px)", padding:"20px" }}>
+          <div style={{ background:"var(--charcoal)", border:"1px solid rgba(201,168,76,0.2)", padding:"36px", width:"100%", maxWidth:"520px", maxHeight:"85vh", overflowY:"auto", animation:"slideIn 0.3s ease" }}>
+            <div style={{ fontFamily:"var(--font-display)", fontSize:"28px", fontStyle:"italic", color:"var(--cream)", marginBottom:"24px" }}>
+              {catModal === "new" ? "New Category" : "Edit Category"}
+            </div>
+            {categoryError && <div style={{ marginBottom:"14px", fontSize:"11px", color:"#fca5a5" }}>{categoryError}</div>}
+            <CategoryFormAdmin form={catForm} setForm={setCatForm} />
+            <div style={{ display:"flex", gap:"10px", marginTop:"24px" }}>
+              <button type="button" onClick={saveCategory} style={{ flex:1, padding:"13px", background:"linear-gradient(135deg,rgba(201,168,76,0.2),rgba(201,168,76,0.08))", border:"1px solid var(--gold)", color:"var(--gold-pale)", fontSize:"9px", letterSpacing:"3px", textTransform:"uppercase", cursor:"pointer", fontFamily:"var(--font-body)" }}>SAVE</button>
+              <button type="button" onClick={() => { setCatModal(null); setCatForm(null); setCategoryError(null); }} style={{ flex:1, padding:"13px", background:"transparent", border:"1px solid rgba(255,255,255,0.1)", color:"var(--muted)", fontSize:"9px", letterSpacing:"3px", textTransform:"uppercase", cursor:"pointer", fontFamily:"var(--font-body)" }}>CANCEL</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {modal!==null && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.85)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000, backdropFilter:"blur(8px)", padding:"20px" }}>
+          <div style={{ background:"var(--charcoal)", border:"1px solid rgba(201,168,76,0.2)", padding:"36px", width:"100%", maxWidth:"560px", maxHeight:"85vh", overflowY:"auto", animation:"slideIn 0.3s ease" }}>
+            <div style={{ fontFamily:"var(--font-display)", fontSize:"28px", fontStyle:"italic", color:"var(--cream)", marginBottom:"28px" }}>
+              {modal==="new"?"New Dish":"Edit Dish"}
+            </div>
+            <DishFormAdmin form={form} setForm={setForm} categories={sortedCats} />
+            <div style={{ display:"flex", gap:"10px", marginTop:"24px" }}>
+              <button onClick={save} style={{ flex:1, padding:"13px", background:"linear-gradient(135deg,rgba(201,168,76,0.2),rgba(201,168,76,0.08))", border:"1px solid var(--gold)", color:"var(--gold-pale)", fontSize:"9px", letterSpacing:"3px", textTransform:"uppercase", cursor:"pointer", fontFamily:"var(--font-body)" }}>SAVE</button>
+              <button onClick={()=>setModal(null)} style={{ flex:1, padding:"13px", background:"transparent", border:"1px solid rgba(255,255,255,0.1)", color:"var(--muted)", fontSize:"9px", letterSpacing:"3px", textTransform:"uppercase", cursor:"pointer", fontFamily:"var(--font-body)" }}>CANCEL</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CategoryFormAdmin({ form, setForm }) {
+  const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
+  const setL = (f, l, v) => setForm(p => ({ ...p, [f]: { ...p[f], [l]: v } }));
+  const labelStyle = { fontSize:"8px", color:"var(--gold)", letterSpacing:"3px", textTransform:"uppercase", marginBottom:"6px", display:"block" };
+  const inputStyle = { width:"100%", padding:"10px 0", background:"transparent", border:"none", borderBottom:"1px solid rgba(201,168,76,0.2)", color:"var(--cream)", fontSize:"14px", fontFamily:"var(--font-display)", outline:"none", boxSizing:"border-box", letterSpacing:"0.5px" };
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:"18px" }}>
+      <div>
+        <label style={labelStyle}>Icon (symbol)</label>
+        <input value={form.icon ?? ""} onChange={e => set("icon", e.target.value.slice(0, 2))} style={{ ...inputStyle, maxWidth:"100px", fontFamily:"var(--font-display)", fontSize:"20px" }} />
+      </div>
+      <div>
+        <label style={labelStyle}>Sort order</label>
+        <input type="number" value={form.order === "" || form.order === undefined ? "" : form.order} onChange={e => set("order", e.target.value === "" ? "" : Number(e.target.value))} style={{ ...inputStyle, fontFamily:"var(--font-body)", fontSize:"13px" }} />
+      </div>
+      {["en","ka","ru"].map(l => (
+        <div key={l}>
+          <label style={labelStyle}>Name ({l.toUpperCase()})</label>
+          <input value={form.name[l] ?? ""} onChange={e => setL("name", l, e.target.value)} style={inputStyle} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function DishFormAdmin({ form, setForm, categories }) {
+  const set = (k,v) => setForm(p=>({...p,[k]:v}));
+  const setL = (f,l,v) => setForm(p=>({...p,[f]:{...p[f],[l]:v}}));
+  const labelStyle = { fontSize:"8px", color:"var(--gold)", letterSpacing:"3px", textTransform:"uppercase", marginBottom:"6px", display:"block" };
+  const inputStyle = { width:"100%", padding:"10px 0", background:"transparent", border:"none", borderBottom:"1px solid rgba(201,168,76,0.2)", color:"var(--cream)", fontSize:"14px", fontFamily:"var(--font-display)", outline:"none", boxSizing:"border-box", letterSpacing:"0.5px" };
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:"18px" }}>
+      <div>
+        <label style={labelStyle}>Category</label>
+        <select value={form.categoryId} onChange={e=>set("categoryId",Number(e.target.value))}
+          style={{...inputStyle, fontFamily:"var(--font-body)", fontSize:"12px"}}>
+          {categories.map(c=><option key={c.id} value={c.id} style={{background:"var(--charcoal)"}}>{c.name.en}</option>)}
+        </select>
+      </div>
+      {["en","ka","ru"].map(l=>(
+        <div key={l}>
+          <label style={labelStyle}>Name ({l.toUpperCase()})</label>
+          <input value={form.name[l]} onChange={e=>setL("name",l,e.target.value)} style={inputStyle} />
+        </div>
+      ))}
+      <div>
+        <label style={labelStyle}>Description (EN)</label>
+        <textarea value={form.description.en} onChange={e=>setL("description","en",e.target.value)} rows={2}
+          style={{...inputStyle, resize:"vertical"}} />
+      </div>
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"16px" }}>
+        <div><label style={labelStyle}>Price (₾)</label><input type="number" value={form.price} onChange={e=>set("price",e.target.value)} style={inputStyle} /></div>
+        <div><label style={labelStyle}>Image URL</label><input value={form.image} onChange={e=>set("image",e.target.value)} style={inputStyle} /></div>
+      </div>
+      <div>
+        <label style={labelStyle}>Distinctions</label>
+        <div style={{ display:"flex", flexWrap:"wrap", gap:"6px", marginTop:"6px" }}>
+          {Object.keys(BADGE_CFG).map(b=>(
+            <button key={b} onClick={()=>set("badges",form.badges.includes(b)?form.badges.filter(x=>x!==b):[...form.badges,b])} style={{ padding:"5px 12px", border:"1px solid", borderColor:form.badges.includes(b)?"var(--gold)":"rgba(201,168,76,0.15)", background:form.badges.includes(b)?"rgba(201,168,76,0.12)":"transparent", color:form.badges.includes(b)?"var(--gold)":"var(--muted)", fontSize:"9px", letterSpacing:"1px", cursor:"pointer", fontFamily:"var(--font-body)" }}>{b}</button>
+          ))}
+        </div>
+      </div>
+      <div style={{ display:"flex", gap:"20px" }}>
+        {[["available","✦ Available"],["featured","◈ Featured"]].map(([k,l])=>(
+          <label key={k} style={{ display:"flex", alignItems:"center", gap:"8px", cursor:"pointer", fontSize:"11px", color:"var(--muted)" }}>
+            <input type="checkbox" checked={form[k]} onChange={e=>set(k,e.target.checked)} /> {l}
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Tables ──────────────────────────────────────────────────────────── */
+function AdminTables({ store }) {
+  const { tables, setTables } = store;
+  const [name, setName] = useState(""); const [zone, setZone] = useState("Grand Hall");
+  const [qr, setQr] = useState(null);
+
+  const add = () => { if (!name.trim()) return; setTables(p=>[...p,{id:Date.now(),name,zone,active:true}]); setName(""); };
+  const toggle = id => setTables(p=>p.map(t=>t.id===id?{...t,active:!t.active}:t));
+  const del = id => setTables(p=>p.filter(t=>t.id!==id));
+
+  const inputStyle = { padding:"11px 0", background:"transparent", border:"none", borderBottom:"1px solid rgba(201,168,76,0.2)", color:"var(--cream)", fontSize:"14px", fontFamily:"var(--font-display)", outline:"none", width:"100%", boxSizing:"border-box" };
+
+  return (
+    <div style={{ padding:"40px", color:"var(--cream)" }}>
+      <PageHeader title="Seating" sub="Table Management" />
+
+      <div style={{ background:"var(--charcoal)", border:"1px solid rgba(201,168,76,0.15)", padding:"28px", marginBottom:"28px" }}>
+        <div style={{ fontSize:"8px", color:"var(--gold)", letterSpacing:"4px", textTransform:"uppercase", marginBottom:"20px" }}>Add Table</div>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr auto", gap:"20px", alignItems:"end" }}>
+          <div><div style={{ fontSize:"8px", color:"var(--muted)", letterSpacing:"2px", marginBottom:"6px" }}>TABLE NAME</div><input value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. Salon Privé" style={inputStyle} /></div>
+          <div>
+            <div style={{ fontSize:"8px", color:"var(--muted)", letterSpacing:"2px", marginBottom:"6px" }}>ZONE</div>
+            <select value={zone} onChange={e=>setZone(e.target.value)} style={{...inputStyle,fontFamily:"var(--font-body)",fontSize:"12px"}}>
+              {["Grand Hall","VIP","Terrace","Bar","Private"].map(z=><option key={z} style={{background:"var(--charcoal)"}}>{z}</option>)}
+            </select>
+          </div>
+          <button onClick={add} style={{ padding:"11px 24px", background:"rgba(201,168,76,0.12)", border:"1px solid var(--gold)", color:"var(--gold)", fontSize:"9px", letterSpacing:"2px", textTransform:"uppercase", cursor:"pointer", fontFamily:"var(--font-body)", whiteSpace:"nowrap" }}>ADD</button>
+        </div>
+      </div>
+
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))", gap:"12px" }}>
+        {tables.map(tb => (
+          <div key={tb.id} style={{ background:"var(--charcoal)", border:"1px solid rgba(255,255,255,0.06)", padding:"22px" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:"16px" }}>
+              <div>
+                <div style={{ fontFamily:"var(--font-display)", fontSize:"20px", fontStyle:"italic", color:"var(--cream)" }}>{tb.name}</div>
+                <div style={{ fontSize:"9px", color:"var(--muted)", letterSpacing:"2px", marginTop:"2px" }}>{tb.zone}</div>
+                <div style={{ fontSize:"8px", color:"var(--subtle)", marginTop:"6px", letterSpacing:"1px" }}>tiflisi.ge/?table={tb.id}</div>
+              </div>
+              <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:"4px" }}>
+                <div style={{ width:"8px", height:"8px", borderRadius:"50%", background:tb.active?"#10b981":"var(--subtle)", animation:tb.active?"pulse 2s infinite":"none" }} />
+                <span style={{ fontSize:"8px", color:tb.active?"#10b981":"var(--subtle)", letterSpacing:"1.5px" }}>{tb.active?"LIVE":"OFF"}</span>
+              </div>
+            </div>
+
+            {qr===tb.id && (
+              <div style={{ textAlign:"center", padding:"16px", background:"#f5e4b0", marginBottom:"14px" }}>
+                <img src={makeQR(`tiflisi.ge/?table=${tb.id}`)} alt="QR" style={{ width:"140px", height:"140px" }} />
+                <div style={{ marginTop:"8px", fontSize:"9px", color:"#333", letterSpacing:"1px", fontFamily:"var(--font-body)" }}>{tb.name} · {tb.zone}</div>
+              </div>
+            )}
+
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr auto", gap:"6px" }}>
+              <button onClick={()=>setQr(qr===tb.id?null:tb.id)} style={{ padding:"8px", background:"rgba(139,92,246,0.08)", border:"1px solid rgba(139,92,246,0.2)", color:"#a78bfa", fontSize:"8px", letterSpacing:"1.5px", textTransform:"uppercase", cursor:"pointer", fontFamily:"var(--font-body)" }}>
+                {qr===tb.id?"HIDE":"QR"}
+              </button>
+              <button onClick={()=>toggle(tb.id)} style={{ padding:"8px", background:tb.active?"rgba(239,68,68,0.06)":"rgba(16,185,129,0.06)", border:`1px solid ${tb.active?"rgba(239,68,68,0.2)":"rgba(16,185,129,0.2)"}`, color:tb.active?"#ef4444":"#10b981", fontSize:"8px", letterSpacing:"1.5px", textTransform:"uppercase", cursor:"pointer", fontFamily:"var(--font-body)" }}>
+                {tb.active?"PAUSE":"START"}
+              </button>
+              <button onClick={()=>del(tb.id)} style={{ padding:"8px 10px", background:"rgba(239,68,68,0.06)", border:"1px solid rgba(239,68,68,0.1)", color:"rgba(239,68,68,0.5)", cursor:"pointer", fontSize:"11px" }}>✕</button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Alerts ──────────────────────────────────────────────────────────── */
+function AdminAlerts({ store }) {
+  const { notifications, setNotifications } = store;
+  const unread = notifications.filter(n=>!n.read).length;
+
+  return (
+    <div style={{ padding:"40px", color:"var(--cream)" }}>
+      <PageHeader title="Alerts" sub={`${unread} Unread Notifications`}
+        action={
+          <div style={{ display:"flex", gap:"8px" }}>
+            <button onClick={()=>setNotifications(p=>p.map(n=>({...n,read:true})))} style={{ padding:"9px 18px", background:"rgba(201,168,76,0.08)", border:"1px solid rgba(201,168,76,0.2)", color:"var(--gold)", fontSize:"9px", letterSpacing:"2px", cursor:"pointer", fontFamily:"var(--font-body)" }}>MARK READ</button>
+            <button onClick={()=>setNotifications([])} style={{ padding:"9px 18px", background:"rgba(239,68,68,0.06)", border:"1px solid rgba(239,68,68,0.15)", color:"rgba(239,68,68,0.7)", fontSize:"9px", letterSpacing:"2px", cursor:"pointer", fontFamily:"var(--font-body)" }}>CLEAR ALL</button>
+          </div>
+        } />
+
+      {notifications.length===0 ? (
+        <div style={{ textAlign:"center", padding:"80px 0", fontFamily:"var(--font-display)", fontSize:"22px", fontStyle:"italic", color:"var(--subtle)" }}>No alerts at this time</div>
+      ) : (
+        <div style={{ display:"flex", flexDirection:"column", gap:"8px" }}>
+          {notifications.map(n => (
+            <div key={n.id} onClick={()=>setNotifications(p=>p.map(x=>x.id===n.id?{...x,read:true}:x))} style={{
+              display:"flex", gap:"16px", alignItems:"center",
+              padding:"18px 20px", background: n.read?"rgba(255,255,255,0.015)":"rgba(201,168,76,0.04)",
+              border:`1px solid ${n.read?"rgba(255,255,255,0.05)":"rgba(201,168,76,0.15)"}`,
+              borderLeft:`3px solid ${n.type==="waiter"?"var(--gold)":"#8b5cf6"}`,
+              cursor:"pointer", transition:"all 0.2s",
+            }}>
+              <div style={{ width:"36px", height:"36px", background: n.type==="waiter"?"rgba(201,168,76,0.1)":"rgba(139,92,246,0.1)", border:`1px solid ${n.type==="waiter"?"rgba(201,168,76,0.2)":"rgba(139,92,246,0.2)"}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:"14px", flexShrink:0 }}>
+                {n.type==="waiter"?"◈":"◇"}
+              </div>
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:"14px", fontFamily:"var(--font-display)", fontStyle:"italic", color: n.read?"var(--muted)":"var(--cream)" }}>{n.tableName}</div>
+                <div style={{ fontSize:"10px", color:"var(--muted)", marginTop:"2px", letterSpacing:"0.5px" }}>{n.message}</div>
+              </div>
+              <div style={{ textAlign:"right" }}>
+                <div style={{ fontSize:"11px", color:"var(--gold)", fontFamily:"var(--font-display)" }}>{n.time?.toLocaleTimeString()}</div>
+                {!n.read && <div style={{ fontSize:"7px", letterSpacing:"2px", color:"var(--gold)", marginTop:"4px" }}>NEW</div>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Analytics ───────────────────────────────────────────────────────── */
+function AdminAnalytics({ store }) {
+  const { dishes, categories, analytics } = store;
+  const top = [...dishes].sort((a,b)=>(analytics.views[b.id]||0)-(analytics.views[a.id]||0)).slice(0,6);
+  const maxV = Math.max(...top.map(d=>analytics.views[d.id]||0),1);
+  const catData = [...categories].sort((a,b)=>(a.order??0)-(b.order??0)).map(c=>({ ...c, views: dishes.filter(d=>d.categoryId===c.id).reduce((s,d)=>s+(analytics.views[d.id]||0),0) }));
+
+  return (
+    <div style={{ padding:"40px", color:"var(--cream)" }}>
+      <PageHeader title="Insights" sub="Performance Analytics" />
+
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:"12px", marginBottom:"32px" }}>
+        <Stat icon="◈" label="Total Scans" value={analytics.scans} color="var(--gold)" />
+        <Stat icon="◎" label="Total Views" value={Object.values(analytics.views).reduce((a,b)=>a+b,0)} color="#8b5cf6" />
+        <Stat icon="◉" label="Available Dishes" value={dishes.filter(d=>d.available).length} color="#10b981" />
+      </div>
+
+      <div style={{ display:"grid", gridTemplateColumns:"3fr 2fr", gap:"16px" }}>
+        <div style={{ background:"var(--charcoal)", border:"1px solid rgba(201,168,76,0.1)", padding:"28px" }}>
+          <div style={{ fontSize:"8px", color:"var(--gold)", letterSpacing:"4px", textTransform:"uppercase", marginBottom:"24px" }}>Most Viewed Dishes</div>
+          {top.map((dish,i) => {
+            const v = analytics.views[dish.id]||0;
+            const pct = (v/maxV)*100;
+            return (
+              <div key={dish.id} style={{ marginBottom:"16px" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", marginBottom:"6px" }}>
+                  <div style={{ display:"flex", gap:"10px", alignItems:"center" }}>
+                    <span style={{ fontSize:"9px", color:"var(--subtle)", width:"14px" }}>#{i+1}</span>
+                    <span style={{ fontSize:"12px", color:"var(--cream)" }}>{dish.name.en}</span>
+                  </div>
+                  <span style={{ fontSize:"12px", fontFamily:"var(--font-display)", color:"var(--gold-light)" }}>{v}</span>
+                </div>
+                <div style={{ height:"2px", background:"rgba(255,255,255,0.05)" }}>
+                  <div style={{ width:`${pct}%`, height:"100%", background:`linear-gradient(90deg,var(--gold),var(--amber))`, transition:"width 0.8s cubic-bezier(0.4,0,0.2,1)" }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div style={{ background:"var(--charcoal)", border:"1px solid rgba(201,168,76,0.1)", padding:"28px" }}>
+          <div style={{ fontSize:"8px", color:"var(--gold)", letterSpacing:"4px", textTransform:"uppercase", marginBottom:"24px" }}>Category Views</div>
+          {catData.sort((a,b)=>b.views-a.views).map(cat => (
+            <div key={cat.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 0", borderBottom:"1px solid rgba(255,255,255,0.04)" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:"10px" }}>
+                <span style={{ fontSize:"12px", color:"var(--gold)", opacity:0.6 }}>{cat.icon}</span>
+                <span style={{ fontSize:"11px", color:"var(--cream)" }}>{cat.name.en}</span>
+              </div>
+              <span style={{ fontFamily:"var(--font-display)", fontSize:"18px", color:"var(--gold-light)" }}>{cat.views}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   WELCOME (language gate)
+═══════════════════════════════════════════════════════════════════════════ */
+const WELCOME_STORAGE_KEY = "tiflisi_welcome_v1";
+
+/** Vite `base` (e.g. `/` or `/repo-name/`); home and admin URLs must include it on GitHub Pages. */
+const APP_HOME_URL = import.meta.env.BASE_URL || "/";
+const BASE_WITH_SLASH = APP_HOME_URL.endsWith("/") ? APP_HOME_URL : `${APP_HOME_URL}/`;
+const APP_ADMIN_PATH = `${BASE_WITH_SLASH}admin`.replace(/([^:]\/)\/+/g, "$1");
+
+function getRouteSegment() {
+  const p = (window.location.pathname || "/").replace(/\/+$/, "") || "/";
+  const admin = APP_ADMIN_PATH.replace(/\/+$/, "");
+  return p === admin ? "admin" : "customer";
+}
+
+function readSavedWelcomeLang() {
+  try {
+    const raw = sessionStorage.getItem(WELCOME_STORAGE_KEY);
+    if (!raw) return null;
+    const j = JSON.parse(raw);
+    if (j?.lang && ["en", "ka", "ru"].includes(j.lang)) return j.lang;
+  } catch {}
+  return null;
+}
+
+function WelcomeScreen({ onChooseLang }) {
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="welcome-title"
+      style={{
+        minHeight: "100vh",
+        background: "var(--obsidian)",
+        color: "var(--cream)",
+        fontFamily: "var(--font-body)",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "32px 24px",
+        position: "relative",
+      }}
+    >
+      <GlobalStyles />
+      <FontLoader />
+      <div className="noise" />
+      <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at 50% 20%, rgba(201,168,76,0.08) 0%, transparent 55%)", pointerEvents: "none" }} />
+
+      <div style={{ position: "relative", zIndex: 1, width: "100%", maxWidth: "420px", textAlign: "center", animation: "fadeIn 0.9s ease" }}>
+        <div style={{ fontSize: "10px", letterSpacing: "6px", color: "var(--gold)", textTransform: "uppercase", marginBottom: "14px", fontWeight: 500 }}>
+          GEORGIAN FINE DINING
+        </div>
+        <h1 id="welcome-title" style={{ fontFamily: "var(--font-display)", fontSize: "clamp(44px,12vw,64px)", fontWeight: 300, fontStyle: "italic", color: "var(--cream)", letterSpacing: "-1px", lineHeight: 1.05, margin: 0 }}>
+          Tiflisi
+        </h1>
+        <p style={{ marginTop: "18px", fontFamily: "var(--font-display)", fontSize: "clamp(17px,4.5vw,22px)", fontWeight: 300, color: "var(--gold-pale)", lineHeight: 1.45, fontStyle: "italic" }}>
+          კეთილი იყოს თქვენი მობრძანება
+        </p>
+        <p style={{ marginTop: "8px", fontSize: "11px", color: "var(--muted)", letterSpacing: "0.4px", lineHeight: 1.6, fontWeight: 300 }}>
+          Welcome · Добро пожаловать
+        </p>
+
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "12px", margin: "36px 0 28px" }}>
+          <div style={{ flex: 1, maxWidth: "80px", height: "1px", background: "linear-gradient(90deg, transparent, rgba(201,168,76,0.45))" }} />
+          <span style={{ fontSize: "9px", letterSpacing: "3px", textTransform: "uppercase", color: "var(--muted)" }}>ენა / Language</span>
+          <div style={{ flex: 1, maxWidth: "80px", height: "1px", background: "linear-gradient(90deg, rgba(201,168,76,0.45), transparent)" }} />
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          <button
+            type="button"
+            onClick={() => onChooseLang("ka")}
+            className="action-btn"
+            style={{
+              width: "100%",
+              padding: "16px 20px",
+              border: "1px solid var(--gold)",
+              background: "linear-gradient(135deg, rgba(201,168,76,0.18), rgba(201,168,76,0.06))",
+              color: "var(--gold-pale)",
+              fontSize: "15px",
+              fontWeight: 500,
+              cursor: "pointer",
+              fontFamily: "var(--font-display)",
+              fontStyle: "italic",
+              letterSpacing: "0.5px",
+              borderRadius: "2px",
+            }}
+          >
+            ქართული
+          </button>
+          <button
+            type="button"
+            onClick={() => onChooseLang("en")}
+            className="action-btn"
+            style={{
+              width: "100%",
+              padding: "16px 20px",
+              border: "1px solid rgba(201,168,76,0.28)",
+              background: "rgba(255,255,255,0.03)",
+              color: "var(--cream)",
+              fontSize: "13px",
+              fontWeight: 600,
+              letterSpacing: "2px",
+              textTransform: "uppercase",
+              cursor: "pointer",
+              fontFamily: "var(--font-body)",
+              borderRadius: "2px",
+            }}
+          >
+            English
+          </button>
+          <button
+            type="button"
+            onClick={() => onChooseLang("ru")}
+            className="action-btn"
+            style={{
+              width: "100%",
+              padding: "16px 20px",
+              border: "1px solid rgba(201,168,76,0.28)",
+              background: "rgba(255,255,255,0.03)",
+              color: "var(--cream)",
+              fontSize: "13px",
+              fontWeight: 600,
+              letterSpacing: "2px",
+              textTransform: "uppercase",
+              cursor: "pointer",
+              fontFamily: "var(--font-body)",
+              borderRadius: "2px",
+            }}
+          >
+            Русский
+          </button>
+        </div>
+
+        <p style={{ marginTop: "28px", fontSize: "10px", color: "var(--subtle)", letterSpacing: "1px" }}>
+          აირჩიეთ ენა მენიუს სანახავად
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ROOT APP
+═══════════════════════════════════════════════════════════════════════════ */
+export default function App() {
+  const store = useStore();
+  const [routeSeg, setRouteSeg] = useState(() => getRouteSegment());
+  const isAdminRoute = routeSeg === "admin";
+
+  const navigate = useCallback((path) => {
+    window.history.pushState({}, "", path);
+    setRouteSeg(getRouteSegment());
+  }, []);
+
+  useEffect(() => {
+    const sync = () => setRouteSeg(getRouteSegment());
+    window.addEventListener("popstate", sync);
+    return () => window.removeEventListener("popstate", sync);
+  }, []);
+
+  const savedLang = readSavedWelcomeLang();
+  const [enteredMenu, setEnteredMenu] = useState(() => savedLang !== null || getRouteSegment() === "admin");
+  const [lang, setLang] = useState(savedLang ?? "ka");
+  const [tableId, setTableId] = useState(1);
+  const [adminAuth, setAdminAuth] = useState(false);
+
+  useEffect(() => {
+    document.documentElement.lang = lang === "ka" ? "ka" : lang === "ru" ? "ru" : "en";
+  }, [lang]);
+
+  const enterWithLang = useCallback((l) => {
+    setLang(l);
+    try {
+      sessionStorage.setItem(WELCOME_STORAGE_KEY, JSON.stringify({ lang: l }));
+    } catch {}
+    setEnteredMenu(true);
+  }, []);
+
+  return (
+    <div>
+      {!enteredMenu && !isAdminRoute && <WelcomeScreen onChooseLang={enterWithLang} />}
+
+      {enteredMenu && !isAdminRoute && (
+        <div style={{ position:"fixed", bottom:"16px", left:"50%", transform:"translateX(-50%)", zIndex:9999, display:"flex", gap:"6px", background:"rgba(7,6,8,0.92)", padding:"8px 10px", border:"1px solid rgba(201,168,76,0.2)", backdropFilter:"blur(20px)" }}>
+          <select value={tableId} onChange={e=>{ setTableId(Number(e.target.value)); }}
+            style={{ padding:"5px 8px", background:"var(--charcoal)", border:"1px solid rgba(201,168,76,0.2)", color:"var(--gold)", fontSize:"9px", letterSpacing:"1px", fontFamily:"var(--font-body)" }}>
+            {store.tables.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}
+          </select>
+          <button type="button" onClick={() => navigate(APP_HOME_URL)} style={{ padding:"5px 14px", background:"rgba(201,168,76,0.15)", border:"1px solid var(--gold)", color:"var(--gold)", fontSize:"9px", letterSpacing:"2px", cursor:"pointer", fontFamily:"var(--font-body)" }}>
+            MENU
+          </button>
+          <button type="button" onClick={() => navigate(APP_ADMIN_PATH)} style={{ padding:"5px 14px", background:"transparent", border:"1px solid rgba(201,168,76,0.15)", color:"var(--muted)", fontSize:"9px", letterSpacing:"2px", cursor:"pointer", fontFamily:"var(--font-body)" }}>
+            ADMIN
+          </button>
+        </div>
+      )}
+
+      {enteredMenu && !isAdminRoute && <CustomerMenu tableId={tableId} store={store} lang={lang} setLang={setLang} />}
+      {enteredMenu && isAdminRoute && !adminAuth && (
+        <AdminLogin onLogin={() => { setAdminAuth(true); }} />
+      )}
+      {enteredMenu && isAdminRoute && adminAuth && (
+        <AdminPanel store={store} onLogout={() => { setAdminAuth(false); navigate(APP_HOME_URL); }} />
+      )}
+    </div>
+  );
+}

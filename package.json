@@ -1,0 +1,19 @@
+{
+  "name": "tiflisi-digital-menu",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build && node scripts/ensure-spa-404.mjs",
+    "preview": "vite preview --host",
+    "start": "vite --host --port 3001"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite": "^6.0.3"
+  }
+}
