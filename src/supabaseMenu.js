@@ -204,6 +204,13 @@ export async function insertMenuItem({
   if (error) throw error;
 }
 
+/** Cloud admin: set only `image_url` for an existing row (other fields unchanged). */
+export async function updateMenuDishImageUrl(id, imageUrl) {
+  if (!supabase) throw new Error("Supabase is not configured");
+  const { error } = await supabase.from("menu").update({ image_url: imageUrl }).eq("id", id);
+  if (error) throw error;
+}
+
 /** Full dish from Cuisine admin (all locales). Returns created row as app dish. */
 export async function insertFullMenuDish(dish) {
   if (!supabase) throw new Error("Supabase is not configured");

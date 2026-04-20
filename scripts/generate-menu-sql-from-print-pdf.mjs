@@ -153,8 +153,8 @@ function median3(a, b, c) {
 }
 
 /**
- * KA list is the column master. RU/EN PDF text order can drift by ±1; match by price
- * in a sliding window around index i (prefer closest index, then smallest Δprice).
+ * Prefer same index when price matches (avoids wrong khinkali / duplicate-price rows).
+ * Otherwise smallest price delta, then nearest index.
  */
 function pickMatch(list, i, used, targetPrice, win) {
   const lo = Math.max(0, i - win);
@@ -164,14 +164,113 @@ function pickMatch(list, i, used, targetPrice, win) {
   for (let j = lo; j <= hi; j++) {
     if (used.has(j)) continue;
     const dp = Math.abs(list[j].price - targetPrice);
-    const di = Math.abs(j - i) * 0.001;
-    const score = dp + di;
+    const di = Math.abs(j - i);
+    const score = dp * 1_000_000 + di;
     if (score < bestScore) {
       bestScore = score;
       bestJ = j;
     }
   }
   return bestJ;
+}
+
+/** Map PDF sub-headings / fragments → stable menu group (Georgian key). */
+function collapseCategoryKa(raw) {
+  const t = prettifyTitle(raw);
+  if (!t) return "სხვა";
+  if (/დესერტ/i.test(t)) return "დესერტი";
+  if (/გარნირი/i.test(t)) return "გარნირი";
+  if (/თევზ|ზუთხი|ორაგულის ფილე|შემწვარი ვეფხისებრი|კრევეტ/i.test(t)) return "თევზეული";
+  if (/პასტა|რიზოტო/i.test(t)) return "პასტა/რიზოტო";
+  if (/ცხელი კერძ/i.test(t)) return "ცხელი კერძები";
+  if (/მაყალზე|ჯოსპერ|მომზადებული კერძები/i.test(t)) return "შამფური და ჯოსპერი";
+  if (/ხინკალი/i.test(t)) return "ხინკალი";
+  if (/ცომეული/i.test(t)) return "ცომეული";
+  if (/წვნიანი/i.test(t)) return "წვნიანი";
+  if (/ცხელი წასახემს/i.test(t)) return "ცხელი წასახემსებელი";
+  if (/ცივი წასახემს/i.test(t)) return "ცივი წასახემსებელი";
+  if (/მომზადებული ბოსტნეულით|შერეული მწნილით|სოსისის ასორტ/i.test(t)) return "ცხელი კერძები";
+  if (/კარამელიზირებული|მანგო ავოკადო|ცეზარი კრევეტ/i.test(t)) return "სალათი";
+  if (/^სალათი$/i.test(t) || (t.length <= 20 && /სალათი/i.test(t) && !/ქათმის|რუკოლა|ბერძნული|ენის|ცეზარი ქათმით|კამეჩის/i.test(t)))
+    return "სალათი";
+  if (/სალათი/i.test(t)) return "სალათი";
+  return t.length > 40 ? t.slice(0, 40) : t;
+}
+
+const CAT_LABELS = {
+  სალათი: { en: "Salads", ru: "Салаты" },
+  "ცივი წასახემსებელი": { en: "Cold appetizers", ru: "Холодные закуски" },
+  "ცხელი წასახემსებელი": { en: "Hot appetizers", ru: "Горячие закуски" },
+  წვნიანი: { en: "Soups", ru: "Супы" },
+  ცომეული: { en: "Bakery", ru: "Выпечка" },
+  ხინკალი: { en: "Khinkali", ru: "Хинкали" },
+  "შამფური და ჯოსპერი": { en: "Grill & Josper", ru: "Мангал и джоспер" },
+  "პასტა/რიზოტო": { en: "Pasta & risotto", ru: "Паста и ризотто" },
+  "ცხელი კერძები": { en: "Main courses", ru: "Горячие блюда" },
+  თევზეული: { en: "Seafood", ru: "Морепродукты" },
+  გარნირი: { en: "Side dishes", ru: "Гарниры" },
+  დესერტი: { en: "Desserts", ru: "Десерты" },
+  სხვა: { en: "Other", ru: "Прочее" },
+};
+
+/** Insert order + stable labels (never use parsed dish lines as category titles). */
+const CATEGORY_ORDER = [
+  "სალათი",
+  "ცივი წასახემსებელი",
+  "ცხელი წასახემსებელი",
+  "წვნიანი",
+  "ცომეული",
+  "ხინკალი",
+  "შამფური და ჯოსპერი",
+  "პასტა/რიზოტო",
+  "ცხელი კერძები",
+  "თევზეული",
+  "გარნირი",
+  "დესერტი",
+  "სხვა",
+];
+
+function applyKnownNameFixes(row) {
+  const ka = row.nameKa;
+  const ru = row.nameRu;
+  const en = row.nameEn;
+  if (/^cheese and honey sauce$/i.test(en) && /ყველით და თაფლის/i.test(ka)) {
+    return {
+      ...row,
+      nameKa: "კარამელიზებული მსხლის სალათი ლურჯი ყველით და თაფლის სოუსით",
+      nameEn: "Caramelized pear salad with blue cheese and honey sauce",
+      nameRu: "Салат из карамелизированной груши с сыром дор блю и медовым соусом",
+    };
+  }
+  if (/^and sweet-sour sauce$/i.test(en) && /კრევეტებით და ტკბილ/i.test(ka)) {
+    return {
+      ...row,
+      nameKa: "მანგოსა და ავოკადოს სალათი კრევეტებით და ტკბილ-ცხარე სოუსით",
+      nameEn: "Mango and avocado salad with prawns and sweet-sour sauce",
+      nameRu: "Салат с манго и авокадо, креветками и кисло-сладким соусом",
+    };
+  }
+  if (/ტრადიციული ქართული სალათი.*ნიგვზით/i.test(ka) && ru.length < 40) {
+    return {
+      ...row,
+      nameRu: "Традиционный грузинский салат с грецкими орехами",
+      nameEn: "Traditional Georgian salad with walnuts",
+    };
+  }
+  if (/^ushroom\b/i.test(en)) {
+    return { ...row, nameEn: en.replace(/^ushroom/i, "Mushroom") };
+  }
+  if (/ореxами/i.test(ru)) {
+    return { ...row, nameRu: ru.replace(/ореxами/gi, "орехами") };
+  }
+  if (/^ореxами$/i.test(ru) && /ნიგვზით/.test(ka)) {
+    return {
+      ...row,
+      nameRu: "Традиционный грузинский салат с грецкими орехами",
+      nameEn: "Traditional Georgian salad with walnuts",
+    };
+  }
+  return row;
 }
 
 function zipDishesAligned(kaList, ruList, enList, win = 8) {
@@ -214,21 +313,30 @@ function zipDishesAligned(kaList, ruList, enList, win = 8) {
 }
 
 function buildCategoryMap(rows) {
+  const present = new Set();
+  for (const r of rows) {
+    present.add(collapseCategoryKa(r.categoryKa));
+  }
   const keys = [];
   const map = new Map();
   let order = 0;
-  for (const r of rows) {
-    const key = prettifyTitle(r.categoryEn || r.categoryKa || r.categoryRu);
-    if (!map.has(key)) {
-      map.set(key, {
-        id: CATEGORY_ID_BASE + keys.length,
-        name_en: r.categoryEn || "",
-        name_ka: r.categoryKa || "",
-        name_ru: r.categoryRu || "",
-        order: ++order,
-      });
-      keys.push(key);
-    }
+  const addKey = (key) => {
+    if (map.has(key)) return;
+    const lab = CAT_LABELS[key] || { en: key, ru: key };
+    map.set(key, {
+      id: CATEGORY_ID_BASE + keys.length,
+      name_en: lab.en,
+      name_ka: key,
+      name_ru: lab.ru,
+      order: ++order,
+    });
+    keys.push(key);
+  };
+  for (const key of CATEGORY_ORDER) {
+    if (present.has(key)) addKey(key);
+  }
+  for (const key of present) {
+    if (!map.has(key)) addKey(key);
   }
   return { keys, map };
 }
@@ -255,7 +363,8 @@ async function main() {
   const enD = parseLanguageBlock(en);
   console.error(`Parsed dishes — KA:${kaD.length} RU:${ruD.length} EN:${enD.length}`);
 
-  const zipped = zipDishesAligned(kaD, ruD, enD, 10);
+  let zipped = zipDishesAligned(kaD, ruD, enD, 10);
+  zipped = zipped.map(applyKnownNameFixes);
   const { keys, map } = buildCategoryMap(zipped);
 
   const lines = [];
@@ -277,8 +386,8 @@ async function main() {
   lines.push("");
 
   for (const row of zipped) {
-    const key = row.categoryEn || row.categoryKa || row.categoryRu;
-    const cid = map.get(key).id;
+    const key = collapseCategoryKa(row.categoryKa);
+    const cid = map.get(key)?.id ?? CATEGORY_ID_BASE;
     lines.push(
       `INSERT INTO public.menu (category_id, name_en, name_ka, name_ru, description_en, description_ka, description_ru, price, image_url, ingredients, badges, available, featured) VALUES (${cid}, ${sqlStr(row.nameEn)}, ${sqlStr(row.nameKa)}, ${sqlStr(row.nameRu)}, '', '', '', ${row.price}, ${sqlStr(PLACEHOLDER_IMAGE)}, '{}', '{}', true, false);`
     );

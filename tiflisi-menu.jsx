@@ -6,6 +6,7 @@ import {
   fetchMenuCategories,
   uploadMenuImage,
   insertMenuItem,
+  updateMenuDishImageUrl,
   insertFullMenuDish,
   updateFullMenuDish,
   deleteMenuDishById,
@@ -1106,17 +1107,40 @@ function AdminLogin({ onLogin }) {
 
 /** Supabase: upload image to Storage, insert row into public.menu (see supabase/schema.sql). */
 function AdminCloudMenu({ store }) {
-  const { categories, reloadMenuFromSupabase } = store;
+  const { categories, dishes, reloadMenuFromSupabase, menuLoading } = store;
   const sortedCats = useMemo(() => [...categories].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)), [categories]);
   const [categoryId, setCategoryId] = useState(() => sortedCats[0]?.id ?? "");
+  const [existingDishId, setExistingDishId] = useState("");
+
+  const dishOptions = useMemo(() => {
+    const catOrder = new Map(sortedCats.map((c, i) => [c.id, i]));
+    return [...dishes].sort((a, b) => {
+      const oa = catOrder.get(a.categoryId) ?? 999;
+      const ob = catOrder.get(b.categoryId) ?? 999;
+      if (oa !== ob) return oa - ob;
+      const ta = a.name?.en || a.name?.ka || "";
+      const tb = b.name?.en || b.name?.ka || "";
+      return ta.localeCompare(tb, "ka");
+    });
+  }, [dishes, sortedCats]);
+
+  const selectedDish = useMemo(
+    () => (existingDishId ? dishes.find((d) => String(d.id) === String(existingDishId)) : null),
+    [dishes, existingDishId]
+  );
+
   useEffect(() => {
     const first = sortedCats[0]?.id;
     if (first == null) {
       setCategoryId("");
       return;
     }
+    if (existingDishId && selectedDish) {
+      setCategoryId(selectedDish.categoryId);
+      return;
+    }
     setCategoryId((prev) => (sortedCats.some((c) => c.id === prev) ? prev : first));
-  }, [sortedCats]);
+  }, [sortedCats, existingDishId, selectedDish]);
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -1125,6 +1149,13 @@ function AdminCloudMenu({ store }) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
+
+  const dishOptionLabel = (d) => {
+    const cat = sortedCats.find((c) => c.id === d.categoryId);
+    const catEn = cat?.name?.en || cat?.name?.ka || "—";
+    const title = d.name?.en || d.name?.ka || "—";
+    return `${catEn} · ${title} · ${formatLari(d.price)} ₾`;
+  };
 
   const inputStyle = { width:"100%", padding:"12px 14px", background:"rgba(255,255,255,0.04)", border:"1px solid rgba(61,191,176,0.2)", color:"var(--cream)", fontSize:"13px", fontFamily:"var(--font-body)", borderRadius:"2px", boxSizing:"border-box" };
   const labelStyle = { fontSize:"8px", color:"var(--gold)", letterSpacing:"3px", textTransform:"uppercase", marginBottom:"8px", display:"block" };
@@ -1141,17 +1172,41 @@ function AdminCloudMenu({ store }) {
       setErr("ჯგუფები ცარიელია — Admin → Cuisine → Categories-დან დაამატე კატეგორია.");
       return;
     }
-    if (categoryId === "" || categoryId == null) {
-      setErr("აირჩიე კატეგორია.");
+    if (!file) {
+      setErr("აირჩიე სურათის ფაილი.");
       return;
     }
-    if (!name.trim()) { setErr("Name is required."); return; }
-    const priceNum = parsePriceValue(price);
-    if (!Number.isFinite(priceNum) || priceNum < 0) { setErr("Enter a valid price."); return; }
-    if (!file) { setErr("Choose an image file."); return; }
+    if (existingDishId) {
+      if (!dishes.some((d) => String(d.id) === String(existingDishId))) {
+        setErr("არასწორი კერძი.");
+        return;
+      }
+    } else {
+      if (categoryId === "" || categoryId == null) {
+        setErr("აირჩიე კატეგორია.");
+        return;
+      }
+      if (!name.trim()) {
+        setErr("Name is required.");
+        return;
+      }
+      const priceNum = parsePriceValue(price);
+      if (!Number.isFinite(priceNum) || priceNum < 0) {
+        setErr("Enter a valid price.");
+        return;
+      }
+    }
     setBusy(true);
     try {
       const imageUrl = await uploadMenuImage(file);
+      if (existingDishId) {
+        await updateMenuDishImageUrl(existingDishId, imageUrl);
+        setMsg("სურათი მიება კერძს Supabase-ში. მენიუ განახლდა.");
+        setFile(null);
+        await reloadMenuFromSupabase();
+        return;
+      }
+      const priceNum = parsePriceValue(price);
       await insertMenuItem({
         categoryId: Number(categoryId),
         name: name.trim(),
@@ -1185,12 +1240,105 @@ function AdminCloudMenu({ store }) {
     );
   }
 
+  const updateMode = Boolean(existingDishId);
+
   return (
     <div style={{ padding:"40px", color:"var(--cream)", maxWidth:"560px" }}>
-      <PageHeader title="Cloud menu" sub="Upload image → Storage · Save row → Postgres" />
+      <PageHeader
+        title="Cloud menu"
+        sub={updateMode ? "არსებული კერძი → სურათი → Storage · განახლება Postgres-ში" : "ახალი კერძი · სურათი → Storage · ჩანაწერი Postgres-ში"}
+      />
       {err && <div style={{ marginBottom:"16px", padding:"12px", border:"1px solid rgba(239,68,68,0.35)", background:"rgba(239,68,68,0.08)", color:"#fca5a5", fontSize:"12px" }}>{err}</div>}
       {msg && <div style={{ marginBottom:"16px", padding:"12px", border:"1px solid rgba(16,185,129,0.35)", background:"rgba(16,185,129,0.08)", color:"#86efac", fontSize:"12px" }}>{msg}</div>}
       <form onSubmit={onSubmit} style={{ display:"flex", flexDirection:"column", gap:"20px" }}>
+        <div>
+          <label style={labelStyle}>არსებული კერძი (სურათის მისაბმელად)</label>
+          <select
+            value={existingDishId}
+            onChange={(e) => {
+              const v = e.target.value;
+              setExistingDishId(v);
+              setErr("");
+              setMsg("");
+              setFile(null);
+              if (v) {
+                setName("");
+                setDescription("");
+                setPrice("");
+              }
+            }}
+            disabled={menuLoading}
+            style={{ ...inputStyle, cursor: menuLoading ? "wait" : "pointer", opacity: menuLoading ? 0.7 : 1 }}
+          >
+            <option value="" style={{ background:"#132220" }}>
+              — ახალი კერძი (ქვემოთ შეავსე სახელი, ფასი) —
+            </option>
+            {dishOptions.map((d) => (
+              <option key={d.id} value={String(d.id)} style={{ background:"#132220" }}>
+                {dishOptionLabel(d)}
+              </option>
+            ))}
+          </select>
+          {menuLoading && (
+            <div style={{ marginTop:"8px", fontSize:"11px", color:"var(--muted)" }}>მენიუ იტვირთება…</div>
+          )}
+          {!menuLoading && dishes.length === 0 && (
+            <div style={{ marginTop:"8px", fontSize:"11px", color:"var(--muted)" }}>კერძები ჯერ არ ჩანს — შეამოწმე Supabase ან SQL seed.</div>
+          )}
+        </div>
+
+        {selectedDish && (
+          <div
+            style={{
+              padding:"14px",
+              border:"1px solid rgba(61,191,176,0.2)",
+              background:"rgba(61,191,176,0.06)",
+              borderRadius:"2px",
+              display:"flex",
+              gap:"14px",
+              alignItems:"flex-start",
+            }}
+          >
+            {selectedDish.image ? (
+              <img
+                src={selectedDish.image}
+                alt=""
+                style={{ width:"72px", height:"72px", objectFit:"cover", borderRadius:"2px", flexShrink:0, border:"1px solid rgba(255,255,255,0.08)" }}
+              />
+            ) : (
+              <div
+                style={{
+                  width:"72px",
+                  height:"72px",
+                  flexShrink:0,
+                  borderRadius:"2px",
+                  border:"1px dashed rgba(255,255,255,0.15)",
+                  display:"flex",
+                  alignItems:"center",
+                  justifyContent:"center",
+                  fontSize:"9px",
+                  color:"var(--muted)",
+                  textAlign:"center",
+                  padding:"4px",
+                  lineHeight:1.3,
+                }}
+              >
+                სურათი არაა
+              </div>
+            )}
+            <div style={{ minWidth:0, fontSize:"12px", lineHeight:1.5 }}>
+              <div style={{ color:"var(--gold)", fontSize:"8px", letterSpacing:"2px", textTransform:"uppercase", marginBottom:"6px" }}>არჩეული</div>
+              <div style={{ fontFamily:"var(--font-display)", color:"var(--cream)" }}>{selectedDish.name?.en || selectedDish.name?.ka || "—"}</div>
+              {(selectedDish.name?.ka || selectedDish.name?.ru) && (
+                <div style={{ color:"var(--muted)", marginTop:"4px", fontSize:"11px" }}>
+                  {[selectedDish.name?.ka, selectedDish.name?.ru].filter(Boolean).join(" · ")}
+                </div>
+              )}
+              <div style={{ marginTop:"8px", color:"var(--muted)" }}>{formatLari(selectedDish.price)} ₾</div>
+            </div>
+          </div>
+        )}
+
         <div>
           <label style={labelStyle}>Category</label>
           <select
@@ -1199,7 +1347,8 @@ function AdminCloudMenu({ store }) {
               const v = e.target.value;
               setCategoryId(v === "" ? "" : Number(v));
             }}
-            style={{ ...inputStyle, cursor:"pointer" }}
+            disabled={updateMode}
+            style={{ ...inputStyle, cursor: updateMode ? "not-allowed" : "pointer", opacity: updateMode ? 0.65 : 1 }}
           >
             {sortedCats.length === 0 ? (
               <option value="" style={{ background:"#132220" }}>— ჯგუფი არაა —</option>
@@ -1212,22 +1361,47 @@ function AdminCloudMenu({ store }) {
         </div>
         <div>
           <label style={labelStyle}>Name</label>
-          <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} placeholder="Dish name (English)" />
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            style={{ ...inputStyle, opacity: updateMode ? 0.5 : 1 }}
+            placeholder="Dish name (English)"
+            readOnly={updateMode}
+            disabled={updateMode}
+          />
         </div>
         <div>
           <label style={labelStyle}>Description</label>
-          <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} style={{ ...inputStyle, resize:"vertical", fontFamily:"var(--font-display)" }} placeholder="Short description" />
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={3}
+            style={{ ...inputStyle, resize:"vertical", fontFamily:"var(--font-display)", opacity: updateMode ? 0.5 : 1 }}
+            placeholder="Short description"
+            readOnly={updateMode}
+            disabled={updateMode}
+          />
         </div>
         <div>
           <label style={labelStyle}>Price (₾)</label>
-          <input type="number" min={0} step="any" inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} style={inputStyle} />
+          <input
+            type="number"
+            min={0}
+            step="any"
+            inputMode="decimal"
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+            style={{ ...inputStyle, opacity: updateMode ? 0.5 : 1 }}
+            readOnly={updateMode}
+            disabled={updateMode}
+          />
         </div>
         <div>
           <label style={labelStyle}>Image file</label>
           <input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] || null)} style={{ fontSize:"12px", color:"var(--muted)" }} />
         </div>
-        <button type="submit" disabled={busy} style={{ padding:"14px", background: busy ? "rgba(255,255,255,0.06)" : "linear-gradient(135deg,rgba(61,191,176,0.2),rgba(61,191,176,0.08))", border:"1px solid var(--gold)", color:"var(--gold-pale)", fontSize:"10px", letterSpacing:"3px", textTransform:"uppercase", cursor: busy ? "wait" : "pointer", fontFamily:"var(--font-body)" }}>
-          {busy ? "Uploading…" : "Save to Supabase"}
+        <button type="submit" disabled={busy || menuLoading} style={{ padding:"14px", background: busy ? "rgba(255,255,255,0.06)" : "linear-gradient(135deg,rgba(61,191,176,0.2),rgba(61,191,176,0.08))", border:"1px solid var(--gold)", color:"var(--gold-pale)", fontSize:"10px", letterSpacing:"3px", textTransform:"uppercase", cursor: busy ? "wait" : "pointer", fontFamily:"var(--font-body)" }}>
+          {busy ? "Uploading…" : updateMode ? "განაახლე სურათი Supabase-ში" : "Save to Supabase"}
         </button>
       </form>
     </div>
