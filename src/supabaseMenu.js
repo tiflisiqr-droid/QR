@@ -147,3 +147,52 @@ export async function setMenuDishAvailable(id, available) {
   const { error } = await supabase.from("menu").update({ available }).eq("id", id);
   if (error) throw error;
 }
+
+/* ─── Seating (tables) — public.seating, shared across all devices ─────── */
+
+export function mapSeatingRow(row) {
+  return {
+    id: row.id,
+    name: typeof row.name === "string" ? row.name : "",
+    zone: typeof row.zone === "string" ? row.zone : "",
+    active: row.active !== false,
+    sort_order: Number(row.sort_order) || 0,
+  };
+}
+
+export async function fetchSeatingTables() {
+  if (!supabase) throw new Error("Supabase is not configured");
+  const { data, error } = await supabase
+    .from("seating")
+    .select("*")
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  return (data ?? []).map(mapSeatingRow);
+}
+
+export async function insertSeatingTable({ name, zone }) {
+  if (!supabase) throw new Error("Supabase is not configured");
+  const row = {
+    name: String(name || "").trim(),
+    zone: String(zone || "").trim() || "Hall",
+    active: true,
+    sort_order: Math.floor(Date.now() / 1000) % 1_000_000,
+  };
+  const { data, error } = await supabase.from("seating").insert(row).select("*").single();
+  if (error) throw error;
+  return mapSeatingRow(data);
+}
+
+export async function updateSeatingTable(id, patch) {
+  if (!supabase) throw new Error("Supabase is not configured");
+  const { data, error } = await supabase.from("seating").update(patch).eq("id", id).select("*").single();
+  if (error) throw error;
+  return mapSeatingRow(data);
+}
+
+export async function deleteSeatingTable(id) {
+  if (!supabase) throw new Error("Supabase is not configured");
+  const { error } = await supabase.from("seating").delete().eq("id", id);
+  if (error) throw error;
+}

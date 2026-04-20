@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import QRCode from "qrcode";
-import { isSupabaseConfigured } from "./src/supabaseClient.js";
+import { supabase, isSupabaseConfigured } from "./src/supabaseClient.js";
 import {
   fetchMenuDishes,
   uploadMenuImage,
@@ -12,6 +12,10 @@ import {
   parsePriceValue,
   priceToCents,
   formatLari,
+  fetchSeatingTables,
+  insertSeatingTable,
+  updateSeatingTable,
+  deleteSeatingTable,
 } from "./src/supabaseMenu.js";
 
 /* ─── GOOGLE FONTS INJECTION ─────────────────────────────────────────────── */
@@ -250,7 +254,9 @@ function useStore() {
   });
   const [menuLoading, setMenuLoading] = useState(supabaseEnabled);
   const [menuError, setMenuError] = useState(null);
-  const [tables, setTables] = useState(() => loadTablesFromLocalStorage() ?? TABLES);
+  const [tables, setTables] = useState(() => (supabaseEnabled ? [] : (loadTablesFromLocalStorage() ?? TABLES)));
+  const [tablesLoading, setTablesLoading] = useState(!!supabaseEnabled);
+  const [tablesError, setTablesError] = useState(null);
   const [notifications, setNotificationsState] = useState(loadNotificationsFromStorage);
   const [analytics, setAnalytics] = useState({ scans: 247, views: { 1:18, 2:24, 3:31, 5:42, 9:28 } });
 
@@ -312,6 +318,56 @@ function useStore() {
     }
   }, []);
 
+  const reloadSeatingFromSupabase = useCallback(async () => {
+    if (!isSupabaseConfigured() || !supabase) return;
+    setTablesError(null);
+    try {
+      const rows = await fetchSeatingTables();
+      setTables(rows);
+    } catch (e) {
+      setTablesError(e?.message || "Could not load seating");
+      setTables(TABLES);
+    }
+  }, []);
+
+  const addTableRow = useCallback(
+    async (name, zone) => {
+      if (!supabaseEnabled) {
+        setTables((p) => [...p, { id: Date.now(), name: String(name).trim(), zone, active: true }]);
+        return;
+      }
+      await insertSeatingTable({ name, zone });
+      await reloadSeatingFromSupabase();
+    },
+    [supabaseEnabled, reloadSeatingFromSupabase]
+  );
+
+  const toggleTableRow = useCallback(
+    async (id) => {
+      if (!supabaseEnabled) {
+        setTables((p) => p.map((t) => (String(t.id) === String(id) ? { ...t, active: !t.active } : t)));
+        return;
+      }
+      const row = tables.find((t) => String(t.id) === String(id));
+      if (!row) return;
+      await updateSeatingTable(id, { active: !row.active });
+      await reloadSeatingFromSupabase();
+    },
+    [supabaseEnabled, tables, reloadSeatingFromSupabase]
+  );
+
+  const removeTableRow = useCallback(
+    async (id) => {
+      if (!supabaseEnabled) {
+        setTables((p) => p.filter((t) => String(t.id) !== String(id)));
+        return;
+      }
+      await deleteSeatingTable(id);
+      await reloadSeatingFromSupabase();
+    },
+    [supabaseEnabled, reloadSeatingFromSupabase]
+  );
+
   useEffect(() => {
     if (!supabaseEnabled) return;
     let cancelled = false;
@@ -360,10 +416,12 @@ function useStore() {
   }, [supabaseEnabled]);
 
   useEffect(() => {
+    if (supabaseEnabled) return;
     saveTablesToStorage(tables);
-  }, [tables]);
+  }, [tables, supabaseEnabled]);
 
   useEffect(() => {
+    if (supabaseEnabled) return;
     const onStorage = (e) => {
       if (e.key !== TABLES_STORAGE_KEY || e.newValue == null) return;
       try {
@@ -373,7 +431,48 @@ function useStore() {
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
-  }, []);
+  }, [supabaseEnabled]);
+
+  /** Supabase: load seating + optional Realtime sync (enable `seating` in Replication if updates do not propagate). */
+  useEffect(() => {
+    if (!supabaseEnabled || !supabase) return;
+    let cancelled = false;
+    setTablesLoading(true);
+    setTablesError(null);
+    fetchSeatingTables()
+      .then((rows) => {
+        if (!cancelled) setTables(rows);
+      })
+      .catch((e) => {
+        if (!cancelled) {
+          setTablesError(e?.message || "Seating load failed");
+          setTables(TABLES);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setTablesLoading(false);
+      });
+
+    const ch = supabase
+      .channel("seating_sync")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "seating" },
+        () => {
+          fetchSeatingTables()
+            .then((rows) => {
+              if (!cancelled) setTables(rows);
+            })
+            .catch(() => {});
+        }
+      )
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(ch);
+    };
+  }, [supabaseEnabled]);
 
   return {
     categories,
@@ -381,7 +480,12 @@ function useStore() {
     dishes,
     setDishes,
     tables,
-    setTables,
+    tablesLoading,
+    tablesError,
+    addTableRow,
+    toggleTableRow,
+    removeTableRow,
+    reloadSeatingFromSupabase,
     notifications,
     setNotifications,
     addNotification,
@@ -409,7 +513,7 @@ function CustomerMenu({ tableId, store, lang, setLang }) {
   const [cartOpen, setCartOpen] = useState(false);
   const catRefs = useRef({});
   const headerRef = useRef(null);
-  const table = tables.find(tb => tb.id === tableId) || { name: `Table ${tableId}`, zone: "Hall" };
+  const table = tables.find((tb) => String(tb.id) === String(tableId)) || { name: `Table ${tableId}`, zone: "Hall" };
 
   const cartLines = useMemo(() => {
     return Object.entries(cart)
@@ -1684,19 +1788,69 @@ function TableQrImage({ tableId, tableName, zone }) {
 
 /* ─── Tables ──────────────────────────────────────────────────────────── */
 function AdminTables({ store }) {
-  const { tables, setTables } = store;
+  const { tables, tablesLoading, tablesError, addTableRow, toggleTableRow, removeTableRow, reloadSeatingFromSupabase } = store;
   const [name, setName] = useState(""); const [zone, setZone] = useState("Grand Hall");
   const [qr, setQr] = useState(null);
+  const [seatErr, setSeatErr] = useState(null);
 
-  const add = () => { if (!name.trim()) return; setTables(p=>[...p,{id:Date.now(),name,zone,active:true}]); setName(""); };
-  const toggle = id => setTables(p=>p.map(t=>t.id===id?{...t,active:!t.active}:t));
-  const del = id => setTables(p=>p.filter(t=>t.id!==id));
+  const add = async () => {
+    if (!name.trim()) return;
+    setSeatErr(null);
+    try {
+      await addTableRow(name.trim(), zone);
+      setName("");
+    } catch (e) {
+      setSeatErr(e?.message || "Save failed");
+    }
+  };
+  const toggle = async (id) => {
+    setSeatErr(null);
+    try {
+      await toggleTableRow(id);
+    } catch (e) {
+      setSeatErr(e?.message || "Update failed");
+    }
+  };
+  const del = async (id) => {
+    setSeatErr(null);
+    try {
+      await removeTableRow(id);
+    } catch (e) {
+      setSeatErr(e?.message || "Delete failed");
+    }
+  };
 
   const inputStyle = { padding:"11px 0", background:"transparent", border:"none", borderBottom:"1px solid rgba(61,191,176,0.2)", color:"var(--cream)", fontSize:"14px", fontFamily:"var(--font-display)", outline:"none", width:"100%", boxSizing:"border-box" };
 
   return (
     <div style={{ padding:"40px", color:"var(--cream)" }}>
-      <PageHeader title="Seating" sub="Table Management" />
+      <PageHeader
+        title="Seating"
+        sub={isSupabaseConfigured() ? "Table Management · Supabase (all devices)" : "Table Management · this browser only"}
+        action={
+          isSupabaseConfigured() ? (
+            <button
+              type="button"
+              onClick={() => {
+                setSeatErr(null);
+                reloadSeatingFromSupabase().catch((e) => setSeatErr(e?.message || "Reload failed"));
+              }}
+              style={{ padding:"9px 18px", background:"rgba(61,191,176,0.08)", border:"1px solid rgba(61,191,176,0.25)", color:"var(--gold)", fontSize:"9px", letterSpacing:"2px", cursor:"pointer", fontFamily:"var(--font-body)" }}
+            >
+              RELOAD FROM CLOUD
+            </button>
+          ) : null
+        }
+      />
+
+      {(tablesError || seatErr) && (
+        <div style={{ marginBottom:"16px", padding:"12px 14px", border:"1px solid rgba(239,68,68,0.35)", background:"rgba(239,68,68,0.08)", color:"#fca5a5", fontSize:"11px", lineHeight:1.5 }}>
+          {seatErr || tablesError}
+        </div>
+      )}
+      {tablesLoading && tables.length === 0 && (
+        <div style={{ marginBottom:"16px", fontSize:"12px", color:"var(--muted)" }}>Loading tables…</div>
+      )}
 
       <div style={{ background:"var(--charcoal)", border:"1px solid rgba(61,191,176,0.15)", padding:"28px", marginBottom:"28px" }}>
         <div style={{ fontSize:"8px", color:"var(--gold)", letterSpacing:"4px", textTransform:"uppercase", marginBottom:"20px" }}>Add Table</div>
@@ -1708,7 +1862,7 @@ function AdminTables({ store }) {
               {["Grand Hall","VIP","Terrace","Bar","Private"].map(z=><option key={z} style={{background:"var(--charcoal)"}}>{z}</option>)}
             </select>
           </div>
-          <button onClick={add} style={{ padding:"11px 24px", background:"rgba(61,191,176,0.12)", border:"1px solid var(--gold)", color:"var(--gold)", fontSize:"9px", letterSpacing:"2px", textTransform:"uppercase", cursor:"pointer", fontFamily:"var(--font-body)", whiteSpace:"nowrap" }}>ADD</button>
+          <button type="button" onClick={add} disabled={tablesLoading} style={{ padding:"11px 24px", background:"rgba(61,191,176,0.12)", border:"1px solid var(--gold)", color:"var(--gold)", fontSize:"9px", letterSpacing:"2px", textTransform:"uppercase", cursor: tablesLoading ? "wait" : "pointer", fontFamily:"var(--font-body)", whiteSpace:"nowrap", opacity: tablesLoading ? 0.6 : 1 }}>ADD</button>
         </div>
       </div>
 
@@ -1868,8 +2022,12 @@ function readTableIdFromUrl() {
   try {
     const q = new URLSearchParams(window.location.search).get("table");
     if (q == null || q === "") return null;
-    const n = Number(q);
-    return Number.isFinite(n) ? n : null;
+    const trimmed = q.trim();
+    const n = Number(trimmed);
+    if (Number.isFinite(n) && String(n) === trimmed) return n;
+    const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (uuidRe.test(trimmed)) return trimmed;
+    return null;
   } catch {
     return null;
   }
@@ -2017,6 +2175,16 @@ export default function App() {
   const [tableId, setTableId] = useState(() => readTableIdFromUrl() ?? 1);
   const [adminAuth, setAdminAuth] = useState(false);
 
+  useEffect(() => {
+    if (store.tables.length === 0) return;
+    setTableId((prev) => {
+      if (store.tables.some((t) => String(t.id) === String(prev))) return prev;
+      const u = readTableIdFromUrl();
+      if (u != null && store.tables.some((t) => String(t.id) === String(u))) return u;
+      return store.tables[0].id;
+    });
+  }, [store.tables]);
+
   const navigate = useCallback((path) => {
     window.history.pushState({}, "", path);
     setRouteSeg(getRouteSegment());
@@ -2052,8 +2220,9 @@ export default function App() {
 
       {enteredMenu && !isAdminRoute && (
         <div style={{ position:"fixed", bottom:"16px", left:"50%", transform:"translateX(-50%)", zIndex:9999, display:"flex", gap:"6px", background:"rgba(7,6,8,0.92)", padding:"8px 10px", border:"1px solid rgba(61,191,176,0.2)", backdropFilter:"blur(20px)" }}>
-          <select value={tableId} onChange={(e) => {
-            const id = Number(e.target.value);
+          <select value={String(tableId)} onChange={(e) => {
+            const raw = e.target.value;
+            const id = /^\d+$/.test(raw) ? Number(raw) : raw;
             setTableId(id);
             try {
               const u = new URL(window.location.href);
@@ -2062,7 +2231,9 @@ export default function App() {
             } catch {}
           }}
             style={{ padding:"5px 8px", background:"var(--charcoal)", border:"1px solid rgba(61,191,176,0.2)", color:"var(--gold)", fontSize:"9px", letterSpacing:"1px", fontFamily:"var(--font-body)" }}>
-            {store.tables.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}
+            {store.tables.map((t) => (
+              <option key={t.id} value={String(t.id)}>{t.name}</option>
+            ))}
           </select>
           <button type="button" onClick={() => navigate(APP_HOME_URL)} style={{ padding:"5px 14px", background:"rgba(61,191,176,0.15)", border:"1px solid var(--gold)", color:"var(--gold)", fontSize:"9px", letterSpacing:"2px", cursor:"pointer", fontFamily:"var(--font-body)" }}>
             MENU

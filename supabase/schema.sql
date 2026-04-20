@@ -40,6 +40,48 @@ create policy "menu_insert_anon" on public.menu for insert with check (true);
 create policy "menu_update_anon" on public.menu for update using (true) with check (true);
 create policy "menu_delete_anon" on public.menu for delete using (true);
 
+-- 1b) Seating / tables (Admin → Seating; QR ?table=<uuid>)
+create table if not exists public.seating (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  zone text not null default '',
+  active boolean not null default true,
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists seating_sort_order_idx on public.seating (sort_order);
+create index if not exists seating_created_at_idx on public.seating (created_at);
+
+alter table public.seating enable row level security;
+
+drop policy if exists "seating_select_anon" on public.seating;
+drop policy if exists "seating_insert_anon" on public.seating;
+drop policy if exists "seating_update_anon" on public.seating;
+drop policy if exists "seating_delete_anon" on public.seating;
+
+create policy "seating_select_anon" on public.seating for select using (true);
+create policy "seating_insert_anon" on public.seating for insert with check (true);
+create policy "seating_update_anon" on public.seating for update using (true) with check (true);
+create policy "seating_delete_anon" on public.seating for delete using (true);
+
+-- Optional: Dashboard → Database → Replication → enable `seating` for Realtime (live updates).
+-- SQL: alter publication supabase_realtime add table public.seating;
+
+-- Seed default rows only when table is empty (first run).
+insert into public.seating (name, zone, active, sort_order)
+select v.name, v.zone, v.active, v.sort_order
+from (
+  values
+    ('Table 01', 'Grand Hall', true, 1),
+    ('Table 02', 'Grand Hall', true, 2),
+    ('Salon Privé', 'VIP', true, 3),
+    ('Terrace I', 'Terrace', true, 4),
+    ('Terrace II', 'Terrace', false, 5),
+    ('Wine Cellar', 'Private', true, 6)
+) as v(name, zone, active, sort_order)
+where not exists (select 1 from public.seating limit 1);
+
 -- 2) Storage bucket for dish photos (bucket id must be: menu-images)
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
