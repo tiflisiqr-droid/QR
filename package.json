@@ -6,7 +6,8 @@
     "dev": "vite --host",
     "build": "vite build && node scripts/ensure-spa-404.mjs",
     "preview": "vite preview --host",
-    "start": "vite --host --port 3001"
+    "start": "vite --host --port 3001",
+    "menu:pdf-to-sql": "node scripts/generate-menu-sql-from-print-pdf.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.104.0",
@@ -16,6 +17,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.4",
+    "pdf-parse": "^2.4.5",
     "vite": "^6.0.3"
   }
 }
