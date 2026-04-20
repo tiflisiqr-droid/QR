@@ -10,6 +10,20 @@ export function parsePriceValue(value) {
   return Number.isFinite(n) ? n : NaN;
 }
 
+/** Price in tetri (cents) for exact integer math (avoids 2.3 * 6 → 13.799999…). */
+export function priceToCents(price) {
+  const n = Number(price);
+  if (!Number.isFinite(n) || n < 0) return 0;
+  return Math.round(n * 100);
+}
+
+/** Display ₾ amount with at most 2 decimals (no float garbage). */
+export function formatLari(amount) {
+  const cents = priceToCents(amount);
+  const v = cents / 100;
+  return v.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+
 /** Maps app dish shape → DB row (no `id`). */
 export function dishToDbInsert(dish) {
   const price = parsePriceValue(dish.price);

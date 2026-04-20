@@ -10,6 +10,8 @@ import {
   deleteMenuDishById,
   setMenuDishAvailable,
   parsePriceValue,
+  priceToCents,
+  formatLari,
 } from "./src/supabaseMenu.js";
 
 /* ─── GOOGLE FONTS INJECTION ─────────────────────────────────────────────── */
@@ -366,11 +368,16 @@ function CustomerMenu({ tableId, store, lang, setLang }) {
       .filter(({ id, qty }) => qty > 0 && dishes.some((d) => String(d.id) === id && d.available))
       .map(({ id, qty }) => {
         const dish = dishes.find((d) => String(d.id) === id);
-        return { dish, qty, lineTotal: dish.price * qty };
+        const unitCents = priceToCents(dish.price);
+        const lineTotal = (unitCents * qty) / 100;
+        return { dish, qty, lineTotal };
       });
   }, [cart, dishes]);
 
-  const cartGrandTotal = useMemo(() => cartLines.reduce((s, l) => s + l.lineTotal, 0), [cartLines]);
+  const cartGrandTotal = useMemo(
+    () => cartLines.reduce((s, l) => s + priceToCents(l.dish.price) * l.qty, 0) / 100,
+    [cartLines]
+  );
   const cartItemCount = useMemo(() => cartLines.reduce((s, l) => s + l.qty, 0), [cartLines]);
 
   const addToCart = useCallback((dish) => {
@@ -589,7 +596,7 @@ function CustomerMenu({ tableId, store, lang, setLang }) {
                     <img src={dish.image} alt="" style={{ width:"52px", height:"52px", objectFit:"cover", borderRadius:"2px", flexShrink:0 }} />
                     <div style={{ flex:1, minWidth:0 }}>
                       <div style={{ fontFamily:"var(--font-display)", fontSize:"15px", color:"var(--cream)", lineHeight:1.25 }}>{dish.name[lang]}</div>
-                      <div style={{ fontSize:"10px", color:"var(--muted)", marginTop:"4px" }}>₾{dish.price} × {qty}</div>
+                      <div style={{ fontSize:"10px", color:"var(--muted)", marginTop:"4px" }}>₾{formatLari(dish.price)} × {qty}</div>
                     </div>
                     <div onClick={(e) => e.stopPropagation()} style={{ display:"flex", alignItems:"center", gap:"6px", flexShrink:0 }}>
                       <button type="button" onClick={() => bumpCartQty(dish.id, -1)} style={{
@@ -602,7 +609,7 @@ function CustomerMenu({ tableId, store, lang, setLang }) {
                         background:"rgba(61,191,176,0.12)", color:"var(--gold)", fontSize:"16px", cursor: dish.available ? "pointer" : "not-allowed", opacity: dish.available ? 1 : 0.35, lineHeight:1, padding:0,
                       }}>+</button>
                     </div>
-                    <div style={{ fontFamily:"var(--font-display)", fontSize:"17px", color:"var(--gold-light)", flexShrink:0, minWidth:"56px", textAlign:"right" }}>₾{lineTotal}</div>
+                    <div style={{ fontFamily:"var(--font-display)", fontSize:"17px", color:"var(--gold-light)", flexShrink:0, minWidth:"56px", textAlign:"right" }}>₾{formatLari(lineTotal)}</div>
                   </div>
                 ))
               )}
@@ -611,7 +618,7 @@ function CustomerMenu({ tableId, store, lang, setLang }) {
               <div style={{ padding:"16px 18px 22px", borderTop:"1px solid rgba(61,191,176,0.12)", flexShrink:0, background:"rgba(7,6,8,0.5)" }}>
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:"10px" }}>
                   <span style={{ fontSize:"10px", letterSpacing:"3px", textTransform:"uppercase", color:"var(--gold)" }}>{t.cartTotal}</span>
-                  <span style={{ fontFamily:"var(--font-display)", fontSize:"32px", fontWeight:300, color:"var(--gold-light)" }}>₾{cartGrandTotal}</span>
+                  <span style={{ fontFamily:"var(--font-display)", fontSize:"32px", fontWeight:300, color:"var(--gold-light)" }}>₾{formatLari(cartGrandTotal)}</span>
                 </div>
                 <div style={{ fontSize:"10px", color:"var(--muted)", lineHeight:1.5, letterSpacing:"0.2px" }}>{t.cartHint}</div>
               </div>
@@ -648,7 +655,7 @@ function CustomerMenu({ tableId, store, lang, setLang }) {
             >
               <span style={{ fontSize:"10px", letterSpacing:"2px", textTransform:"uppercase", color:"var(--gold)" }}>{t.cart}</span>
               <span style={{ fontSize:"11px", color:"var(--muted)", letterSpacing:"0.5px" }}>{cartItemCount} ·</span>
-              <span style={{ fontFamily:"var(--font-display)", fontSize:"22px", fontWeight:300, color:"var(--gold-light)", marginLeft:"auto" }}>₾{cartGrandTotal}</span>
+              <span style={{ fontFamily:"var(--font-display)", fontSize:"22px", fontWeight:300, color:"var(--gold-light)", marginLeft:"auto" }}>₾{formatLari(cartGrandTotal)}</span>
               <span style={{ fontSize:"10px", color:"var(--subtle)" }}>▴</span>
             </button>
           )}
@@ -804,7 +811,7 @@ function DishRow({ dish, lang, t, expanded, onToggle, style, cartQty = 0, onAddT
           </div>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginTop:"8px", gap:"8px" }}>
             <div style={{ fontFamily:"var(--font-display)", fontSize:"22px", fontWeight:300, color:"var(--gold-light)", letterSpacing:"-0.5px" }}>
-              ₾{dish.price}
+              ₾{formatLari(dish.price)}
             </div>
             <div style={{ display:"flex", alignItems:"center", gap:"8px", flexShrink:0 }}>
               <div
@@ -1442,7 +1449,7 @@ function AdminMenu({ store }) {
                 <div style={{ position:"absolute", inset:0, background:"linear-gradient(0deg, rgba(7,6,8,0.7) 0%, transparent 60%)" }} />
                 <div style={{ position:"absolute", bottom:"10px", left:"12px", right:"12px", display:"flex", justifyContent:"space-between", alignItems:"flex-end" }}>
                   <div style={{ fontFamily:"var(--font-display)", fontSize:"18px", fontStyle:"italic", color:"#fff" }}>{dish.name.en}</div>
-                  <div style={{ fontFamily:"var(--font-display)", fontSize:"20px", color:"var(--gold-light)" }}>₾{dish.price}</div>
+                  <div style={{ fontFamily:"var(--font-display)", fontSize:"20px", color:"var(--gold-light)" }}>₾{formatLari(dish.price)}</div>
                 </div>
                 <div style={{ position:"absolute", top:"8px", right:"8px", display:"flex", gap:"4px", flexWrap:"wrap" }}>
                   {dish.badges.map(b=><span key={b} style={{ background:BADGE_CFG[b]?.bg||"#333", color:BADGE_CFG[b]?.color||"#fff", fontSize:"7px", padding:"2px 6px", fontWeight:"700", letterSpacing:"1px" }}>{b}</span>)}
