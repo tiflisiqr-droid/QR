@@ -91,6 +91,10 @@ const GlobalStyles = () => {
         from { opacity:0; transform:translateX(30px); }
         to   { opacity:1; transform:translateX(0); }
       }
+      @keyframes menuSheetUp {
+        from { opacity: 0; transform: translateY(22px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
       @keyframes toastIn {
         from { opacity:0; transform:translateX(-50%) translateY(-20px) scale(0.9); }
         to   { opacity:1; transform:translateX(-50%) translateY(0) scale(1); }
@@ -101,51 +105,400 @@ const GlobalStyles = () => {
       @keyframes borderRotate {
         from { transform: rotate(0deg); } to { transform: rotate(360deg); }
       }
-      .dish-card { animation: fadeUp 0.5s ease both; }
-      .dish-card-inner { display: flex; align-items: stretch; gap: 0; }
-      .dish-card-media {
+      @keyframes menuCardIn {
+        from { opacity: 0; transform: translateY(18px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes menuAddPulse {
+        0%   { box-shadow: 0 0 0 0 rgba(61,191,176,0.45); }
+        70%  { box-shadow: 0 0 0 12px rgba(61,191,176,0); }
+        100% { box-shadow: 0 0 0 0 rgba(61,191,176,0); }
+      }
+      .menu-page-shell {
+        min-height: 100vh;
+        min-height: 100dvh;
+        background: linear-gradient(185deg, #030807 0%, var(--obsidian) 18%, var(--obsidian) 100%);
+      }
+      .menu-sticky-nav {
+        background: rgba(5, 10, 10, 0.78) !important;
+        backdrop-filter: blur(22px) saturate(1.2);
+        -webkit-backdrop-filter: blur(22px) saturate(1.2);
+        border-bottom: 1px solid rgba(201, 169, 98, 0.12) !important;
+        box-shadow: 0 12px 40px rgba(0,0,0,0.35);
+      }
+      .menu-search-wrap { position: relative; margin-bottom: 12px; }
+      .menu-search-wrap .menu-search-icon {
+        position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
+        color: rgba(201, 169, 98, 0.55); font-size: 13px; pointer-events: none;
+      }
+      .menu-search-input {
+        width: 100%; min-height: 48px; padding: 12px 14px 12px 42px;
+        background: rgba(8, 16, 16, 0.65);
+        border: 1px solid rgba(201, 169, 98, 0.15);
+        border-radius: 999px;
+        color: var(--cream); font-size: 14px; font-family: var(--font-body);
+        letter-spacing: 0.04em; outline: none; box-sizing: border-box;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 8px 28px rgba(0,0,0,0.25);
+        transition: border-color 0.25s ease, box-shadow 0.25s ease;
+      }
+      .menu-search-input::placeholder { color: rgba(109, 143, 137, 0.75); }
+      .menu-search-input:focus {
+        border-color: rgba(61, 191, 176, 0.45);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 0 0 1px rgba(61, 191, 176, 0.12), 0 12px 36px rgba(0,0,0,0.3);
+      }
+      .menu-cat-scroll {
+        display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none;
+        padding: 4px 2px 16px; -webkit-overflow-scrolling: touch;
+      }
+      .menu-cat-scroll::-webkit-scrollbar { display: none; }
+      .menu-cat-tab {
         flex-shrink: 0;
-        width: 156px;
-        min-height: 132px;
+        min-height: 46px;
+        padding: 12px 20px;
+        border-radius: 999px;
+        border: 1px solid rgba(61, 191, 176, 0.14);
+        background: rgba(6, 12, 12, 0.5);
+        color: rgba(238, 246, 244, 0.65);
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        white-space: nowrap;
+        font-family: var(--font-body);
+        cursor: pointer;
+        transition: transform 0.2s ease, border-color 0.25s ease, box-shadow 0.25s ease, color 0.2s ease, background 0.25s ease;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .menu-cat-tab:hover {
+        border-color: rgba(201, 169, 98, 0.35);
+        color: var(--cream);
+        transform: translateY(-1px);
+      }
+      .menu-cat-tab--active {
+        border-color: rgba(201, 169, 98, 0.55) !important;
+        background: linear-gradient(135deg, rgba(201, 169, 98, 0.22), rgba(61, 191, 176, 0.12)) !important;
+        color: #f4f1ea !important;
+        box-shadow: 0 0 28px rgba(61, 191, 176, 0.12), 0 8px 24px rgba(0,0,0,0.35);
+      }
+      .menu-section-head {
+        display: flex; align-items: center; gap: 14px; margin-bottom: 20px;
+      }
+      .menu-section-icon {
+        width: 40px; height: 40px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 15px; color: var(--gold);
+        background: rgba(61, 191, 176, 0.08);
+        border: 1px solid rgba(201, 169, 98, 0.2);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+      }
+      .menu-section-title {
+        font-family: var(--font-display);
+        font-size: clamp(1.45rem, 4.5vw, 1.85rem);
+        font-weight: 300;
+        font-style: italic;
+        color: var(--cream);
+        letter-spacing: 0.06em;
+        margin: 0;
+        line-height: 1.15;
+      }
+      .menu-section-line {
+        flex: 1; height: 1px;
+        background: linear-gradient(90deg, rgba(201, 169, 98, 0.35), transparent);
+        min-width: 24px;
+      }
+      .menu-dish-list { display: flex; flex-direction: column; gap: 16px; }
+      .dish-card.menu-dish-card {
+        animation: menuCardIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+        border-radius: 20px;
+        overflow: hidden;
+        background: linear-gradient(152deg, rgba(18, 32, 30, 0.94), rgba(6, 11, 11, 0.92));
+        border: 1px solid rgba(201, 169, 98, 0.1);
+        box-shadow:
+          0 10px 40px rgba(0,0,0,0.38),
+          inset 0 1px 0 rgba(255,255,255,0.05);
+        cursor: pointer;
+        transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.4s ease, border-color 0.3s ease, background 0.3s ease;
+      }
+      .dish-card.menu-dish-card:hover {
+        transform: translateY(-4px) scale(1.008);
+        border-color: rgba(61, 191, 176, 0.28);
+        box-shadow:
+          0 22px 56px rgba(0,0,0,0.48),
+          0 0 48px rgba(61, 191, 176, 0.1),
+          inset 0 1px 0 rgba(255,255,255,0.07);
+      }
+      .dish-card.menu-dish-card.menu-dish-card--expanded {
+        border-color: rgba(61, 191, 176, 0.32);
+        background: linear-gradient(152deg, rgba(22, 42, 40, 0.98), rgba(8, 14, 14, 0.96));
+      }
+      @media (hover: none) {
+        .dish-card.menu-dish-card:active { transform: scale(0.992); }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .dish-card.menu-dish-card { animation: fadeIn 0.4s ease both; transition: none; }
+        .dish-card.menu-dish-card:hover { transform: none; }
+      }
+      .dish-card-inner { display: flex; align-items: stretch; gap: 0; }
+      .dish-card.menu-dish-card .dish-card-media {
+        flex-shrink: 0;
+        width: 168px;
+        min-height: 140px;
         position: relative;
         overflow: hidden;
         align-self: stretch;
-        background: linear-gradient(160deg, rgba(30,52,48,0.75), rgba(6,10,10,0.98));
-        border-right: 1px solid rgba(61,191,176,0.12);
+        background: linear-gradient(165deg, rgba(36, 58, 54, 0.5), rgba(5, 10, 10, 0.95));
+        border-right: 1px solid rgba(201, 169, 98, 0.08);
       }
-      .dish-card-media .dish-img {
+      .dish-card.menu-dish-card .dish-card-media .dish-img {
         width: 100%;
         height: 100%;
-        min-height: 132px;
+        min-height: 140px;
         object-fit: cover;
         object-position: center;
         display: block;
-        transition: transform 0.6s cubic-bezier(0.25,0.46,0.45,0.94);
+        transition: transform 0.65s cubic-bezier(0.25, 0.46, 0.45, 0.94);
       }
-      .dish-card:hover .dish-card-media .dish-img { transform: scale(1.05); }
-      .dish-card-media .dish-img-placeholder {
+      .dish-card.menu-dish-card:hover .dish-card-media .dish-img { transform: scale(1.07); }
+      .dish-card.menu-dish-card .dish-card-media .dish-img-placeholder {
         width: 100%;
-        min-height: 132px;
+        min-height: 140px;
         height: 100%;
         display: flex;
         align-items: center;
         justify-content: center;
-        color: rgba(109,143,137,0.55);
-        font-size: 11px;
-        letter-spacing: 2px;
+        color: rgba(109,143,137,0.5);
+        font-size: 10px;
+        letter-spacing: 0.25em;
         text-transform: uppercase;
+        font-family: var(--font-body);
       }
       @media (max-width: 520px) {
         .dish-card-inner { flex-direction: column; }
-        .dish-card-media {
+        .dish-card.menu-dish-card .dish-card-media {
           width: 100% !important;
-          min-height: min(52vw, 220px) !important;
-          max-height: 56vw;
+          min-height: min(48vw, 200px) !important;
+          max-height: 52vw;
           border-right: none;
-          border-bottom: 1px solid rgba(61,191,176,0.1);
+          border-bottom: 1px solid rgba(201, 169, 98, 0.1);
         }
-        .dish-card-media .dish-img { min-height: min(52vw, 220px) !important; max-height: 56vw; }
-        .dish-card-media .dish-img-placeholder { min-height: min(52vw, 200px) !important; }
+        .dish-card.menu-dish-card .dish-card-media .dish-img { min-height: min(48vw, 200px) !important; max-height: 52vw; }
+        .dish-card.menu-dish-card .dish-card-media .dish-img-placeholder { min-height: min(48vw, 190px) !important; }
+      }
+      .menu-feature-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 4px 11px;
+        border-radius: 999px;
+        font-size: 8px;
+        font-weight: 700;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        font-family: var(--font-body);
+        color: rgba(244, 241, 234, 0.95);
+        border: 1px solid rgba(201, 169, 98, 0.45);
+        background: linear-gradient(135deg, rgba(201, 169, 98, 0.2), rgba(61, 191, 176, 0.08));
+        box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+      }
+      .menu-dish-name {
+        font-family: var(--font-display);
+        font-size: clamp(1.15rem, 3.8vw, 1.35rem);
+        font-weight: 400;
+        color: var(--cream);
+        letter-spacing: 0.02em;
+        line-height: 1.22;
+      }
+      .menu-dish-blurb {
+        margin-top: 6px;
+        font-size: 11px;
+        color: rgba(109, 143, 137, 0.95);
+        line-height: 1.55;
+        font-weight: 400;
+        letter-spacing: 0.04em;
+      }
+      .menu-dish-price {
+        font-family: var(--font-display);
+        font-size: clamp(1.25rem, 3.5vw, 1.45rem);
+        font-weight: 300;
+        color: #c9a962;
+        letter-spacing: 0.04em;
+      }
+      .menu-cart-step {
+        width: 44px; height: 44px; min-width: 44px; min-height: 44px;
+        border-radius: 50%;
+        border: 1px solid rgba(61, 191, 176, 0.3);
+        background: rgba(8, 14, 14, 0.75);
+        color: var(--cream);
+        font-size: 18px;
+        line-height: 1;
+        padding: 0;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        transition: transform 0.15s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .menu-cart-step:hover {
+        transform: scale(1.06);
+        border-color: rgba(201, 169, 98, 0.45);
+        box-shadow: 0 0 20px rgba(61, 191, 176, 0.15);
+      }
+      .menu-cart-step--plus {
+        border-color: rgba(61, 191, 176, 0.45);
+        background: rgba(61, 191, 176, 0.12);
+        color: var(--gold);
+      }
+      .menu-add-btn {
+        position: relative;
+        min-height: 48px;
+        padding: 12px 22px;
+        border-radius: 999px;
+        border: 1px solid rgba(201, 169, 98, 0.45);
+        background: linear-gradient(135deg, rgba(201, 169, 98, 0.18), rgba(61, 191, 176, 0.08));
+        color: #f4f1ea;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        cursor: pointer;
+        font-family: var(--font-body);
+        overflow: hidden;
+        transition: transform 0.2s ease, box-shadow 0.25s ease, filter 0.2s ease;
+        -webkit-tap-highlight-color: transparent;
+        box-shadow: 0 6px 24px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.08);
+      }
+      .menu-add-btn::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        box-shadow: 0 0 0 0 rgba(61, 191, 176, 0.35);
+        opacity: 0;
+        transition: opacity 0.2s ease;
+        pointer-events: none;
+      }
+      .menu-add-btn:hover:not(:disabled) {
+        transform: translateY(-2px);
+        filter: brightness(1.06);
+        box-shadow: 0 10px 32px rgba(0,0,0,0.4), 0 0 36px rgba(61, 191, 176, 0.15), inset 0 1px 0 rgba(255,255,255,0.1);
+      }
+      .menu-add-btn:disabled {
+        opacity: 0.38;
+        cursor: not-allowed;
+        filter: grayscale(0.3);
+      }
+      .menu-add-btn.menu-add-btn--pulse { animation: menuAddPulse 0.55s ease-out 1; }
+      .menu-cart-step.menu-cart-step--pulse { animation: menuAddPulse 0.55s ease-out 1; }
+      .menu-expand-chevron {
+        font-size: 11px;
+        color: rgba(201, 169, 98, 0.55);
+        transition: transform 0.35s ease;
+      }
+      .menu-dish-expanded {
+        padding: 16px 18px;
+        border-top: 1px solid rgba(61, 191, 176, 0.12);
+        background: linear-gradient(180deg, rgba(61, 191, 176, 0.06), rgba(5, 10, 10, 0.5));
+        animation: fadeIn 0.35s ease;
+      }
+      .menu-cart-bar {
+        background: linear-gradient(0deg, rgba(2, 6, 6, 0.98) 0%, rgba(4, 10, 10, 0.94) 55%, transparent 100%);
+        padding: 12px 16px max(20px, env(safe-area-inset-bottom));
+      }
+      .menu-cart-open-btn {
+        width: 100%;
+        min-height: 52px;
+        margin-bottom: 10px;
+        padding: 14px 18px;
+        border: 1px solid rgba(201, 169, 98, 0.4);
+        border-radius: 999px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        font-family: var(--font-body);
+        background: linear-gradient(135deg, rgba(201, 169, 98, 0.22), rgba(61, 191, 176, 0.12));
+        color: #f4f1ea;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.45), 0 0 40px rgba(61, 191, 176, 0.12), inset 0 1px 0 rgba(255,255,255,0.08);
+        transition: transform 0.2s ease, box-shadow 0.25s ease;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .menu-cart-open-btn:hover { transform: translateY(-2px); box-shadow: 0 14px 44px rgba(0,0,0,0.5), 0 0 48px rgba(61, 191, 176, 0.18); }
+      .menu-service-btn {
+        min-height: 52px;
+        padding: 14px 12px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        font-family: var(--font-body);
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .menu-service-btn--waiter {
+        border: 1px solid rgba(61, 191, 176, 0.45);
+        background: linear-gradient(135deg, rgba(61, 191, 176, 0.18), rgba(8, 18, 18, 0.9));
+        color: var(--gold-pale);
+        box-shadow: 0 6px 24px rgba(0,0,0,0.35);
+      }
+      .menu-service-btn--bill {
+        border: 1px solid rgba(196, 88, 68, 0.45);
+        background: linear-gradient(135deg, rgba(196, 88, 68, 0.16), rgba(8, 12, 12, 0.92));
+        color: var(--brick-pale);
+        box-shadow: 0 6px 24px rgba(0,0,0,0.35);
+      }
+      .menu-service-btn:hover { transform: translateY(-2px); }
+      .menu-hero-strip {
+        position: relative;
+        height: min(200px, 28vh);
+        overflow: hidden;
+        overflow-anchor: none;
+        border-bottom: 1px solid rgba(201, 169, 98, 0.1);
+      }
+      .menu-hero-strip::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background:
+          linear-gradient(180deg, rgba(4,8,8,0.2) 0%, var(--obsidian) 100%),
+          radial-gradient(ellipse at 80% 10%, rgba(201, 169, 98, 0.12), transparent 50%),
+          radial-gradient(ellipse at 40% 0%, rgba(61, 191, 176, 0.12), transparent 55%);
+        z-index: 1;
+        pointer-events: none;
+      }
+      .menu-lang-btn {
+        min-width: 48px;
+        min-height: 44px;
+        padding: 0 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(61, 191, 176, 0.2);
+        background: rgba(6, 12, 12, 0.55);
+        color: rgba(238, 246, 244, 0.55);
+        font-size: 10px;
+        font-weight: 700;
+        cursor: pointer;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        font-family: var(--font-body);
+        transition: all 0.22s ease;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .menu-lang-btn--on {
+        border-color: rgba(201, 169, 98, 0.55);
+        background: linear-gradient(135deg, rgba(201, 169, 98, 0.25), rgba(61, 191, 176, 0.12));
+        color: #0a1010;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.35);
+      }
+      .menu-cart-sheet {
+        background: linear-gradient(180deg, rgba(18, 32, 30, 0.98), rgba(8, 14, 14, 0.99)) !important;
+        border-top: 1px solid rgba(201, 169, 98, 0.25) !important;
+        backdrop-filter: blur(24px);
+        -webkit-backdrop-filter: blur(24px);
+        box-shadow: 0 -28px 80px rgba(0,0,0,0.65) !important;
       }
       .social-top-strip {
         display: flex;
@@ -679,9 +1032,9 @@ const BADGE_CFG = {
 };
 
 const T = {
-  en:{menu:"Menu",callWaiter:"Summon Waiter",requestBill:"Request Bill",ingredients:"Provenance",soldOut:"Unavailable",table:"Table",waiterCalled:"Your waiter is on the way.",billRequested:"Your bill is being prepared.",search:"Search the menu…",all:"All",adminLogin:"Staff Access",login:"Enter",dashboard:"Overview",menuMgmt:"Cuisine",tables:"Seating",notifications:"Alerts",analytics:"Insights",logout:"Exit",addDish:"New Dish",save:"Save",cancel:"Cancel",available:"Available",featured:"Recommended",badges:"Distinctions",cart:"Basket",cartTotal:"Total",addToCart:"Add",cartHint:"Estimated total for your selection (reference only).",emptyCart:"Your basket is empty.",cartQty:"Qty",cartClose:"Close"},
-  ka:{menu:"მენიუ",callWaiter:"მიმტანის გამოძახება",requestBill:"ანგარიშის მოთხოვნა",ingredients:"წარმომავლობა",soldOut:"მიუწვდომელი",table:"მაგიდა",waiterCalled:"მიმტანი მოდის.",billRequested:"ანგარიში მზადდება.",search:"მოძებნეთ…",all:"ყველა",adminLogin:"პერსონალი",login:"შესვლა",dashboard:"მიმოხილვა",menuMgmt:"სამზარეულო",tables:"მოსასვლელი",notifications:"შეტყობინებები",analytics:"ანალიტიკა",logout:"გამოსვლა",addDish:"ახალი კერძი",save:"შენახვა",cancel:"გაუქმება",available:"ხელმისაწვდომი",featured:"რეკომენდებული",badges:"გამოჩენილი",cart:"კალათა",cartTotal:"ჯამი",addToCart:"დამატება",cartHint:"არჩეული კერძების სავარაუდო ჯამი (საინფორმაციოდ).",emptyCart:"კალათა ცარიელია.",cartQty:"რაოდ.",cartClose:"დახურვა"},
-  ru:{menu:"Меню",callWaiter:"Позвать Официанта",requestBill:"Попросить Счёт",ingredients:"Происхождение",soldOut:"Недоступно",table:"Стол",waiterCalled:"Официант уже идёт.",billRequested:"Счёт готовится.",search:"Поиск…",all:"Все",adminLogin:"Персонал",login:"Войти",dashboard:"Обзор",menuMgmt:"Кухня",tables:"Места",notifications:"Оповещения",analytics:"Аналитика",logout:"Выйти",addDish:"Новое Блюдо",save:"Сохранить",cancel:"Отмена",available:"Доступно",featured:"Рекомендуем",badges:"Отличия",cart:"Корзина",cartTotal:"Итого",addToCart:"В корзину",cartHint:"Ориентировочная сумма выбранных блюд (справочно).",emptyCart:"Корзина пуста.",cartQty:"Кол-во",cartClose:"Закрыть"},
+  en:{menu:"Menu",callWaiter:"Summon Waiter",requestBill:"Request Bill",ingredients:"Provenance",soldOut:"Unavailable",table:"Table",waiterCalled:"Your waiter is on the way.",billRequested:"Your bill is being prepared.",search:"Search the menu…",all:"All",adminLogin:"Staff Access",login:"Enter",dashboard:"Overview",menuMgmt:"Cuisine",tables:"Seating",notifications:"Alerts",analytics:"Insights",logout:"Exit",addDish:"New Dish",save:"Save",cancel:"Cancel",available:"Available",featured:"Recommended",chefChoice:"Chef's choice",badges:"Distinctions",cart:"Basket",cartTotal:"Total",addToCart:"Add",cartHint:"Estimated total for your selection (reference only).",emptyCart:"Your basket is empty.",cartQty:"Qty",cartClose:"Close"},
+  ka:{menu:"მენიუ",callWaiter:"მიმტანის გამოძახება",requestBill:"ანგარიშის მოთხოვნა",ingredients:"წარმომავლობა",soldOut:"მიუწვდომელი",table:"მაგიდა",waiterCalled:"მიმტანი მოდის.",billRequested:"ანგარიში მზადდება.",search:"მოძებნეთ…",all:"ყველა",adminLogin:"პერსონალი",login:"შესვლა",dashboard:"მიმოხილვა",menuMgmt:"სამზარეულო",tables:"მოსასვლელი",notifications:"შეტყობინებები",analytics:"ანალიტიკა",logout:"გამოსვლა",addDish:"ახალი კერძი",save:"შენახვა",cancel:"გაუქმება",available:"ხელმისაწვდომი",featured:"რეკომენდებული",chefChoice:"შეფის არჩევანი",badges:"გამოჩენილი",cart:"კალათა",cartTotal:"ჯამი",addToCart:"დამატება",cartHint:"არჩეული კერძების სავარაუდო ჯამი (საინფორმაციოდ).",emptyCart:"კალათა ცარიელია.",cartQty:"რაოდ.",cartClose:"დახურვა"},
+  ru:{menu:"Меню",callWaiter:"Позвать Официанта",requestBill:"Попросить Счёт",ingredients:"Происхождение",soldOut:"Недоступно",table:"Стол",waiterCalled:"Официант уже идёт.",billRequested:"Счёт готовится.",search:"Поиск…",all:"Все",adminLogin:"Персонал",login:"Войти",dashboard:"Обзор",menuMgmt:"Кухня",tables:"Места",notifications:"Оповещения",analytics:"Аналитика",logout:"Выйти",addDish:"Новое Блюдо",save:"Сохранить",cancel:"Отмена",available:"Доступно",featured:"Рекомендуем",chefChoice:"Выбор шефа",badges:"Отличия",cart:"Корзина",cartTotal:"Итого",addToCart:"В корзину",cartHint:"Ориентировочная сумма выбранных блюд (справочно).",emptyCart:"Корзина пуста.",cartQty:"Кол-во",cartClose:"Закрыть"},
 };
 
 /* ─── SHARED STATE ───────────────────────────────────────────────────────── */
@@ -1153,78 +1506,59 @@ function CustomerMenu({ tableId, store, lang, setLang }) {
     const pad = (headerRef.current?.offsetHeight ?? 0) + 12;
     el.style.scrollMarginTop = `${pad}px`;
     const top = el.getBoundingClientRect().top + window.scrollY - pad;
-    window.scrollTo({ top: Math.max(0, top), behavior: "auto" });
+    window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
   }, [scrollTargetTick]);
 
   return (
-    <div style={{ minHeight:"100vh", background:"var(--obsidian)", color:"var(--cream)", fontFamily:"var(--font-body)" }}>
+    <div className="menu-page-shell" style={{ color:"var(--cream)", fontFamily:"var(--font-body)" }}>
       <GlobalStyles /><FontLoader />
       <div className="noise" />
 
-      {/* HERO HEADER — fixed height (no JS collapse) for stable scroll */}
-      <div style={{ position: "relative", height: "200px", overflow: "hidden", overflowAnchor: "none" }}>
-        <div style={{ position:"absolute", inset:0, background:"linear-gradient(180deg, rgba(7,6,8,0) 0%, var(--obsidian) 100%)", zIndex:2 }} />
-        <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse at 82% 15%, rgba(196,88,68,0.14) 0%, transparent 55%)", zIndex:1 }} />
-        <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse at 50% 0%, rgba(61,191,176,0.14) 0%, transparent 70%)", zIndex:1 }} />
-        <div style={{ position:"relative", zIndex:3, height:"100%", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", paddingTop:"20px", animation:"fadeIn 1s ease" }}>
-          <div style={{ fontSize:"10px", letterSpacing:"6px", color:"var(--gold)", textTransform:"uppercase", marginBottom:"10px", fontFamily:"var(--font-body)", fontWeight:500 }}>
-            GEORGIAN FINE DINING
+      {/* HERO — compact, matches welcome luxury language */}
+      <div className="menu-hero-strip">
+        <div style={{ position:"relative", zIndex:3, height:"100%", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", paddingTop:"12px", animation:"fadeIn 0.9s ease" }}>
+          <div style={{ fontSize:"9px", letterSpacing:"0.55em", color:"#c9a962", textTransform:"uppercase", marginBottom:"8px", fontFamily:"var(--font-body)", fontWeight:600 }}>
+            Georgian fine dining
           </div>
-          <div style={{ fontFamily:"var(--font-display)", fontSize:"clamp(40px,10vw,64px)", fontWeight:300, color:"var(--cream)", letterSpacing:"-1px", lineHeight:1, fontStyle:"italic" }}>
+          <div style={{ fontFamily:"var(--font-display)", fontSize:"clamp(36px,9vw,56px)", fontWeight:300, color:"var(--cream)", letterSpacing:"0.06em", lineHeight:1, fontStyle:"italic" }}>
             Tiflisi
           </div>
-          <div style={{ marginTop:"10px", display:"flex", alignItems:"center", gap:"10px" }}>
-            <div style={{ width:"30px", height:"1px", background:"var(--gold)", opacity:0.5 }} />
-            <span style={{ fontSize:"10px", color:"var(--muted)", letterSpacing:"3px", textTransform:"uppercase" }}>{t.table} · {table.name}</span>
-            <div style={{ width:"30px", height:"1px", background:"var(--gold)", opacity:0.5 }} />
+          <div style={{ marginTop:"10px", display:"flex", alignItems:"center", gap:"12px" }}>
+            <div style={{ width:"36px", height:"1px", background:"linear-gradient(90deg, transparent, rgba(201,169,98,0.6))" }} />
+            <span style={{ fontSize:"9px", color:"rgba(109,143,137,0.95)", letterSpacing:"0.28em", textTransform:"uppercase" }}>{t.table} · {table.name}</span>
+            <div style={{ width:"36px", height:"1px", background:"linear-gradient(90deg, rgba(201,169,98,0.6), transparent)" }} />
           </div>
         </div>
       </div>
 
       {/* STICKY NAV */}
-      <div ref={headerRef} style={{ position: "sticky", top: 0, zIndex: 100, overflowAnchor: "none", background: "rgba(7,6,8,0.92)", backdropFilter: "blur(20px)", borderBottom: "1px solid rgba(61,191,176,0.12)" }}>
-        <div style={{ padding:"10px 16px 0" }}>
+      <div ref={headerRef} className="menu-sticky-nav" style={{ position: "sticky", top: 0, zIndex: 100, overflowAnchor: "none" }}>
+        <div style={{ padding:"10px 16px 0", maxWidth:720, margin:"0 auto" }}>
           <SocialTopStrip />
-          {/* Lang — ზედა ხაზი, დიდი სატაპე (მობილური) */}
           <div style={{ display:"flex", justifyContent:"flex-end", alignItems:"center", gap:"8px", marginBottom:"10px", paddingTop:"2px" }}>
             {["en","ka","ru"].map((l) => (
               <button
                 key={l}
                 type="button"
                 onClick={() => setLang(l)}
-                className="nav-btn"
-                style={{
-                  minWidth: "48px",
-                  minHeight: "44px",
-                  padding: "0 10px",
-                  borderRadius: "4px",
-                  border: `1px solid ${lang === l ? "var(--gold)" : "rgba(61,191,176,0.2)"}`,
-                  background: lang === l ? "var(--gold)" : "transparent",
-                  color: lang === l ? "var(--obsidian)" : "var(--muted)",
-                  fontSize: "11px",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  letterSpacing: "0.5px",
-                  textTransform: "uppercase",
-                  fontFamily: "var(--font-body)",
-                  transition: "all 0.2s",
-                  WebkitTapHighlightColor: "transparent",
-                }}
+                className={`menu-lang-btn${lang === l ? " menu-lang-btn--on" : ""}`}
               >
                 {l}
               </button>
             ))}
           </div>
 
-          {/* Search */}
-          <div style={{ position:"relative", marginBottom:"12px" }}>
-            <div style={{ position:"absolute", left:"16px", top:"50%", transform:"translateY(-50%)", color:"var(--muted)", fontSize:"14px" }}>✦</div>
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t.search}
-              style={{ width:"100%", minHeight:"46px", padding:"12px 14px 12px 40px", background:"rgba(255,255,255,0.04)", border:"1px solid rgba(61,191,176,0.15)", borderRadius:"4px", color:"var(--cream)", fontSize:"14px", fontFamily:"var(--font-body)", letterSpacing:"0.5px", outline:"none", boxSizing:"border-box" }} />
+          <div className="menu-search-wrap">
+            <span className="menu-search-icon" aria-hidden="true">✦</span>
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={t.search}
+              className="menu-search-input"
+            />
           </div>
 
-          {/* Categories — სრული სიგანე */}
-          <div style={{ display:"flex", gap:"8px", overflowX:"auto", scrollbarWidth:"none", paddingBottom:"14px", WebkitOverflowScrolling:"touch" }}>
+          <div className="menu-cat-scroll">
             <CatBtn active={!activeCat} onClick={() => setActiveCat(null)} label={t.all} />
             {sortedCategories.map((c) => (
               <CatBtn key={c.id} active={activeCat === c.id} onClick={() => scrollTo(c.id)} label={c.name[lang]} icon={c.icon} />
@@ -1243,7 +1577,7 @@ function CustomerMenu({ tableId, store, lang, setLang }) {
       )}
 
       {/* DISH SECTIONS */}
-      <div style={{ padding:`0 16px ${cartItemCount > 0 ? "220px" : "140px"}` }}>
+      <div style={{ padding:`0 16px ${cartItemCount > 0 ? "240px" : "160px"}`, maxWidth:720, margin:"0 auto", width:"100%" }}>
         {menuLoading && dishes.length === 0 && (
           <div style={{ textAlign:"center", padding:"80px 20px", fontFamily:"var(--font-display)", fontSize:"20px", fontStyle:"italic", color:"var(--muted)" }}>
             Loading menu…
@@ -1257,15 +1591,13 @@ function CustomerMenu({ tableId, store, lang, setLang }) {
           </div>
         )}
         {grouped.map((cat, gi) => (
-          <div key={cat.id} ref={el => catRefs.current[cat.id] = el} style={{ marginTop:"40px" }}>
-            <div style={{ display:"flex", alignItems:"center", gap:"16px", marginBottom:"24px" }}>
-              <span style={{ fontSize:"16px", color:"var(--gold)", opacity:0.7, fontFamily:"var(--font-display)" }}>{cat.icon}</span>
-              <h2 style={{ fontFamily:"var(--font-display)", fontSize:"28px", fontWeight:300, color:"var(--cream)", letterSpacing:"-0.5px", fontStyle:"italic", margin:0 }}>
-                {cat.name[lang]}
-              </h2>
-              <div style={{ flex:1, height:"1px", background:"linear-gradient(90deg, rgba(61,191,176,0.3), transparent)" }} />
+          <div key={cat.id} ref={el => catRefs.current[cat.id] = el} style={{ marginTop: gi === 0 ? 28 : 44 }}>
+            <div className="menu-section-head">
+              <span className="menu-section-icon" aria-hidden="true">{cat.icon}</span>
+              <h2 className="menu-section-title">{cat.name[lang]}</h2>
+              <div className="menu-section-line" aria-hidden="true" />
             </div>
-            <div style={{ display:"flex", flexDirection:"column", gap:"2px" }}>
+            <div className="menu-dish-list">
               {cat.dishes.map((dish, di) => (
                 <DishRow key={dish.id} dish={dish} lang={lang} t={t}
                   style={{ animationDelay:`${(gi*3+di)*0.06}s` }}
@@ -1280,9 +1612,9 @@ function CustomerMenu({ tableId, store, lang, setLang }) {
         ))}
 
         {/* Footer */}
-        <div style={{ marginTop:"60px", textAlign:"center", padding:"30px 0" }}>
-          <div style={{ width:"1px", height:"40px", background:"linear-gradient(180deg,transparent,var(--gold),transparent)", margin:"0 auto 16px" }} />
-          <div style={{ fontFamily:"var(--font-display)", fontSize:"13px", color:"var(--muted)", fontStyle:"italic", letterSpacing:"1px" }}>
+        <div style={{ marginTop:"56px", textAlign:"center", padding:"32px 0 8px" }}>
+          <div style={{ width:"1px", height:"36px", background:"linear-gradient(180deg,transparent,rgba(201,169,98,0.55),transparent)", margin:"0 auto 14px" }} />
+          <div style={{ fontFamily:"var(--font-display)", fontSize:"12px", color:"rgba(109,143,137,0.9)", fontStyle:"italic", letterSpacing:"0.12em" }}>
             All dishes prepared with the finest Georgian ingredients
           </div>
         </div>
@@ -1304,11 +1636,11 @@ function CustomerMenu({ tableId, store, lang, setLang }) {
             role="dialog"
             aria-modal="true"
             aria-labelledby="cart-sheet-title"
+            className="menu-cart-sheet"
             style={{
               position:"fixed", left:0, right:0, bottom:0, zIndex:10130, maxHeight:"72vh",
-              background:"var(--charcoal)", borderTop:"1px solid rgba(61,191,176,0.35)",
-              borderRadius:"12px 12px 0 0", boxShadow:"0 -24px 80px rgba(0,0,0,0.65)",
-              display:"flex", flexDirection:"column", animation:"slideIn 0.28s ease",
+              borderRadius:"20px 20px 0 0",
+              display:"flex", flexDirection:"column", animation:"menuSheetUp 0.36s cubic-bezier(0.22, 1, 0.36, 1)",
             }}
           >
             <div style={{ padding:"14px 18px 10px", borderBottom:"1px solid rgba(255,255,255,0.06)", display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0 }}>
@@ -1362,71 +1694,26 @@ function CustomerMenu({ tableId, store, lang, setLang }) {
       )}
 
       {/* BOTTOM ACTIONS */}
-      <div style={{ position:"fixed", bottom:0, left:0, right:0, zIndex:10100 }}>
-        <div style={{ background:"linear-gradient(0deg, rgba(7,6,8,1) 0%, rgba(7,6,8,0.98) 60%, transparent 100%)", padding:"12px 16px 28px" }}>
+      <div style={{ position:"fixed", bottom:0, left:0, right:0, zIndex:10100, maxWidth:720, margin:"0 auto", width:"100%" }}>
+        <div className="menu-cart-bar">
           {cartItemCount > 0 && (
             <button
               type="button"
               onClick={() => setCartOpen(true)}
-              className="action-btn"
-              style={{
-                width: "100%",
-                minHeight: "48px",
-                marginBottom: "10px",
-                padding: "14px 16px",
-                border: "1px solid rgba(61,191,176,0.35)",
-                background: "linear-gradient(135deg, rgba(61,191,176,0.2), rgba(61,191,176,0.06))",
-                color: "var(--gold-pale)",
-                cursor: "pointer",
-                borderRadius: "4px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: "12px",
-                fontFamily: "var(--font-body)",
-                WebkitTapHighlightColor: "transparent",
-              }}
+              className="action-btn menu-cart-open-btn"
             >
-              <span style={{ fontSize:"10px", letterSpacing:"2px", textTransform:"uppercase", color:"var(--gold)" }}>{t.cart}</span>
-              <span style={{ fontSize:"11px", color:"var(--muted)", letterSpacing:"0.5px" }}>{cartItemCount} ·</span>
-              <span style={{ fontFamily:"var(--font-display)", fontSize:"22px", fontWeight:300, color:"var(--gold-light)", marginLeft:"auto" }}>₾{formatLari(cartGrandTotal)}</span>
-              <span style={{ fontSize:"10px", color:"var(--subtle)" }}>▴</span>
+              <span style={{ fontSize:"9px", letterSpacing:"0.22em", textTransform:"uppercase", color:"rgba(244,241,234,0.9)" }}>{t.cart}</span>
+              <span style={{ fontSize:"11px", color:"rgba(109,143,137,0.95)", letterSpacing:"0.08em" }}>{cartItemCount}</span>
+              <span style={{ fontFamily:"var(--font-display)", fontSize:"clamp(1.15rem,4vw,1.4rem)", fontWeight:300, color:"#c9a962", marginLeft:"auto" }}>₾{formatLari(cartGrandTotal)}</span>
+              <span style={{ fontSize:"11px", color:"rgba(201,169,98,0.55)" }} aria-hidden="true">▴</span>
             </button>
           )}
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"12px" }}>
-            <button type="button" onClick={callWaiter} className="action-btn" style={{
-              minHeight: "52px",
-              padding: "14px 12px",
-              border: "1px solid var(--gold)",
-              background: "linear-gradient(135deg, rgba(61,191,176,0.15), rgba(61,191,176,0.05))",
-              color: "var(--gold-pale)",
-              fontSize: "12px",
-              fontWeight: 600,
-              cursor: "pointer",
-              letterSpacing: "1.5px",
-              textTransform: "uppercase",
-              fontFamily: "var(--font-body)",
-              borderRadius: "4px",
-              WebkitTapHighlightColor: "transparent",
-            }}>
-              ✦ &nbsp;{t.callWaiter}
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"10px" }}>
+            <button type="button" onClick={callWaiter} className="action-btn menu-service-btn menu-service-btn--waiter">
+              ✦ {t.callWaiter}
             </button>
-            <button type="button" onClick={requestBill} className="action-btn" style={{
-              minHeight: "52px",
-              padding: "14px 12px",
-              border: "1px solid rgba(196,88,68,0.42)",
-              background: "linear-gradient(135deg, rgba(196,88,68,0.14), rgba(196,88,68,0.04))",
-              color: "var(--brick-pale)",
-              fontSize: "12px",
-              fontWeight: 600,
-              cursor: "pointer",
-              letterSpacing: "1.5px",
-              textTransform: "uppercase",
-              fontFamily: "var(--font-body)",
-              borderRadius: "4px",
-              WebkitTapHighlightColor: "transparent",
-            }}>
-              ◇ &nbsp;{t.requestBill}
+            <button type="button" onClick={requestBill} className="action-btn menu-service-btn menu-service-btn--bill">
+              ◇ {t.requestBill}
             </button>
           </div>
         </div>
@@ -1452,49 +1739,12 @@ function CustomerMenu({ tableId, store, lang, setLang }) {
 
 function CatBtn({ active, onClick, label, icon }) {
   return (
-    <button type="button" onClick={onClick} className="nav-btn" style={{
-      flexShrink: 0,
-      minHeight: "44px",
-      padding: "10px 16px",
-      border: `1px solid ${active ? "var(--gold)" : "rgba(61,191,176,0.15)"}`,
-      background: active ? "rgba(61,191,176,0.14)" : "transparent",
-      color: active ? "var(--gold)" : "var(--muted)",
-      fontSize: "11px",
-      fontWeight: 600,
-      cursor: "pointer",
-      letterSpacing: "1px",
-      textTransform: "uppercase",
-      whiteSpace: "nowrap",
-      fontFamily: "var(--font-body)",
-      transition: "all 0.3s",
-      borderRadius: "4px",
-      WebkitTapHighlightColor: "transparent",
-    }}>
-      {icon && <span style={{ marginRight: "6px", opacity: 0.75 }}>{icon}</span>}
+    <button type="button" onClick={onClick} className={`menu-cat-tab${active ? " menu-cat-tab--active" : ""}`}>
+      {icon && <span style={{ marginRight: "7px", opacity: active ? 1 : 0.65 }}>{icon}</span>}
       {label}
     </button>
   );
 }
-
-const cartStepBtn = {
-  width: "40px",
-  height: "40px",
-  minWidth: "40px",
-  minHeight: "40px",
-  borderRadius: "4px",
-  border: "1px solid rgba(61,191,176,0.28)",
-  background: "rgba(255,255,255,0.04)",
-  color: "var(--cream)",
-  fontSize: "18px",
-  lineHeight: 1,
-  padding: 0,
-  cursor: "pointer",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  flexShrink: 0,
-  WebkitTapHighlightColor: "transparent",
-};
 
 function dishBlurbText(dish, lang) {
   const d = dish?.description && typeof dish.description === "object" ? dish.description : {};
@@ -1507,20 +1757,43 @@ function dishBlurbText(dish, lang) {
 }
 
 function DishRow({ dish, lang, t, expanded, onToggle, style, cartQty = 0, onAddToCart, onBumpCartQty }) {
+  const [addPulse, setAddPulse] = useState(false);
+  const addPulseTimerRef = useRef(null);
   const nameObj = dish.name && typeof dish.name === "object" ? dish.name : {};
   const title = String(nameObj[lang] || nameObj.en || nameObj.ka || "—").trim() || "—";
   const blurb = dishBlurbText(dish, lang);
   const badges = Array.isArray(dish.badges) ? dish.badges : [];
+  const displayBadges = dish.featured ? badges.filter((b) => b !== "Chef's Table") : badges;
   const ingredients = Array.isArray(dish.ingredients) ? dish.ingredients : [];
+
+  const badgeLine = (b) => (b === "Chef's Table" ? t.chefChoice : b);
+
+  useEffect(() => {
+    return () => {
+      if (addPulseTimerRef.current) clearTimeout(addPulseTimerRef.current);
+    };
+  }, []);
+
+  const triggerAddPulse = () => {
+    if (addPulseTimerRef.current) clearTimeout(addPulseTimerRef.current);
+    setAddPulse(true);
+    addPulseTimerRef.current = setTimeout(() => {
+      setAddPulse(false);
+      addPulseTimerRef.current = null;
+    }, 520);
+  };
+
   return (
-    <div className="dish-card" onClick={onToggle} style={{
-      background: expanded ? "rgba(61,191,176,0.04)" : "transparent",
-      border:`1px solid ${expanded ? "rgba(61,191,176,0.2)" : "rgba(255,255,255,0.05)"}`,
-      cursor:"pointer", transition:"all 0.3s", overflow:"hidden",
-      opacity: dish.available ? 1 : 0.45, ...style,
-    }}>
+    <div
+      className={`dish-card menu-dish-card${expanded ? " menu-dish-card--expanded" : ""}`}
+      onClick={onToggle}
+      style={{
+        cursor: "pointer",
+        opacity: dish.available ? 1 : 0.48,
+        ...style,
+      }}
+    >
       <div className="dish-card-inner">
-        {/* Image — larger desktop strip; full-width hero on narrow screens (see GlobalStyles) */}
         <div className="dish-card-media">
           {dish.image ? (
             <img
@@ -1534,44 +1807,51 @@ function DishRow({ dish, lang, t, expanded, onToggle, style, cartQty = 0, onAddT
               }}
             />
           ) : (
-            <div className="dish-img-placeholder">IMG</div>
+            <div className="dish-img-placeholder">Image</div>
           )}
           {!dish.available && (
-            <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", background:"rgba(7,6,8,0.78)", pointerEvents:"none" }}>
-              <span style={{ fontSize:"9px", letterSpacing:"2px", color:"var(--muted)", textTransform:"uppercase" }}>{t.soldOut}</span>
+            <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", background:"rgba(4,8,8,0.82)", pointerEvents:"none" }}>
+              <span style={{ fontSize:"9px", letterSpacing:"0.2em", color:"rgba(238,246,244,0.75)", textTransform:"uppercase", fontFamily:"var(--font-body)", fontWeight:600 }}>{t.soldOut}</span>
             </div>
           )}
           {dish.featured && (
-            <div style={{ position:"absolute", top:"8px", left:"8px", width:"7px", height:"7px", background:"var(--gold)", borderRadius:"50%", animation:"pulse 2s infinite", boxShadow:"0 0 0 2px rgba(7,12,12,0.6)" }} />
+            <div style={{ position:"absolute", top:"10px", left:"10px", pointerEvents:"none" }}>
+              <span className="menu-feature-pill" aria-label={t.chefChoice}>✦ {t.chefChoice}</span>
+            </div>
           )}
         </div>
 
-        {/* Info */}
-        <div style={{ flex:1, padding:"14px 16px", display:"flex", flexDirection:"column", justifyContent:"space-between", minWidth:0 }}>
+        <div style={{ flex:1, padding:"16px 18px", display:"flex", flexDirection:"column", justifyContent:"space-between", minWidth:0 }}>
           <div>
-            <div style={{ display:"flex", gap:"5px", flexWrap:"wrap", marginBottom:"6px" }}>
-              {badges.map(b => (
-                <span key={b} className="tag" style={{
-                  background: BADGE_CFG[b]?.bg || "#333", color: BADGE_CFG[b]?.color || "#fff",
-                  fontSize:"8px", fontWeight:"700", padding:"2px 8px",
-                  letterSpacing:"1.5px", textTransform:"uppercase", fontFamily:"var(--font-body)",
-                }}>
-                  {b}
+            <div style={{ display:"flex", gap:"6px", flexWrap:"wrap", marginBottom:"8px", alignItems:"center" }}>
+              {displayBadges.map((b) => (
+                <span
+                  key={b}
+                  className="tag"
+                  style={{
+                    background: BADGE_CFG[b]?.bg || "#333",
+                    color: BADGE_CFG[b]?.color || "#fff",
+                    fontSize: "8px",
+                    fontWeight: 700,
+                    padding: "4px 10px",
+                    borderRadius: "999px",
+                    letterSpacing: "0.14em",
+                    textTransform: "uppercase",
+                    fontFamily: "var(--font-body)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
+                  }}
+                >
+                  {b === "Popular" && <span aria-hidden="true">🔥&nbsp;</span>}
+                  {badgeLine(b)}
                 </span>
               ))}
             </div>
-            <div style={{ fontFamily:"var(--font-display)", fontSize:"18px", fontWeight:400, color:"var(--cream)", letterSpacing:"-0.3px", lineHeight:1.2 }}>
-              {title}
-            </div>
+            <div className="menu-dish-name">{title}</div>
             {blurb ? (
               <div
+                className="menu-dish-blurb"
                 style={{
-                  marginTop: "4px",
-                  fontSize: "10px",
-                  color: "var(--muted)",
-                  lineHeight: 1.5,
-                  fontWeight: 300,
-                  letterSpacing: "0.3px",
                   wordBreak: "break-word",
                   overflowWrap: "anywhere",
                   whiteSpace: expanded ? "pre-wrap" : "normal",
@@ -1579,8 +1859,11 @@ function DishRow({ dish, lang, t, expanded, onToggle, style, cartQty = 0, onAddT
                     ? { overflow: "visible", maxHeight: "none", display: "block" }
                     : {
                         overflow: "hidden",
-                        display: "block",
-                        maxHeight: "3.1em",
+                        display: "-webkit-box",
+                        WebkitLineClamp: 3,
+                        WebkitBoxOrient: "vertical",
+                        lineClamp: 3,
+                        maxHeight: "4.8em",
                       }),
                 }}
               >
@@ -1588,67 +1871,78 @@ function DishRow({ dish, lang, t, expanded, onToggle, style, cartQty = 0, onAddT
               </div>
             ) : null}
           </div>
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginTop:"8px", gap:"8px" }}>
-            <div style={{ fontFamily:"var(--font-display)", fontSize:"22px", fontWeight:300, color:"var(--gold-light)", letterSpacing:"-0.5px" }}>
-              ₾{formatLari(dish.price)}
-            </div>
-            <div style={{ display:"flex", alignItems:"center", gap:"8px", flexShrink:0 }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginTop:"12px", gap:"10px" }}>
+            <div className="menu-dish-price">₾{formatLari(dish.price)}</div>
+            <div style={{ display:"flex", alignItems:"center", gap:"10px", flexShrink:0 }}>
               <div
                 onClick={(e) => e.stopPropagation()}
                 onKeyDown={(e) => e.stopPropagation()}
-                style={{ display:"flex", alignItems:"center", gap:"4px" }}
+                style={{ display:"flex", alignItems:"center", gap:"6px" }}
               >
                 {cartQty > 0 && (
                   <>
-                    <button type="button" aria-label={t.cartQty + " −"} onClick={() => onBumpCartQty(dish.id, -1)} style={cartStepBtn}>−</button>
-                    <span style={{ minWidth:"18px", textAlign:"center", fontSize:"11px", fontWeight:600, color:"var(--gold-pale)" }}>{cartQty}</span>
-                    <button type="button" aria-label={t.cartQty + " +"} disabled={!dish.available} onClick={() => dish.available && onBumpCartQty(dish.id, 1)} style={{ ...cartStepBtn, opacity: dish.available ? 1 : 0.35, cursor: dish.available ? "pointer" : "not-allowed", borderColor: "rgba(61,191,176,0.4)", background: "rgba(61,191,176,0.1)", color: "var(--gold)" }}>+</button>
+                    <button type="button" className="menu-cart-step" aria-label={t.cartQty + " −"} onClick={() => onBumpCartQty(dish.id, -1)}>−</button>
+                    <span style={{ minWidth:"20px", textAlign:"center", fontSize:"12px", fontWeight:600, color:"rgba(212,247,242,0.95)" }}>{cartQty}</span>
+                    <button
+                      type="button"
+                      className={`menu-cart-step menu-cart-step--plus${addPulse ? " menu-cart-step--pulse" : ""}`}
+                      aria-label={t.cartQty + " +"}
+                      disabled={!dish.available}
+                      onClick={() => {
+                        if (!dish.available) return;
+                        onBumpCartQty(dish.id, 1);
+                        triggerAddPulse();
+                      }}
+                      style={{ opacity: dish.available ? 1 : 0.35, cursor: dish.available ? "pointer" : "not-allowed" }}
+                    >
+                      +
+                    </button>
                   </>
                 )}
                 {cartQty === 0 && (
                   <button
                     type="button"
+                    className={`menu-add-btn${addPulse ? " menu-add-btn--pulse" : ""}`}
                     disabled={!dish.available}
-                    onClick={() => dish.available && onAddToCart(dish)}
-                    style={{
-                      minHeight: "44px",
-                      padding: "10px 14px",
-                      borderRadius: "4px",
-                      border: `1px solid ${dish.available ? "var(--gold)" : "rgba(61,191,176,0.15)"}`,
-                      background: dish.available ? "rgba(61,191,176,0.14)" : "transparent",
-                      color: dish.available ? "var(--gold-pale)" : "var(--subtle)",
-                      fontSize: "10px",
-                      fontWeight: 700,
-                      letterSpacing: "1px",
-                      textTransform: "uppercase",
-                      cursor: dish.available ? "pointer" : "not-allowed",
-                      fontFamily: "var(--font-body)",
-                      WebkitTapHighlightColor: "transparent",
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (!dish.available) return;
+                      onAddToCart(dish);
+                      triggerAddPulse();
                     }}
                   >
                     {t.addToCart}
                   </button>
                 )}
               </div>
-              <div style={{ fontSize:"10px", color:"var(--subtle)", transition:"all 0.3s", transform: expanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</div>
+              <div className="menu-expand-chevron" style={{ transform: expanded ? "rotate(180deg)" : "rotate(0deg)" }} aria-hidden="true">▾</div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Expanded */}
       {expanded && (
-        <div onClick={(e) => e.stopPropagation()} style={{ padding:"14px 16px", borderTop:"1px solid rgba(61,191,176,0.1)", background:"rgba(61,191,176,0.02)", animation:"fadeIn 0.3s ease" }}>
-          <div style={{ fontSize:"8px", color:"var(--gold)", letterSpacing:"3px", textTransform:"uppercase", marginBottom:"10px", fontFamily:"var(--font-body)", fontWeight:600 }}>
-            ✦ &nbsp;{t.ingredients}
+        <div className="menu-dish-expanded" onClick={(e) => e.stopPropagation()}>
+          <div style={{ fontSize:"8px", color:"#c9a962", letterSpacing:"0.28em", textTransform:"uppercase", marginBottom:"12px", fontFamily:"var(--font-body)", fontWeight:600 }}>
+            ✦ {t.ingredients}
           </div>
-          <div style={{ display:"flex", flexWrap:"wrap", gap:"6px" }}>
+          <div style={{ display:"flex", flexWrap:"wrap", gap:"8px" }}>
             {ingredients.map((ing) => (
-              <span key={ing} style={{
-                padding:"4px 12px", border:"1px solid rgba(61,191,176,0.2)",
-                fontSize:"10px", color:"var(--gold-pale)", letterSpacing:"0.5px",
-                fontFamily:"var(--font-body)", fontWeight:300,
-              }}>
+              <span
+                key={ing}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: "999px",
+                  border: "1px solid rgba(61,191,176,0.22)",
+                  fontSize: "10px",
+                  color: "rgba(212,247,242,0.9)",
+                  letterSpacing: "0.06em",
+                  fontFamily: "var(--font-body)",
+                  fontWeight: 400,
+                  background: "rgba(6,12,12,0.45)",
+                  backdropFilter: "blur(8px)",
+                }}
+              >
                 {ing}
               </span>
             ))}
