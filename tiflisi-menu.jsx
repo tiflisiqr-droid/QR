@@ -500,46 +500,156 @@ const GlobalStyles = () => {
         -webkit-backdrop-filter: blur(24px);
         box-shadow: 0 -28px 80px rgba(0,0,0,0.65) !important;
       }
+      @keyframes socialGoldShimmer {
+        0%   { transform: translate3d(-135%, 0, 0) skewX(-13deg); opacity: 0; }
+        12%  { opacity: 1; }
+        88%  { opacity: 1; }
+        100% { transform: translate3d(235%, 0, 0) skewX(-13deg); opacity: 0; }
+      }
       .social-top-strip {
         display: flex;
-        flex-wrap: nowrap;
-        gap: 8px;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: center;
+        gap: 12px;
         overflow-x: auto;
         overflow-y: hidden;
-        padding-bottom: 2px;
-        margin-bottom: 8px;
+        padding: 4px 2px 6px;
+        margin-bottom: 10px;
         scrollbar-width: none;
         -webkit-overflow-scrolling: touch;
       }
       .social-top-strip::-webkit-scrollbar { display: none; }
       .social-top-link {
+        --social-accent: #3dbfb0;
+        position: relative;
         flex: 0 0 auto;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        min-height: 42px;
-        min-width: 42px;
-        padding: 0 10px;
-        border-radius: 10px;
-        border: 1px solid transparent;
+        min-height: 48px;
+        padding: 0 14px;
+        border-radius: 14px;
+        border: 1px solid rgba(201, 169, 98, 0.32);
         text-decoration: none;
         font-family: var(--font-body);
-        font-size: 11px;
+        font-size: 10px;
         font-weight: 700;
-        letter-spacing: 0.4px;
-        transition: filter 0.2s, transform 0.2s, box-shadow 0.2s;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: rgba(244, 247, 246, 0.92);
+        background:
+          linear-gradient(145deg, rgba(255, 255, 255, 0.09) 0%, transparent 42%, rgba(61, 191, 176, 0.06) 100%),
+          linear-gradient(155deg, rgba(12, 18, 18, 0.62), rgba(4, 8, 10, 0.45));
+        backdrop-filter: blur(18px) saturate(1.15);
+        -webkit-backdrop-filter: blur(18px) saturate(1.15);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.07),
+          0 6px 28px rgba(0, 0, 0, 0.35);
+        transition: transform 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease, background 0.35s ease, color 0.35s ease;
         -webkit-tap-highlight-color: transparent;
         box-sizing: border-box;
+        overflow: hidden;
       }
-      .social-top-link--icon { width: 42px; padding: 0; }
-      .social-top-link--text { padding: 0 14px; min-width: auto; }
-      .social-top-link:hover { filter: brightness(1.08); transform: translateY(-1px); }
-      .social-top-link img {
-        width: 20px;
-        height: 20px;
+      .social-top-link::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        left: 0;
+        width: 48%;
+        border-radius: inherit;
+        pointer-events: none;
+        background: linear-gradient(
+          118deg,
+          transparent 0%,
+          transparent 34%,
+          rgba(201, 169, 98, 0.1) 45%,
+          rgba(255, 232, 190, 0.22) 50%,
+          rgba(201, 169, 98, 0.1) 55%,
+          transparent 66%,
+          transparent 100%
+        );
+        transform: translate3d(-125%, 0, 0) skewX(-12deg);
+        opacity: 0;
+        mix-blend-mode: soft-light;
+      }
+      .social-top-link:hover {
+        transform: scale(1.04);
+        border-color: color-mix(in srgb, var(--social-accent) 50%, rgba(201, 169, 98, 0.55));
+        background:
+          linear-gradient(145deg, rgba(255, 255, 255, 0.1) 0%, transparent 40%, rgba(61, 191, 176, 0.07) 100%),
+          linear-gradient(155deg, rgba(18, 32, 30, 0.72), rgba(6, 12, 12, 0.55));
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.11),
+          0 0 0 1px color-mix(in srgb, var(--social-accent) 22%, transparent),
+          0 0 28px rgba(201, 169, 98, 0.14),
+          0 0 40px color-mix(in srgb, var(--social-accent) 26%, transparent),
+          0 14px 40px rgba(0, 0, 0, 0.42);
+      }
+      .social-top-link:hover::before {
+        animation: socialGoldShimmer 1.5s ease-in-out 1;
+      }
+      .social-top-link:active {
+        transform: scale(1.02);
+      }
+      .social-top-link--icon {
+        width: 48px;
+        min-width: 48px;
+        max-width: 48px;
+        height: 48px;
+        padding: 0;
+      }
+      .social-top-link--text {
+        padding: 0 18px;
+        min-width: 88px;
+        color: rgba(248, 250, 249, 0.96);
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+      }
+      .social-top-link--text:hover {
+        color: #fff;
+        text-shadow: 0 0 18px color-mix(in srgb, var(--social-accent) 35%, transparent), 0 1px 3px rgba(0, 0, 0, 0.4);
+      }
+      .social-top-link__icon-mask {
+        position: relative;
+        z-index: 2;
         display: block;
-        filter: brightness(0) invert(1);
-        opacity: 0.98;
+        width: 22px;
+        height: 22px;
+        background: linear-gradient(145deg, var(--social-accent), color-mix(in srgb, var(--social-accent) 72%, #f4f7f6));
+        -webkit-mask-image: var(--social-icon-url);
+        mask-image: var(--social-icon-url);
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        opacity: 0.88;
+        transition: opacity 0.3s ease, filter 0.3s ease, transform 0.3s ease;
+      }
+      .social-top-link:hover .social-top-link__icon-mask {
+        opacity: 0.96;
+        transform: scale(1.06);
+        filter: saturate(1.12) brightness(1.05);
+      }
+      .social-top-link__icon-mask--gradient {
+        background: var(--social-icon-gradient);
+      }
+      @media (max-width: 480px) {
+        .social-top-strip { gap: 10px; padding-left: 0; padding-right: 0; }
+        .social-top-link { min-height: 50px; border-radius: 16px; }
+        .social-top-link--icon {
+          width: 50px;
+          min-width: 50px;
+          max-width: 50px;
+          height: 50px;
+        }
+        .social-top-link__icon-mask { width: 23px; height: 23px; }
+        .social-top-link--text { min-width: 92px; padding: 0 16px; font-size: 9px; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .social-top-link:hover::before { animation: none; opacity: 0; }
+        .social-top-link:hover { transform: none; }
       }
       .nav-btn:hover { letter-spacing: 2.5px !important; }
       .action-btn:hover { transform: translateY(-2px); }
@@ -1358,6 +1468,16 @@ function socialTopHref(envKey, fallback) {
   return fallback;
 }
 
+/** Solid accent for glow / icon tint (SOCIAL_TOP_ITEMS border/bg may be gradient). */
+function socialAccentFromItem(item) {
+  if (typeof item.border === "string" && /^#[0-9A-Fa-f]{3,8}$/.test(item.border)) return item.border;
+  if (item.brand === "instagram") return "#E1306C";
+  if (item.brand === "facebook") return "#1877F2";
+  if (item.brand === "googlemaps") return "#4285F4";
+  if (item.brand === "tripadvisor") return "#00AF87";
+  return "#3dbfb0";
+}
+
 function SocialTopStrip() {
   const iconBase = "https://cdn.jsdelivr.net/npm/simple-icons@11.6.0/icons";
   return (
@@ -1365,6 +1485,9 @@ function SocialTopStrip() {
       {SOCIAL_TOP_ITEMS.map((item) => {
         const href = socialTopHref(item.env, item.fallback);
         const isText = item.mode === "text";
+        const accent = socialAccentFromItem(item);
+        const iconUrl = `${iconBase}/${item.brand}.svg`;
+        const useGradientIcon = !isText && typeof item.bg === "string" && item.bg.includes("gradient");
         return (
           <a
             key={item.env}
@@ -1375,16 +1498,18 @@ function SocialTopStrip() {
             title={item.label}
             aria-label={item.label}
             style={{
-              background: item.bg,
-              borderColor: item.border,
-              ...(isText ? { color: item.fg } : {}),
-              boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+              ["--social-accent"]: accent,
+              ["--social-icon-url"]: `url("${iconUrl}")`,
+              ...(useGradientIcon ? { ["--social-icon-gradient"]: item.bg } : {}),
             }}
           >
             {isText ? (
               item.text
             ) : (
-              <img src={`${iconBase}/${item.brand}.svg`} alt="" width={20} height={20} loading="lazy" decoding="async" />
+              <span
+                className={`social-top-link__icon-mask${useGradientIcon ? " social-top-link__icon-mask--gradient" : ""}`}
+                aria-hidden="true"
+              />
             )}
           </a>
         );
@@ -1464,7 +1589,8 @@ function CustomerMenu({ tableId, store, lang, setLang }) {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return dishes.filter((d) => {
-      const label = (d.name[lang] || d.name.en || "").toLowerCase();
+      const nm = d?.name && typeof d.name === "object" ? d.name : {};
+      const label = String(nm[lang] || nm.en || "").toLowerCase();
       return !q || label.includes(q);
     });
   }, [dishes, search, lang]);
@@ -1505,8 +1631,7 @@ function CustomerMenu({ tableId, store, lang, setLang }) {
     if (!el) return;
     const pad = (headerRef.current?.offsetHeight ?? 0) + 12;
     el.style.scrollMarginTop = `${pad}px`;
-    const top = el.getBoundingClientRect().top + window.scrollY - pad;
-    window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [scrollTargetTick]);
 
   return (
