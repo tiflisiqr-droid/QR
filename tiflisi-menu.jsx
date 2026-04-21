@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from "react";
 import QRCode from "qrcode";
 import { supabase, isSupabaseConfigured } from "./src/supabaseClient.js";
 import {
@@ -698,6 +698,7 @@ function CustomerMenu({ tableId, store, lang, setLang }) {
   const { categories, dishes, tables, addNotification, trackView, menuLoading, menuError } = store;
   const supabaseMenu = isSupabaseConfigured();
   const [activeCat, setActiveCat] = useState(null);
+  const [scrollTargetTick, setScrollTargetTick] = useState(0);
   const [search, setSearch] = useState("");
   const [toast, setToast] = useState(null);
   const [expanded, setExpanded] = useState(null);
@@ -705,6 +706,7 @@ function CustomerMenu({ tableId, store, lang, setLang }) {
   const [cartOpen, setCartOpen] = useState(false);
   const catRefs = useRef({});
   const headerRef = useRef(null);
+  const pendingScrollCatId = useRef(null);
   const table = tables.find((tb) => String(tb.id) === String(tableId)) || { name: `Table ${tableId}`, zone: "Hall" };
 
   const cartLines = useMemo(() => {
@@ -755,21 +757,14 @@ function CustomerMenu({ tableId, store, lang, setLang }) {
 
   const ORPHAN_CAT_KEY = "__orphan__";
 
-  const filtered = useMemo(
-    () =>
-      dishes.filter((d) => {
-        const isOrphan = !sortedCategories.some((c) => c.id === d.categoryId);
-        let catOk = !activeCat;
-        if (activeCat) {
-          if (activeCat === ORPHAN_CAT_KEY) catOk = isOrphan;
-          else catOk = d.categoryId === activeCat;
-        }
-        const label = (d.name[lang] || d.name.en || "").toLowerCase();
-        const searchOk = !search || label.includes(search.toLowerCase());
-        return catOk && searchOk;
-      }),
-    [dishes, activeCat, search, lang, sortedCategories]
-  );
+  /** Search only — category chips scroll to section (no hide-other-categories; avoids wrong scroll after filter). */
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return dishes.filter((d) => {
+      const label = (d.name[lang] || d.name.en || "").toLowerCase();
+      return !q || label.includes(q);
+    });
+  }, [dishes, search, lang]);
 
   const grouped = useMemo(() => {
     const base = sortedCategories
@@ -792,14 +787,23 @@ function CustomerMenu({ tableId, store, lang, setLang }) {
     ];
   }, [sortedCategories, filtered]);
 
-  const scrollTo = id => {
+  const scrollTo = (id) => {
+    pendingScrollCatId.current = id;
     setActiveCat(id);
+    setScrollTargetTick((n) => n + 1);
+  };
+
+  useLayoutEffect(() => {
+    const id = pendingScrollCatId.current;
+    if (id == null) return;
+    pendingScrollCatId.current = null;
     const el = catRefs.current[id];
     if (!el) return;
     const pad = (headerRef.current?.offsetHeight ?? 0) + 12;
     el.style.scrollMarginTop = `${pad}px`;
-    el.scrollIntoView({ behavior: "auto", block: "start" });
-  };
+    const top = el.getBoundingClientRect().top + window.scrollY - pad;
+    window.scrollTo({ top: Math.max(0, top), behavior: "auto" });
+  }, [scrollTargetTick]);
 
   return (
     <div style={{ minHeight:"100vh", background:"var(--obsidian)", color:"var(--cream)", fontFamily:"var(--font-body)" }}>
