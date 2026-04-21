@@ -204,6 +204,355 @@ const GlobalStyles = () => {
       }
       .tag { transition: all 0.2s; }
       .tag:hover { transform: translateY(-1px); }
+
+      /* ─── Welcome hero (luxury first screen) ─────────────────────────── */
+      .welcome-hero-root {
+        --welcome-champagne: #c9a962;
+        --welcome-champagne-dim: rgba(201, 169, 98, 0.55);
+        --welcome-ink: #040608;
+        position: relative;
+        min-height: 100vh;
+        min-height: 100dvh;
+        width: 100%;
+        overflow: hidden;
+        background: var(--welcome-ink);
+        color: var(--cream);
+        font-family: var(--font-body);
+        isolation: isolate;
+      }
+      .welcome-hero-media-wrap {
+        position: absolute;
+        inset: -6%;
+        z-index: 0;
+        pointer-events: none;
+      }
+      .welcome-hero-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center 42%;
+        transform: scale(1.08) translate3d(0, 0, 0);
+        will-change: transform;
+      }
+      @media (hover: none), (pointer: coarse) {
+        .welcome-hero-root:not(.welcome-hero--parallax) .welcome-hero-img {
+          animation: welcomeBgDrift 28s ease-in-out infinite alternate;
+        }
+      }
+      @keyframes welcomeBgDrift {
+        0%   { transform: scale(1.1) translate3d(-1.2%, -0.8%, 0); }
+        100% { transform: scale(1.12) translate3d(1.2%, 0.8%, 0); }
+      }
+      .welcome-hero-dark {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        pointer-events: none;
+        background:
+          linear-gradient(180deg, rgba(2,4,6,0.72) 0%, rgba(4,8,10,0.45) 38%, rgba(4,8,10,0.82) 100%),
+          radial-gradient(ellipse 90% 60% at 50% 0%, rgba(61,191,176,0.12), transparent 55%);
+      }
+      .welcome-hero-vignette {
+        position: absolute;
+        inset: 0;
+        z-index: 2;
+        pointer-events: none;
+        box-shadow: inset 0 0 120px rgba(0,0,0,0.65);
+      }
+      .welcome-hero-inner {
+        position: relative;
+        z-index: 3;
+        min-height: 100vh;
+        min-height: 100dvh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: max(28px, env(safe-area-inset-top, 0px)) max(22px, env(safe-area-inset-right, 0px)) max(28px, env(safe-area-inset-bottom, 0px)) max(22px, env(safe-area-inset-left, 0px));
+        width: 100%;
+        max-width: 520px;
+        margin: 0 auto;
+        text-align: center;
+      }
+      @media (max-height: 700px) {
+        .welcome-hero-inner {
+          justify-content: flex-start;
+          padding-top: max(20px, env(safe-area-inset-top, 0px));
+        }
+        .welcome-hero-eyebrow { margin-bottom: 10px; letter-spacing: 0.42em; }
+        .welcome-hero-sub { margin-top: 12px; }
+        .welcome-hero-ka { margin-top: 6px; font-size: 14px; }
+        .welcome-hero-table { margin-top: 14px; }
+        .welcome-hero-divider { margin: 16px 0 12px; }
+        .welcome-hero-hint { margin-top: 14px; }
+      }
+      .welcome-hero-eyebrow {
+        font-size: clamp(9px, 2.4vw, 11px);
+        letter-spacing: 0.55em;
+        text-transform: uppercase;
+        font-weight: 600;
+        color: var(--welcome-champagne);
+        margin-bottom: clamp(14px, 4vw, 22px);
+        opacity: 0;
+        animation: welcomeFadeUp 1s cubic-bezier(0.22, 1, 0.36, 1) 0.15s forwards;
+      }
+      .welcome-hero-title {
+        font-family: var(--font-display);
+        font-weight: 300;
+        font-style: italic;
+        font-size: clamp(2.65rem, 10vw, 4.25rem);
+        line-height: 1.02;
+        letter-spacing: 0.04em;
+        color: #f4f7f6;
+        text-shadow: 0 4px 48px rgba(0,0,0,0.55);
+        margin: 0;
+        opacity: 0;
+        animation: welcomeFadeUp 1s cubic-bezier(0.22, 1, 0.36, 1) 0.28s forwards;
+      }
+      .welcome-hero-title span {
+        display: block;
+        font-style: normal;
+        font-weight: 400;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        font-size: clamp(0.72rem, 2.8vw, 0.85rem);
+        margin-top: 0.65em;
+        color: var(--welcome-champagne-dim);
+      }
+      .welcome-hero-sub {
+        margin-top: clamp(18px, 4.5vw, 26px);
+        font-size: clamp(14px, 3.6vw, 16px);
+        font-weight: 400;
+        line-height: 1.55;
+        letter-spacing: 0.06em;
+        color: rgba(238,246,244,0.88);
+        max-width: 34em;
+        margin-left: auto;
+        margin-right: auto;
+        opacity: 0;
+        animation: welcomeFadeUp 1s cubic-bezier(0.22, 1, 0.36, 1) 0.4s forwards;
+      }
+      .welcome-hero-ka {
+        margin-top: 10px;
+        font-family: var(--font-display);
+        font-size: clamp(16px, 4vw, 20px);
+        font-weight: 300;
+        font-style: italic;
+        color: rgba(212,247,242,0.75);
+        letter-spacing: 0.02em;
+        opacity: 0;
+        animation: welcomeFadeUp 1s cubic-bezier(0.22, 1, 0.36, 1) 0.48s forwards;
+      }
+      .welcome-hero-table {
+        margin-top: clamp(22px, 5vw, 30px);
+        width: 100%;
+        max-width: 320px;
+        opacity: 0;
+        animation: welcomeFadeUp 1s cubic-bezier(0.22, 1, 0.36, 1) 0.55s forwards;
+      }
+      .welcome-hero-table label {
+        display: block;
+        font-size: 9px;
+        letter-spacing: 0.35em;
+        text-transform: uppercase;
+        color: var(--welcome-champagne-dim);
+        margin-bottom: 10px;
+        font-weight: 600;
+      }
+      .welcome-hero-table select {
+        width: 100%;
+        appearance: none;
+        -webkit-appearance: none;
+        padding: 14px 40px 14px 18px;
+        border-radius: 999px;
+        border: 1px solid rgba(201, 169, 98, 0.35);
+        background: rgba(4,8,10,0.65);
+        color: var(--cream);
+        font-family: var(--font-body);
+        font-size: 13px;
+        letter-spacing: 0.12em;
+        cursor: pointer;
+        box-shadow:
+          0 0 0 1px rgba(0,0,0,0.4),
+          0 12px 40px rgba(0,0,0,0.35),
+          inset 0 1px 0 rgba(255,255,255,0.06);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        background-image: linear-gradient(180deg, rgba(255,255,255,0.06), transparent);
+        transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.2s ease;
+      }
+      .welcome-hero-table select:hover {
+        border-color: rgba(61, 191, 176, 0.45);
+        box-shadow:
+          0 0 0 1px rgba(61, 191, 176, 0.15),
+          0 16px 48px rgba(0,0,0,0.4),
+          0 0 28px rgba(61, 191, 176, 0.12);
+      }
+      .welcome-hero-table-wrap {
+        position: relative;
+      }
+      .welcome-hero-table-wrap::after {
+        content: "";
+        position: absolute;
+        right: 18px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 0;
+        height: 0;
+        border-left: 5px solid transparent;
+        border-right: 5px solid transparent;
+        border-top: 6px solid var(--welcome-champagne-dim);
+        pointer-events: none;
+      }
+      .welcome-hero-divider {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        margin: clamp(26px, 6vw, 36px) 0 clamp(18px, 4vw, 22px);
+        width: 100%;
+        opacity: 0;
+        animation: welcomeFadeUp 1s cubic-bezier(0.22, 1, 0.36, 1) 0.62s forwards;
+      }
+      .welcome-hero-divider i {
+        flex: 1;
+        height: 1px;
+        max-width: 72px;
+        background: linear-gradient(90deg, transparent, var(--welcome-champagne-dim));
+      }
+      .welcome-hero-divider i:last-child {
+        background: linear-gradient(90deg, var(--welcome-champagne-dim), transparent);
+      }
+      .welcome-hero-divider span {
+        font-size: 9px;
+        letter-spacing: 0.35em;
+        text-transform: uppercase;
+        color: rgba(109, 143, 137, 0.95);
+        white-space: nowrap;
+      }
+      .welcome-hero-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        width: 100%;
+        opacity: 0;
+        animation: welcomeFadeUp 1s cubic-bezier(0.22, 1, 0.36, 1) 0.72s forwards;
+      }
+      .welcome-btn-primary {
+        position: relative;
+        width: 100%;
+        padding: 17px 22px;
+        border: none;
+        border-radius: 999px;
+        cursor: pointer;
+        font-family: var(--font-display);
+        font-size: clamp(17px, 4.2vw, 20px);
+        font-weight: 500;
+        font-style: italic;
+        letter-spacing: 0.06em;
+        color: #0a1010;
+        background: linear-gradient(135deg, #e8d5a8 0%, var(--welcome-champagne) 45%, #a88442 100%);
+        box-shadow:
+          0 0 0 1px rgba(255,255,255,0.25) inset,
+          0 4px 24px rgba(201, 169, 98, 0.35),
+          0 18px 48px rgba(0,0,0,0.45);
+        transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.25s ease, filter 0.2s ease;
+        -webkit-tap-highlight-color: transparent;
+        overflow: hidden;
+      }
+      .welcome-btn-primary::before {
+        content: "";
+        position: absolute;
+        inset: -2px;
+        border-radius: inherit;
+        padding: 1px;
+        background: linear-gradient(120deg, rgba(255,255,255,0.65), transparent 40%, rgba(61,191,176,0.5), transparent 70%);
+        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        -webkit-mask-composite: xor;
+        mask-composite: exclude;
+        opacity: 0.85;
+        pointer-events: none;
+        animation: welcomeBorderShimmer 5s linear infinite;
+      }
+      @keyframes welcomeBorderShimmer {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      .welcome-btn-primary:hover {
+        transform: translateY(-2px);
+        filter: brightness(1.05);
+        box-shadow:
+          0 0 0 1px rgba(255,255,255,0.3) inset,
+          0 6px 32px rgba(201, 169, 98, 0.45),
+          0 0 40px rgba(61, 191, 176, 0.22),
+          0 22px 56px rgba(0,0,0,0.5);
+      }
+      .welcome-btn-primary:active { transform: translateY(0); }
+      .welcome-btn-primary small {
+        display: block;
+        margin-top: 4px;
+        font-family: var(--font-body);
+        font-size: 10px;
+        font-style: normal;
+        font-weight: 600;
+        letter-spacing: 0.28em;
+        text-transform: uppercase;
+        opacity: 0.72;
+      }
+      .welcome-btn-ghost {
+        width: 100%;
+        padding: 15px 20px;
+        border-radius: 999px;
+        cursor: pointer;
+        font-family: var(--font-body);
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.28em;
+        text-transform: uppercase;
+        color: rgba(244,247,246,0.92);
+        background: rgba(4,8,10,0.35);
+        border: 1px solid rgba(61, 191, 176, 0.22);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+        transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.2s ease, color 0.2s ease;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .welcome-btn-ghost:hover {
+        border-color: rgba(61, 191, 176, 0.5);
+        box-shadow:
+          0 0 24px rgba(61, 191, 176, 0.15),
+          0 10px 36px rgba(0,0,0,0.3);
+        transform: translateY(-1px);
+        color: var(--gold-light);
+      }
+      .welcome-hero-hint {
+        margin-top: clamp(20px, 4vw, 26px);
+        font-size: 10px;
+        letter-spacing: 0.2em;
+        color: rgba(109, 143, 137, 0.75);
+        line-height: 1.6;
+        opacity: 0;
+        animation: welcomeFadeUp 1s cubic-bezier(0.22, 1, 0.36, 1) 0.85s forwards;
+      }
+      @keyframes welcomeFadeUp {
+        from { opacity: 0; transform: translateY(18px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .welcome-hero-img { animation: none !important; }
+        .welcome-btn-primary::before { animation: none; }
+        .welcome-hero-eyebrow, .welcome-hero-title, .welcome-hero-sub, .welcome-hero-ka,
+        .welcome-hero-table, .welcome-hero-divider, .welcome-hero-actions, .welcome-hero-hint {
+          animation: welcomeFadeIn 0.6s ease forwards !important;
+          opacity: 1;
+        }
+        @keyframes welcomeFadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+      }
     `;
     document.head.appendChild(style);
     return () => document.head.removeChild(style);
@@ -2709,119 +3058,142 @@ function readSavedWelcomeLang() {
   return null;
 }
 
-function WelcomeScreen({ onChooseLang }) {
+/** Optimized Unsplash still — responsive srcSet, fixed dimensions hint for CLS. */
+const WELCOME_HERO_SRC =
+  "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80";
+const WELCOME_HERO_SRCSET =
+  "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=640&q=75 640w, " +
+  "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=960&q=78 960w, " +
+  "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1280&q=80 1280w, " +
+  "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1920&q=82 1920w";
+
+function WelcomeScreen({ onChooseLang, tableId, tables, onTableChange }) {
+  const [finePointer, setFinePointer] = useState(false);
+  const [shift, setShift] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    try {
+      const mq = window.matchMedia("(pointer: fine)");
+      const sync = () => setFinePointer(!!mq.matches);
+      sync();
+      mq.addEventListener("change", sync);
+      return () => mq.removeEventListener("change", sync);
+    } catch {
+      setFinePointer(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    let reduced = false;
+    try {
+      reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    } catch {
+      reduced = false;
+    }
+    if (reduced || !finePointer) return undefined;
+
+    const onMove = (e) => {
+      const cx = window.innerWidth * 0.5;
+      const cy = window.innerHeight * 0.5;
+      const dx = (e.clientX - cx) / Math.max(cx, 1);
+      const dy = (e.clientY - cy) / Math.max(cy, 1);
+      setShift({ x: dx * 14, y: dy * 11 });
+    };
+    window.addEventListener("pointermove", onMove, { passive: true });
+    return () => window.removeEventListener("pointermove", onMove);
+  }, [finePointer]);
+
+  const imgTransform = finePointer ? `scale(1.1) translate3d(${shift.x}px, ${shift.y}px, 0)` : undefined;
+
+  const tableList = Array.isArray(tables) ? tables : [];
+  const showTable = tableList.length > 0;
+
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-labelledby="welcome-title"
-      style={{
-        minHeight: "100vh",
-        background: "var(--obsidian)",
-        color: "var(--cream)",
-        fontFamily: "var(--font-body)",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "32px 24px",
-        position: "relative",
-      }}
+      className={`welcome-hero-root${finePointer ? " welcome-hero--parallax" : ""}`}
     >
       <GlobalStyles />
       <FontLoader />
-      <div className="noise" />
-      <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at 70% 75%, rgba(196,88,68,0.1) 0%, transparent 45%), radial-gradient(ellipse at 50% 18%, rgba(61,191,176,0.1) 0%, transparent 55%)", pointerEvents: "none" }} />
+      <div className="noise" aria-hidden="true" />
+      <div className="welcome-hero-media-wrap" aria-hidden="true">
+        <img
+          className="welcome-hero-img"
+          src={WELCOME_HERO_SRC}
+          srcSet={WELCOME_HERO_SRCSET}
+          sizes="100vw"
+          width={1920}
+          height={1280}
+          alt=""
+          decoding="async"
+          fetchPriority="high"
+          style={imgTransform ? { transform: imgTransform } : undefined}
+        />
+      </div>
+      <div className="welcome-hero-dark" aria-hidden="true" />
+      <div className="welcome-hero-vignette" aria-hidden="true" />
 
-      <div style={{ position: "relative", zIndex: 1, width: "100%", maxWidth: "420px", textAlign: "center", animation: "fadeIn 0.9s ease" }}>
-        <div style={{ fontSize: "10px", letterSpacing: "6px", color: "var(--gold)", textTransform: "uppercase", marginBottom: "14px", fontWeight: 500 }}>
-          GEORGIAN FINE DINING
+      <div className="welcome-hero-inner">
+        <header>
+          <p className="welcome-hero-eyebrow">Georgian fine dining</p>
+          <h1 id="welcome-title" className="welcome-hero-title">
+            Welcome to Tiflisi
+            <span>Fine dining</span>
+          </h1>
+          <p className="welcome-hero-sub">
+            Scan the QR code to browse our menu and send orders from your table—crafted for a calm, unhurried evening.
+          </p>
+          <p className="welcome-hero-ka" lang="ka">
+            კეთილი იყოს თქვენი მობრძანება · Welcome · Добро пожаловать
+          </p>
+        </header>
+
+        {showTable && typeof onTableChange === "function" && (
+          <div className="welcome-hero-table">
+            <label htmlFor="welcome-table-select">Seating</label>
+            <div className="welcome-hero-table-wrap">
+              <select
+                id="welcome-table-select"
+                value={String(tableId)}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  const id = /^\d+$/.test(raw) ? Number(raw) : raw;
+                  onTableChange(id);
+                }}
+              >
+                {tableList.map((t) => (
+                  <option key={t.id} value={String(t.id)}>
+                    {t.name}
+                    {t.zone ? ` — ${t.zone}` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
+
+        <div className="welcome-hero-divider" aria-hidden="true">
+          <i />
+          <span>ენა · Language</span>
+          <i />
         </div>
-        <h1 id="welcome-title" style={{ fontFamily: "var(--font-display)", fontSize: "clamp(44px,12vw,64px)", fontWeight: 300, fontStyle: "italic", color: "var(--cream)", letterSpacing: "-1px", lineHeight: 1.05, margin: 0 }}>
-          Tiflisi
-        </h1>
-        <p style={{ marginTop: "18px", fontFamily: "var(--font-display)", fontSize: "clamp(17px,4.5vw,22px)", fontWeight: 300, color: "var(--gold-pale)", lineHeight: 1.45, fontStyle: "italic" }}>
-          კეთილი იყოს თქვენი მობრძანება
-        </p>
-        <p style={{ marginTop: "8px", fontSize: "11px", color: "var(--muted)", letterSpacing: "0.4px", lineHeight: 1.6, fontWeight: 300 }}>
-          Welcome · Добро пожаловать
-        </p>
 
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "12px", margin: "36px 0 28px" }}>
-          <div style={{ flex: 1, maxWidth: "80px", height: "1px", background: "linear-gradient(90deg, transparent, rgba(61,191,176,0.45))" }} />
-          <span style={{ fontSize: "9px", letterSpacing: "3px", textTransform: "uppercase", color: "var(--muted)" }}>ენა / Language</span>
-          <div style={{ flex: 1, maxWidth: "80px", height: "1px", background: "linear-gradient(90deg, rgba(61,191,176,0.45), transparent)" }} />
-        </div>
-
-        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          <button
-            type="button"
-            onClick={() => onChooseLang("ka")}
-            className="action-btn"
-            style={{
-              width: "100%",
-              padding: "16px 20px",
-              border: "1px solid var(--gold)",
-              background: "linear-gradient(135deg, rgba(61,191,176,0.18), rgba(61,191,176,0.06))",
-              color: "var(--gold-pale)",
-              fontSize: "15px",
-              fontWeight: 500,
-              cursor: "pointer",
-              fontFamily: "var(--font-display)",
-              fontStyle: "italic",
-              letterSpacing: "0.5px",
-              borderRadius: "2px",
-            }}
-          >
-            ქართული
+        <div className="welcome-hero-actions">
+          <button type="button" className="welcome-btn-primary" onClick={() => onChooseLang("ka")}>
+            View menu
+            <small>ქართული</small>
           </button>
-          <button
-            type="button"
-            onClick={() => onChooseLang("en")}
-            className="action-btn"
-            style={{
-              width: "100%",
-              padding: "16px 20px",
-              border: "1px solid rgba(196,88,68,0.35)",
-              background: "rgba(255,255,255,0.03)",
-              color: "var(--cream)",
-              fontSize: "13px",
-              fontWeight: 600,
-              letterSpacing: "2px",
-              textTransform: "uppercase",
-              cursor: "pointer",
-              fontFamily: "var(--font-body)",
-              borderRadius: "2px",
-            }}
-          >
+          <button type="button" className="welcome-btn-ghost" onClick={() => onChooseLang("en")}>
             English
           </button>
-          <button
-            type="button"
-            onClick={() => onChooseLang("ru")}
-            className="action-btn"
-            style={{
-              width: "100%",
-              padding: "16px 20px",
-              border: "1px solid rgba(196,88,68,0.35)",
-              background: "rgba(255,255,255,0.03)",
-              color: "var(--cream)",
-              fontSize: "13px",
-              fontWeight: 600,
-              letterSpacing: "2px",
-              textTransform: "uppercase",
-              cursor: "pointer",
-              fontFamily: "var(--font-body)",
-              borderRadius: "2px",
-            }}
-          >
+          <button type="button" className="welcome-btn-ghost" onClick={() => onChooseLang("ru")}>
             Русский
           </button>
         </div>
 
-        <p style={{ marginTop: "28px", fontSize: "10px", color: "var(--subtle)", letterSpacing: "1px" }}>
-          აირჩიეთ ენა მენიუს სანახავად
-        </p>
+        <p className="welcome-hero-hint">აირჩიეთ ენა მენიუს სანახავად · Choose a language to open the menu</p>
       </div>
     </div>
   );
@@ -2882,7 +3254,23 @@ export default function App() {
 
   return (
     <div>
-      {!enteredMenu && !isAdminRoute && <WelcomeScreen onChooseLang={enterWithLang} />}
+      {!enteredMenu && !isAdminRoute && (
+        <WelcomeScreen
+          onChooseLang={enterWithLang}
+          tableId={tableId}
+          tables={store.tables}
+          onTableChange={(id) => {
+            setTableId(id);
+            try {
+              const u = new URL(window.location.href);
+              u.searchParams.set("table", String(id));
+              window.history.replaceState({}, "", `${u.pathname}${u.search}${u.hash}`);
+            } catch {
+              /* ignore */
+            }
+          }}
+        />
+      )}
 
       {enteredMenu && !isAdminRoute && (
         <div style={{ position:"fixed", bottom:"16px", left:"50%", transform:"translateX(-50%)", zIndex:9999, display:"flex", gap:"6px", background:"rgba(7,6,8,0.92)", padding:"8px 10px", border:"1px solid rgba(61,191,176,0.2)", backdropFilter:"blur(20px)" }}>
