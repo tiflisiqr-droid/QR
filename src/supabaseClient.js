@@ -10,6 +10,9 @@ import { createClient } from "@supabase/supabase-js";
  *
  * GitHub Pages: იგივე სახელები Repository Secrets-ში → Actions workflow `npm run build`-ს აძლევს env-ს.
  *
+ * Security: use only the **anon** key in the browser. Never commit or expose the **service_role** key
+ * in client-side code (it bypasses RLS). RLS policies on `menu`, `menu_categories`, `seating`, etc. protect data.
+ *
  * თუ მხოლოდ სტატიკური HTML გაქვს (Vite არა), ცალკე სკრიპტში შეგიძლია:
  *   import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
  *   export const supabase = createClient(url, key); // ან url/key პირდაპირ სტრინგად (არ ატვირთო საჯარო რეპოში საიდუმლო გასაღებით)

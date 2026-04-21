@@ -1133,13 +1133,25 @@ const MENU_DISHES_STORAGE_KEY = "tiflisi_menu_dishes_v1";
 function normalizeTableRows(arr) {
   if (!Array.isArray(arr)) return [];
   return arr
-    .map((t) => ({
-      id: Number(t?.id) || 0,
-      name: typeof t?.name === "string" ? t.name : "",
-      zone: typeof t?.zone === "string" ? t.zone : "Hall",
-      active: t?.active !== false,
-    }))
-    .filter((t) => t.id > 0 && t.name.length > 0);
+    .map((t) => {
+      if (!t || t.id == null || t.id === "") return null;
+      const rawId = t.id;
+      const id =
+        typeof rawId === "number" && Number.isFinite(rawId)
+          ? rawId
+          : typeof rawId === "string" && /^[0-9]+$/.test(rawId.trim())
+            ? Number(rawId.trim())
+            : String(rawId).trim();
+      const name = typeof t.name === "string" ? t.name.trim() : "";
+      if (!name) return null;
+      return {
+        id,
+        name,
+        zone: typeof t.zone === "string" && t.zone.trim() ? t.zone.trim() : "Hall",
+        active: t.active !== false,
+      };
+    })
+    .filter(Boolean);
 }
 
 function loadTablesFromLocalStorage() {
@@ -1188,11 +1200,13 @@ function loadNotificationsFromStorage() {
     if (!raw) return [];
     const arr = JSON.parse(raw);
     if (!Array.isArray(arr)) return [];
-    return arr.map((n) => ({
-      ...n,
-      time: n.time ? new Date(n.time) : new Date(),
-      read: !!n.read,
-    }));
+    return arr
+      .filter((n) => n && typeof n === "object")
+      .map((n) => ({
+        ...n,
+        time: n.time ? new Date(n.time) : new Date(),
+        read: !!n.read,
+      }));
   } catch (_) {
     return [];
   }
@@ -1265,8 +1279,14 @@ function useStore() {
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
-  const trackView = useCallback(id => {
-    setAnalytics(prev => ({ ...prev, scans: prev.scans+1, views: { ...prev.views, [id]: (prev.views[id]||0)+1 } }));
+  const trackView = useCallback((id) => {
+    const key = id == null ? "" : String(id);
+    if (!key) return;
+    setAnalytics((prev) => ({
+      ...prev,
+      scans: prev.scans + 1,
+      views: { ...prev.views, [key]: (prev.views[key] || 0) + 1 },
+    }));
   }, []);
 
   const clearMenuError = useCallback(() => setMenuError(null), []);
@@ -1275,23 +1295,31 @@ function useStore() {
     if (!isSupabaseConfigured()) return;
     setMenuLoading(true);
     setMenuError(null);
+    const reasonText = (settled) => {
+      const x = settled?.reason;
+      if (x instanceof Error) return x.message;
+      if (typeof x === "string") return x;
+      if (x != null && typeof x === "object" && "message" in x) return String(x.message);
+      return x != null ? String(x) : "";
+    };
+    const [dishResult, catResult] = await Promise.allSettled([fetchMenuDishes(), fetchMenuCategories()]);
     let dishErr = null;
-    try {
-      const rows = await fetchMenuDishes();
-      setDishes(rows);
-    } catch (e) {
-      dishErr = e?.message || "Could not load menu";
+    if (dishResult.status === "fulfilled") {
+      setDishes(dishResult.value);
+    } else {
+      dishErr = reasonText(dishResult) || "Could not load menu";
       setDishes([]);
     }
-    try {
-      const cats = await fetchMenuCategories();
-      setCategories(cats);
-    } catch (e) {
+    if (catResult.status === "fulfilled") {
+      setCategories(catResult.value);
+    } else {
       setCategories([]);
-      if (!dishErr) dishErr = e?.message || "Could not load menu categories (run SQL for public.menu_categories)";
+      if (!dishErr) {
+        dishErr =
+          reasonText(catResult) || "Could not load menu categories (run SQL for public.menu_categories)";
+      }
     }
-    if (dishErr) setMenuError(dishErr);
-    else setMenuError(null);
+    setMenuError(dishErr || null);
     setMenuLoading(false);
   }, []);
 

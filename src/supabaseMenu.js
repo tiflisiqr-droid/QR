@@ -45,16 +45,42 @@ export function dishToDbInsert(dish) {
   };
 }
 
+/** JSONB / text from DB may arrive as array or JSON string — normalize for UI. */
+function normalizeStringArrayField(value) {
+  if (Array.isArray(value)) {
+    return value.map((x) => String(x ?? "").trim()).filter(Boolean);
+  }
+  if (typeof value === "string") {
+    const t = value.trim();
+    if (!t) return [];
+    try {
+      const p = JSON.parse(t);
+      if (Array.isArray(p)) return p.map((x) => String(x ?? "").trim()).filter(Boolean);
+    } catch {
+      /* plain string, not JSON */
+    }
+  }
+  return [];
+}
+
 export function mapMenuRowToDish(row) {
-  const ingredients = Array.isArray(row.ingredients) ? row.ingredients : [];
-  const badges = Array.isArray(row.badges) ? row.badges : [];
+  if (!row || row.id == null || row.id === "") return null;
+  const ingredients = normalizeStringArrayField(row.ingredients);
+  const badges = normalizeStringArrayField(row.badges);
+  const rawCat = row.category_id;
+  const categoryId =
+    rawCat == null || rawCat === ""
+      ? null
+      : Number.isFinite(Number(rawCat)) && String(Number(rawCat)) === String(rawCat).trim()
+        ? Number(rawCat)
+        : rawCat;
   const desc =
     row.description && typeof row.description === "object" && !Array.isArray(row.description)
       ? row.description
       : null;
   return {
     id: row.id,
-    categoryId: row.category_id,
+    categoryId,
     name: {
       en: row.name_en ?? "",
       ka: row.name_ka ?? "",
@@ -90,12 +116,13 @@ export async function fetchMenuDishes() {
     .order("created_at", { ascending: true });
   if (error) throw error;
   if (!data?.length) return [];
-  return data.map(mapMenuRowToDish);
+  return data.map(mapMenuRowToDish).filter(Boolean);
 }
 
 /* ─── Menu categories (Admin → Cuisine → Categories) ───────────────────── */
 
 export function mapMenuCategoryRow(row) {
+  if (!row || row.id == null || row.id === "") return null;
   return {
     id: row.id,
     name: {
@@ -127,7 +154,7 @@ export async function fetchMenuCategories() {
     .order("sort_order", { ascending: true })
     .order("id", { ascending: true });
   if (error) throw error;
-  return (data ?? []).map(mapMenuCategoryRow);
+  return (data ?? []).map(mapMenuCategoryRow).filter(Boolean);
 }
 
 export async function insertMenuCategory(cat) {
@@ -281,6 +308,7 @@ export async function setMenuDishAvailable(id, available) {
 /* ─── Seating (tables) — public.seating, shared across all devices ─────── */
 
 export function mapSeatingRow(row) {
+  if (!row || row.id == null || row.id === "") return null;
   return {
     id: row.id,
     name: typeof row.name === "string" ? row.name : "",
@@ -298,7 +326,7 @@ export async function fetchSeatingTables() {
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: true });
   if (error) throw error;
-  return (data ?? []).map(mapSeatingRow);
+  return (data ?? []).map(mapSeatingRow).filter(Boolean);
 }
 
 export async function insertSeatingTable({ name, zone }) {
