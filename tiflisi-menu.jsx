@@ -1004,6 +1004,15 @@ const GlobalStyles = () => {
         margin: 0 auto;
         text-align: center;
       }
+      .welcome-hero-social {
+        margin-top: clamp(18px, 4.5vw, 26px);
+        width: 100%;
+        max-width: 100%;
+      }
+      .welcome-hero-social .social-top-strip {
+        margin-bottom: 0;
+        justify-content: center;
+      }
       @media (max-height: 700px) {
         .welcome-hero-inner {
           justify-content: flex-start;
@@ -1783,10 +1792,10 @@ function socialAccentFromItem(item) {
   return "#3dbfb0";
 }
 
-function SocialTopStrip() {
+function SocialTopStrip({ className = "" }) {
   const iconBase = "https://cdn.jsdelivr.net/npm/simple-icons@11.6.0/icons";
   return (
-    <div className="social-top-strip" role="navigation" aria-label="Social & delivery">
+    <div className={["social-top-strip", className].filter(Boolean).join(" ")} role="navigation" aria-label="Social & delivery">
       {SOCIAL_TOP_ITEMS.map((item) => {
         const href = socialTopHref(item.env, item.fallback);
         const isText = item.mode === "text";
@@ -1983,7 +1992,6 @@ function CustomerMenu({ tableId, store, lang, setLang }) {
       {/* STICKY NAV */}
       <div ref={headerRef} className="menu-sticky-nav" style={{ position: "sticky", top: 0, zIndex: 100, overflowAnchor: "none" }}>
         <div className="menu-sticky-nav-inner">
-          <SocialTopStrip />
           <div style={{ display:"flex", justifyContent:"flex-end", alignItems:"center", gap:"8px", marginBottom:"10px", paddingTop:"2px" }}>
             {["en","ka","ru"].map((l) => (
               <button
@@ -3923,6 +3931,10 @@ function WelcomeScreen({ onChooseLang, tableId, tables, onTableChange }) {
             კეთილი იყოს თქვენი მობრძანება · Welcome · Добро пожаловать
           </p>
         </header>
+
+        <div className="welcome-hero-social">
+          <SocialTopStrip />
+        </div>
 
         {showTable && typeof onTableChange === "function" && (
           <div className="welcome-hero-table">
