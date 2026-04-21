@@ -208,28 +208,92 @@ const GlobalStyles = () => {
       }
       .menu-dish-list { display: flex; flex-direction: column; gap: 16px; }
       .dish-card.menu-dish-card {
+        position: relative;
+        isolation: isolate;
         animation: menuCardIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
         border-radius: 20px;
         overflow: hidden;
-        background: linear-gradient(152deg, rgba(18, 32, 30, 0.94), rgba(6, 11, 11, 0.92));
-        border: 1px solid rgba(201, 169, 98, 0.1);
+        background: linear-gradient(152deg, rgba(18, 32, 30, 0.88), rgba(6, 11, 11, 0.82));
+        border: 1px solid rgba(255, 215, 0, 0.14);
+        backdrop-filter: blur(12px) saturate(1.08);
+        -webkit-backdrop-filter: blur(12px) saturate(1.08);
         box-shadow:
-          0 10px 40px rgba(0,0,0,0.38),
-          inset 0 1px 0 rgba(255,255,255,0.05);
+          0 12px 44px rgba(0, 0, 0, 0.42),
+          0 0 0 1px rgba(255, 215, 0, 0.06),
+          0 0 24px rgba(255, 215, 0, 0.06),
+          inset 0 1px 0 rgba(255, 255, 255, 0.06);
         cursor: pointer;
-        transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.4s ease, border-color 0.3s ease, background 0.3s ease;
+        transition: transform 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease, background 0.35s ease;
+      }
+      .dish-card.menu-dish-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 200%;
+        height: 100%;
+        background: linear-gradient(
+          118deg,
+          transparent 0%,
+          transparent 40%,
+          rgba(255, 215, 0, 0.1) 47%,
+          rgba(255, 236, 210, 0.22) 50%,
+          rgba(255, 215, 0, 0.1) 53%,
+          transparent 60%,
+          transparent 100%
+        );
+        pointer-events: none;
+        z-index: 1;
+        opacity: 0;
+        mix-blend-mode: soft-light;
+        transition: left 1.55s ease-in-out, opacity 0.35s ease;
+      }
+      .dish-card.menu-dish-card::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        pointer-events: none;
+        z-index: 1;
+        opacity: 0.18;
+        background-image:
+          radial-gradient(circle at 10% 15%, rgba(255, 230, 190, 0.14) 0, transparent 0.5%),
+          radial-gradient(circle at 24% 72%, rgba(255, 215, 0, 0.1) 0, transparent 0.45%),
+          radial-gradient(circle at 86% 22%, rgba(255, 240, 210, 0.12) 0, transparent 0.48%),
+          radial-gradient(circle at 70% 86%, rgba(201, 169, 98, 0.1) 0, transparent 0.42%),
+          radial-gradient(circle at 52% 48%, rgba(255, 220, 160, 0.06) 0, transparent 0.35%);
+        transition: opacity 0.35s ease;
+      }
+      .dish-card.menu-dish-card > * {
+        position: relative;
+        z-index: 2;
       }
       .dish-card.menu-dish-card:hover {
-        transform: translateY(-4px) scale(1.008);
-        border-color: rgba(61, 191, 176, 0.28);
+        transform: translateY(-3px) scale(1.02);
+        border-color: rgba(255, 215, 0, 0.28);
+        background: linear-gradient(152deg, rgba(22, 38, 36, 0.9), rgba(8, 14, 14, 0.86));
         box-shadow:
-          0 22px 56px rgba(0,0,0,0.48),
-          0 0 48px rgba(61, 191, 176, 0.1),
-          inset 0 1px 0 rgba(255,255,255,0.07);
+          0 24px 56px rgba(0, 0, 0, 0.5),
+          0 0 0 1px rgba(255, 215, 0, 0.12),
+          0 0 36px rgba(255, 215, 0, 0.14),
+          0 0 52px rgba(61, 191, 176, 0.08),
+          inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      }
+      .dish-card.menu-dish-card:hover::before {
+        left: 100%;
+        opacity: 1;
+      }
+      .dish-card.menu-dish-card:hover::after {
+        opacity: 0.28;
       }
       .dish-card.menu-dish-card.menu-dish-card--expanded {
-        border-color: rgba(61, 191, 176, 0.32);
-        background: linear-gradient(152deg, rgba(22, 42, 40, 0.98), rgba(8, 14, 14, 0.96));
+        border-color: rgba(255, 215, 0, 0.22);
+        background: linear-gradient(152deg, rgba(22, 42, 40, 0.92), rgba(8, 14, 14, 0.88));
+        box-shadow:
+          0 14px 48px rgba(0, 0, 0, 0.45),
+          0 0 0 1px rgba(255, 215, 0, 0.1),
+          0 0 28px rgba(255, 215, 0, 0.08),
+          inset 0 1px 0 rgba(255, 255, 255, 0.07);
       }
       @media (hover: none) {
         .dish-card.menu-dish-card:active { transform: scale(0.992); }
@@ -237,6 +301,8 @@ const GlobalStyles = () => {
       @media (prefers-reduced-motion: reduce) {
         .dish-card.menu-dish-card { animation: fadeIn 0.4s ease both; transition: none; }
         .dish-card.menu-dish-card:hover { transform: none; }
+        .dish-card.menu-dish-card::before { transition: none; opacity: 0 !important; left: -100% !important; }
+        .dish-card.menu-dish-card:hover::before { left: -100%; opacity: 0; }
       }
       .dish-card-inner { display: flex; align-items: stretch; gap: 0; }
       .dish-card.menu-dish-card .dish-card-media {
