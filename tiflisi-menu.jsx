@@ -42,15 +42,30 @@ const GlobalStyles = () => {
     const style = document.createElement("style");
     style.textContent = `
       * { margin:0; padding:0; box-sizing:border-box; }
-      /* Mobile-first: avoid horizontal scroll; anchor scroll clears sticky header */
+      /* Mobile-first: anchor scroll clears sticky header; pinch zoom still allowed (a11y) */
       html {
+        scroll-behavior: auto;
         scroll-padding-top: min(168px, 42vw);
         -webkit-text-size-adjust: 100%;
+        width: 100%;
+        overflow-x: clip;
       }
       @media (min-width: 521px) {
         html { scroll-padding-top: 132px; }
       }
-      #root { min-width: 0; }
+      body {
+        width: 100%;
+        max-width: 100vw;
+        overflow-x: clip;
+        overscroll-behavior-x: none;
+        background: var(--obsidian);
+      }
+      #root {
+        min-width: 0;
+        width: 100%;
+        max-width: 100vw;
+        overflow-x: clip;
+      }
       :root {
         /* Deep teal-tinted base (ფირუზისთან შეხამებული) */
         --obsidian: #050a0a;
@@ -73,8 +88,6 @@ const GlobalStyles = () => {
         --font-display: 'Cormorant Garamond', Georgia, serif;
         --font-body: 'Montserrat', system-ui, sans-serif;
       }
-      html { scroll-behavior: auto; }
-      body { background: var(--obsidian); }
       ::-webkit-scrollbar { width: 4px; }
       ::-webkit-scrollbar-track { background: var(--void); }
       ::-webkit-scrollbar-thumb { background: var(--subtle); border-radius: 2px; }
@@ -174,6 +187,8 @@ const GlobalStyles = () => {
       .menu-cat-scroll {
         display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none;
         padding: 4px 2px 16px; -webkit-overflow-scrolling: touch;
+        overscroll-behavior-x: contain;
+        touch-action: pan-x;
       }
       .menu-cat-scroll::-webkit-scrollbar { display: none; }
       .menu-cat-tab {
@@ -196,10 +211,15 @@ const GlobalStyles = () => {
         -webkit-tap-highlight-color: transparent;
         touch-action: manipulation;
       }
+      @media (hover: hover) {
       .menu-cat-tab:hover {
         border-color: rgba(201, 169, 98, 0.35);
         color: var(--cream);
         transform: translateY(-1px);
+      }
+      }
+      .menu-cat-tab:active {
+        transform: scale(0.98);
       }
       .menu-cat-tab--active {
         border-color: rgba(201, 169, 98, 0.55) !important;
@@ -253,6 +273,8 @@ const GlobalStyles = () => {
           0 0 24px rgba(255, 215, 0, 0.06),
           inset 0 1px 0 rgba(255, 255, 255, 0.06);
         cursor: pointer;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
         transition: transform 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease, background 0.35s ease;
       }
       .dish-card.menu-dish-card::before {
@@ -298,6 +320,7 @@ const GlobalStyles = () => {
         position: relative;
         z-index: 2;
       }
+      @media (hover: hover) {
       .dish-card.menu-dish-card:hover {
         transform: translateY(-3px) scale(1.02);
         border-color: rgba(255, 215, 0, 0.28);
@@ -315,6 +338,8 @@ const GlobalStyles = () => {
       }
       .dish-card.menu-dish-card:hover::after {
         opacity: 0.28;
+      }
+      .dish-card.menu-dish-card:hover .dish-card-media .dish-img { transform: scale(1.07); }
       }
       .dish-card.menu-dish-card.menu-dish-card--expanded {
         border-color: rgba(255, 215, 0, 0.22);
@@ -354,7 +379,6 @@ const GlobalStyles = () => {
         display: block;
         transition: transform 0.65s cubic-bezier(0.25, 0.46, 0.45, 0.94);
       }
-      .dish-card.menu-dish-card:hover .dish-card-media .dish-img { transform: scale(1.07); }
       .dish-card.menu-dish-card .dish-card-media .dish-img-placeholder {
         width: 100%;
         min-height: 140px;
@@ -472,10 +496,15 @@ const GlobalStyles = () => {
         transition: transform 0.15s ease, border-color 0.2s ease, box-shadow 0.2s ease;
         -webkit-tap-highlight-color: transparent;
       }
+      @media (hover: hover) {
       .menu-cart-step:hover {
         transform: scale(1.06);
         border-color: rgba(201, 169, 98, 0.45);
         box-shadow: 0 0 20px rgba(61, 191, 176, 0.15);
+      }
+      }
+      .menu-cart-step:active {
+        transform: scale(0.96);
       }
       .menu-cart-step--plus {
         border-color: rgba(61, 191, 176, 0.45);
@@ -511,10 +540,16 @@ const GlobalStyles = () => {
         transition: opacity 0.2s ease;
         pointer-events: none;
       }
+      @media (hover: hover) {
       .menu-add-btn:hover:not(:disabled) {
         transform: translateY(-2px);
         filter: brightness(1.06);
         box-shadow: 0 10px 32px rgba(0,0,0,0.4), 0 0 36px rgba(61, 191, 176, 0.15), inset 0 1px 0 rgba(255,255,255,0.1);
+      }
+      }
+      .menu-add-btn:active:not(:disabled) {
+        transform: translateY(0);
+        filter: brightness(0.98);
       }
       .menu-add-btn:disabled {
         opacity: 0.38;
@@ -586,7 +621,10 @@ const GlobalStyles = () => {
         transition: transform 0.2s ease, box-shadow 0.25s ease;
         -webkit-tap-highlight-color: transparent;
       }
+      @media (hover: hover) {
       .menu-cart-open-btn:hover { transform: translateY(-2px); box-shadow: 0 14px 44px rgba(0,0,0,0.5), 0 0 48px rgba(61, 191, 176, 0.18); }
+      }
+      .menu-cart-open-btn:active { transform: translateY(0); }
       .menu-service-btn {
         min-height: 48px;
         touch-action: manipulation;
@@ -613,7 +651,10 @@ const GlobalStyles = () => {
         color: var(--brick-pale);
         box-shadow: 0 6px 24px rgba(0,0,0,0.35);
       }
+      @media (hover: hover) {
       .menu-service-btn:hover { transform: translateY(-2px); }
+      }
+      .menu-service-btn:active { transform: translateY(0); }
       .menu-hero-strip {
         position: relative;
         height: min(200px, 28vh);
@@ -726,6 +767,8 @@ const GlobalStyles = () => {
         margin-bottom: 10px;
         scrollbar-width: none;
         -webkit-overflow-scrolling: touch;
+        overscroll-behavior-x: contain;
+        touch-action: pan-x;
       }
       .social-top-strip::-webkit-scrollbar { display: none; }
       .social-top-link {
@@ -758,6 +801,7 @@ const GlobalStyles = () => {
         -webkit-tap-highlight-color: transparent;
         box-sizing: border-box;
         overflow: hidden;
+        touch-action: manipulation;
       }
       .social-top-link::before {
         content: "";
@@ -781,6 +825,7 @@ const GlobalStyles = () => {
         opacity: 0;
         mix-blend-mode: soft-light;
       }
+      @media (hover: hover) {
       .social-top-link:hover {
         transform: scale(1.04);
         border-color: color-mix(in srgb, var(--social-accent) 50%, rgba(201, 169, 98, 0.55));
@@ -796,6 +841,7 @@ const GlobalStyles = () => {
       }
       .social-top-link:hover::before {
         animation: socialGoldShimmer 1.5s ease-in-out 1;
+      }
       }
       .social-top-link:active {
         transform: scale(1.02);
@@ -813,9 +859,11 @@ const GlobalStyles = () => {
         color: rgba(248, 250, 249, 0.96);
         text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
       }
+      @media (hover: hover) {
       .social-top-link--text:hover {
         color: #fff;
         text-shadow: 0 0 18px color-mix(in srgb, var(--social-accent) 35%, transparent), 0 1px 3px rgba(0, 0, 0, 0.4);
+      }
       }
       .social-top-link__icon-mask {
         position: relative;
@@ -835,10 +883,12 @@ const GlobalStyles = () => {
         opacity: 0.88;
         transition: opacity 0.3s ease, filter 0.3s ease, transform 0.3s ease;
       }
+      @media (hover: hover) {
       .social-top-link:hover .social-top-link__icon-mask {
         opacity: 0.96;
         transform: scale(1.06);
         filter: saturate(1.12) brightness(1.05);
+      }
       }
       .social-top-link__icon-mask--gradient {
         background: var(--social-icon-gradient);
@@ -856,13 +906,18 @@ const GlobalStyles = () => {
         .social-top-link--text { min-width: 92px; padding: 0 16px; font-size: 9px; }
       }
       @media (prefers-reduced-motion: reduce) {
+        @media (hover: hover) {
         .social-top-link:hover::before { animation: none; opacity: 0; }
         .social-top-link:hover { transform: none; }
+        }
       }
+      @media (hover: hover) {
       .nav-btn:hover { letter-spacing: 2.5px !important; }
       .action-btn:hover { transform: translateY(-2px); }
-      .action-btn { transition: transform 0.2s ease, box-shadow 0.2s ease; }
       .admin-nav-item:hover { background: rgba(61,191,176,0.1) !important; }
+      }
+      .action-btn { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+      .action-btn:active { transform: translateY(0); }
       .gold-line::after {
         content: ''; display: block; width: 40px; height: 1px;
         background: linear-gradient(90deg, var(--gold), transparent);
@@ -874,7 +929,9 @@ const GlobalStyles = () => {
         background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
       }
       .tag { transition: all 0.2s; }
+      @media (hover: hover) {
       .tag:hover { transform: translateY(-1px); }
+      }
 
       /* ─── Welcome hero (luxury first screen) ─────────────────────────── */
       .welcome-hero-root {
@@ -885,7 +942,9 @@ const GlobalStyles = () => {
         min-height: 100vh;
         min-height: 100dvh;
         width: 100%;
+        max-width: 100vw;
         overflow: hidden;
+        overflow-x: clip;
         background: var(--welcome-ink);
         color: var(--cream);
         font-family: var(--font-body);
@@ -1032,8 +1091,10 @@ const GlobalStyles = () => {
       }
       .welcome-hero-table select {
         width: 100%;
+        max-width: 100%;
         appearance: none;
         -webkit-appearance: none;
+        touch-action: manipulation;
         padding: 14px 40px 14px 18px;
         border-radius: 999px;
         border: 1px solid rgba(201, 169, 98, 0.35);
@@ -1052,12 +1113,14 @@ const GlobalStyles = () => {
         background-image: linear-gradient(180deg, rgba(255,255,255,0.06), transparent);
         transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.2s ease;
       }
+      @media (hover: hover) {
       .welcome-hero-table select:hover {
         border-color: rgba(61, 191, 176, 0.45);
         box-shadow:
           0 0 0 1px rgba(61, 191, 176, 0.15),
           0 16px 48px rgba(0,0,0,0.4),
           0 0 28px rgba(61, 191, 176, 0.12);
+      }
       }
       .welcome-hero-table-wrap {
         position: relative;
@@ -1112,6 +1175,7 @@ const GlobalStyles = () => {
       .welcome-btn-primary {
         position: relative;
         width: 100%;
+        touch-action: manipulation;
         padding: 17px 22px;
         border: none;
         border-radius: 999px;
@@ -1150,6 +1214,7 @@ const GlobalStyles = () => {
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
       }
+      @media (hover: hover) {
       .welcome-btn-primary:hover {
         transform: translateY(-2px);
         filter: brightness(1.05);
@@ -1158,6 +1223,7 @@ const GlobalStyles = () => {
           0 6px 32px rgba(201, 169, 98, 0.45),
           0 0 40px rgba(61, 191, 176, 0.22),
           0 22px 56px rgba(0,0,0,0.5);
+      }
       }
       .welcome-btn-primary:active { transform: translateY(0); }
       .welcome-btn-primary small {
@@ -1173,6 +1239,7 @@ const GlobalStyles = () => {
       }
       .welcome-btn-ghost {
         width: 100%;
+        touch-action: manipulation;
         padding: 15px 20px;
         border-radius: 999px;
         cursor: pointer;
@@ -1190,6 +1257,7 @@ const GlobalStyles = () => {
         transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.2s ease, color 0.2s ease;
         -webkit-tap-highlight-color: transparent;
       }
+      @media (hover: hover) {
       .welcome-btn-ghost:hover {
         border-color: rgba(61, 191, 176, 0.5);
         box-shadow:
@@ -1197,6 +1265,7 @@ const GlobalStyles = () => {
           0 10px 36px rgba(0,0,0,0.3);
         transform: translateY(-1px);
         color: var(--gold-light);
+      }
       }
       .welcome-hero-hint {
         margin-top: clamp(20px, 4vw, 26px);
@@ -2733,7 +2802,7 @@ function AdminPanel({ store, onLogout }) {
   ];
 
   return (
-    <div style={{ minHeight:"100vh", background:"var(--void)", display:"flex", fontFamily:"var(--font-body)" }}>
+    <div style={{ minHeight:"100vh", background:"var(--void)", display:"flex", fontFamily:"var(--font-body)", width:"100%", maxWidth:"100vw", overflowX:"clip" }}>
       <GlobalStyles /><FontLoader />
       <div className="noise" />
 
@@ -2746,7 +2815,7 @@ function AdminPanel({ store, onLogout }) {
 
         <nav style={{ flex:1, padding:"16px 12px" }}>
           {navItems.map(item => (
-            <button key={item.id} onClick={() => setSection(item.id)} className="admin-nav-item" style={{
+            <button type="button" key={item.id} onClick={() => setSection(item.id)} className="admin-nav-item" style={{
               width:"100%", display:"flex", alignItems:"center", gap:"10px",
               padding:"11px 12px", border:"none",
               background: section===item.id ? "rgba(61,191,176,0.1)" : "transparent",
@@ -2766,14 +2835,14 @@ function AdminPanel({ store, onLogout }) {
         </nav>
 
         <div style={{ padding:"16px 12px", borderTop:"1px solid rgba(61,191,176,0.1)" }}>
-          <button onClick={onLogout} style={{ width:"100%", padding:"10px 12px", background:"transparent", border:"1px solid rgba(239,68,68,0.2)", color:"rgba(239,68,68,0.6)", fontSize:"9px", letterSpacing:"2px", textTransform:"uppercase", cursor:"pointer", fontFamily:"var(--font-body)", transition:"all 0.2s" }}>
+          <button type="button" onClick={onLogout} style={{ width:"100%", padding:"10px 12px", background:"transparent", border:"1px solid rgba(239,68,68,0.2)", color:"rgba(239,68,68,0.6)", fontSize:"9px", letterSpacing:"2px", textTransform:"uppercase", cursor:"pointer", fontFamily:"var(--font-body)", transition:"all 0.2s", touchAction:"manipulation", WebkitTapHighlightColor:"transparent" }}>
             EXIT SESSION
           </button>
         </div>
       </div>
 
       {/* CONTENT */}
-      <div style={{ flex:1, overflow:"auto", position:"relative", zIndex:1 }}>
+      <div style={{ flex:1, minWidth:0, overflow:"auto", WebkitOverflowScrolling:"touch", position:"relative", zIndex:1 }}>
         {section==="dashboard"  && <AdminDash store={store} />}
         {section==="menu"       && <AdminMenu store={store} />}
         {section==="cloud"      && <AdminCloudMenu store={store} />}
