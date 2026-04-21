@@ -1606,13 +1606,15 @@ function CustomerMenu({ tableId, store, lang, setLang }) {
   const cartLines = useMemo(() => {
     return Object.entries(cart)
       .map(([idStr, qty]) => ({ id: idStr, qty: Number(qty) || 0 }))
-      .filter(({ id, qty }) => qty > 0 && dishes.some((d) => String(d.id) === id && d.available))
+      .filter(({ qty }) => qty > 0)
       .map(({ id, qty }) => {
         const dish = dishes.find((d) => String(d.id) === id);
+        if (!dish || !dish.available) return null;
         const unitCents = priceToCents(dish.price);
         const lineTotal = (unitCents * qty) / 100;
         return { dish, qty, lineTotal };
-      });
+      })
+      .filter(Boolean);
   }, [cart, dishes]);
 
   const cartGrandTotal = useMemo(
@@ -1641,6 +1643,23 @@ function CustomerMenu({ tableId, store, lang, setLang }) {
   useEffect(() => {
     if (cartItemCount === 0) setCartOpen(false);
   }, [cartItemCount]);
+
+  /** Drop cart lines for dishes removed from the menu (e.g. after Supabase reload). */
+  useEffect(() => {
+    if (dishes.length === 0) return;
+    const ids = new Set(dishes.map((d) => String(d.id)));
+    setCart((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      for (const k of Object.keys(next)) {
+        if (!ids.has(k)) {
+          delete next[k];
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [dishes]);
 
   const showToast = msg => { setToast(msg); setTimeout(() => setToast(null), 3500); };
 
@@ -2015,9 +2034,9 @@ function DishRow({ dish, lang, t, expanded, onToggle, style, cartQty = 0, onAddT
         <div style={{ flex:1, padding:"16px 18px", display:"flex", flexDirection:"column", justifyContent:"space-between", minWidth:0 }}>
           <div>
             <div style={{ display:"flex", gap:"6px", flexWrap:"wrap", marginBottom:"8px", alignItems:"center" }}>
-              {displayBadges.map((b) => (
+              {displayBadges.map((b, bi) => (
                 <span
-                  key={b}
+                  key={`${dish.id}-b-${bi}-${b}`}
                   className="tag"
                   style={{
                     background: BADGE_CFG[b]?.bg || "#333",
@@ -2118,9 +2137,9 @@ function DishRow({ dish, lang, t, expanded, onToggle, style, cartQty = 0, onAddT
             ✦ {t.ingredients}
           </div>
           <div style={{ display:"flex", flexWrap:"wrap", gap:"8px" }}>
-            {ingredients.map((ing) => (
+            {ingredients.map((ing, ii) => (
               <span
-                key={ing}
+                key={`${dish.id}-ing-${ii}-${ing}`}
                 style={{
                   padding: "6px 14px",
                   borderRadius: "999px",
@@ -3075,7 +3094,7 @@ function AdminMenu({ store }) {
                   <div style={{ fontFamily:"var(--font-display)", fontSize:"20px", color:"var(--gold-light)" }}>₾{formatLari(dish.price)}</div>
                 </div>
                 <div style={{ position:"absolute", top:"8px", right:"8px", display:"flex", gap:"4px", flexWrap:"wrap" }}>
-                  {dish.badges.map(b=><span key={b} style={{ background:BADGE_CFG[b]?.bg||"#333", color:BADGE_CFG[b]?.color||"#fff", fontSize:"7px", padding:"2px 6px", fontWeight:"700", letterSpacing:"1px" }}>{b}</span>)}
+                  {dish.badges.map((b, bi) => <span key={`${dish.id}-ab-${bi}-${b}`} style={{ background:BADGE_CFG[b]?.bg||"#333", color:BADGE_CFG[b]?.color||"#fff", fontSize:"7px", padding:"2px 6px", fontWeight:"700", letterSpacing:"1px" }}>{b}</span>)}
                 </div>
               </div>
               <div style={{ padding:"14px 14px 10px" }}>
