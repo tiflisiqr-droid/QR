@@ -42,6 +42,15 @@ const GlobalStyles = () => {
     const style = document.createElement("style");
     style.textContent = `
       * { margin:0; padding:0; box-sizing:border-box; }
+      /* Mobile-first: avoid horizontal scroll; anchor scroll clears sticky header */
+      html {
+        scroll-padding-top: min(168px, 42vw);
+        -webkit-text-size-adjust: 100%;
+      }
+      @media (min-width: 521px) {
+        html { scroll-padding-top: 132px; }
+      }
+      #root { min-width: 0; }
       :root {
         /* Deep teal-tinted base (ფირუზისთან შეხამებული) */
         --obsidian: #050a0a;
@@ -117,11 +126,14 @@ const GlobalStyles = () => {
       .menu-page-shell {
         min-height: 100vh;
         min-height: 100dvh;
+        width: 100%;
+        max-width: 100vw;
+        overflow-x: clip;
         background: linear-gradient(185deg, #030807 0%, var(--obsidian) 18%, var(--obsidian) 100%);
       }
       /* Space for fixed bottom dock (waiter/bill + optional cart row) + iOS home indicator */
       .menu-main-column {
-        padding: 0 16px max(168px, calc(132px + env(safe-area-inset-bottom, 0px)));
+        padding: 0 max(16px, env(safe-area-inset-right, 0px)) max(168px, calc(132px + env(safe-area-inset-bottom, 0px))) max(16px, env(safe-area-inset-left, 0px));
       }
       .menu-main-column--cart {
         padding-bottom: max(232px, calc(196px + env(safe-area-inset-bottom, 0px)));
@@ -133,13 +145,19 @@ const GlobalStyles = () => {
         border-bottom: 1px solid rgba(201, 169, 98, 0.12) !important;
         box-shadow: 0 12px 40px rgba(0,0,0,0.35);
       }
+      .menu-sticky-nav-inner {
+        padding: 10px max(16px, env(safe-area-inset-left, 0px)) 0 max(16px, env(safe-area-inset-right, 0px));
+        max-width: 720px;
+        margin: 0 auto;
+      }
       .menu-search-wrap { position: relative; margin-bottom: 12px; }
       .menu-search-wrap .menu-search-icon {
         position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
         color: rgba(201, 169, 98, 0.55); font-size: 13px; pointer-events: none;
       }
       .menu-search-input {
-        width: 100%; min-height: 48px; padding: 12px 14px 12px 42px;
+        width: 100%; max-width: 100%; min-height: 48px; padding: 12px 14px 12px 42px;
+        touch-action: manipulation;
         background: rgba(8, 16, 16, 0.65);
         border: 1px solid rgba(201, 169, 98, 0.15);
         border-radius: 999px;
@@ -160,7 +178,8 @@ const GlobalStyles = () => {
       .menu-cat-scroll::-webkit-scrollbar { display: none; }
       .menu-cat-tab {
         flex-shrink: 0;
-        min-height: 46px;
+        min-height: 48px;
+        min-width: 44px;
         padding: 12px 20px;
         border-radius: 999px;
         border: 1px solid rgba(61, 191, 176, 0.14);
@@ -175,6 +194,7 @@ const GlobalStyles = () => {
         cursor: pointer;
         transition: transform 0.2s ease, border-color 0.25s ease, box-shadow 0.25s ease, color 0.2s ease, background 0.25s ease;
         -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
       }
       .menu-cat-tab:hover {
         border-color: rgba(201, 169, 98, 0.35);
@@ -386,12 +406,7 @@ const GlobalStyles = () => {
           padding: 10px 16px;
           font-size: 9px;
           letter-spacing: 0.16em;
-        }
-        .menu-cart-step {
-          width: 42px;
-          height: 42px;
-          min-width: 42px;
-          min-height: 42px;
+          min-height: 48px;
         }
       }
       .menu-feature-pill {
@@ -419,12 +434,19 @@ const GlobalStyles = () => {
         line-height: 1.22;
       }
       .menu-dish-blurb {
-        margin-top: 6px;
+        margin-top: 8px;
         font-size: 11px;
         color: rgba(109, 143, 137, 0.95);
         line-height: 1.55;
         font-weight: 400;
         letter-spacing: 0.04em;
+      }
+      @media (max-width: 430px) {
+        .menu-dish-name { margin-top: 2px; }
+        .menu-dish-blurb { margin-top: 10px; font-size: 12px; line-height: 1.58; }
+        .menu-dish-price { margin-top: 2px; }
+        .menu-section-head { gap: 10px; margin-bottom: 18px; }
+        .menu-dish-expanded { padding: 14px 16px; }
       }
       .menu-dish-price {
         font-family: var(--font-display);
@@ -502,9 +524,16 @@ const GlobalStyles = () => {
       .menu-add-btn.menu-add-btn--pulse { animation: menuAddPulse 0.55s ease-out 1; }
       .menu-cart-step.menu-cart-step--pulse { animation: menuAddPulse 0.55s ease-out 1; }
       .menu-expand-chevron {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 44px;
+        min-height: 44px;
+        margin: -8px -4px -8px 0;
         font-size: 11px;
         color: rgba(201, 169, 98, 0.55);
         transition: transform 0.35s ease;
+        flex-shrink: 0;
       }
       .menu-dish-expanded {
         padding: 16px 18px;
@@ -559,7 +588,7 @@ const GlobalStyles = () => {
       }
       .menu-cart-open-btn:hover { transform: translateY(-2px); box-shadow: 0 14px 44px rgba(0,0,0,0.5), 0 0 48px rgba(61, 191, 176, 0.18); }
       .menu-service-btn {
-        min-height: 52px;
+        min-height: 48px;
         touch-action: manipulation;
         padding: 14px 12px;
         border-radius: 999px;
@@ -605,8 +634,9 @@ const GlobalStyles = () => {
       }
       .menu-lang-btn {
         min-width: 48px;
-        min-height: 44px;
+        min-height: 48px;
         padding: 0 12px;
+        touch-action: manipulation;
         border-radius: 999px;
         border: 1px solid rgba(61, 191, 176, 0.2);
         background: rgba(6, 12, 12, 0.55);
@@ -633,6 +663,50 @@ const GlobalStyles = () => {
         -webkit-backdrop-filter: blur(24px);
         box-shadow: 0 -28px 80px rgba(0,0,0,0.65) !important;
         padding-bottom: max(8px, env(safe-area-inset-bottom, 0px)) !important;
+      }
+      .menu-cart-sheet-close {
+        min-width: 44px;
+        min-height: 44px;
+        padding: 8px 14px;
+        border: 1px solid rgba(61,191,176,0.25);
+        background: transparent;
+        color: var(--muted);
+        font-size: 9px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        cursor: pointer;
+        font-family: var(--font-body);
+        border-radius: 2px;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .menu-cart-sheet-qty-btn {
+        width: 44px;
+        height: 44px;
+        min-width: 44px;
+        min-height: 44px;
+        border-radius: 2px;
+        border: 1px solid rgba(61,191,176,0.28);
+        background: rgba(255,255,255,0.04);
+        color: var(--cream);
+        font-size: 18px;
+        line-height: 1;
+        padding: 0;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .menu-cart-sheet-qty-btn--plus {
+        border-color: rgba(61,191,176,0.4);
+        background: rgba(61,191,176,0.12);
+        color: var(--gold);
+      }
+      .menu-cart-sheet-qty-btn:disabled {
+        opacity: 0.35;
+        cursor: not-allowed;
       }
       @keyframes socialGoldShimmer {
         0%   { transform: translate3d(-135%, 0, 0) skewX(-13deg); opacity: 0; }
@@ -1839,7 +1913,7 @@ function CustomerMenu({ tableId, store, lang, setLang }) {
 
       {/* STICKY NAV */}
       <div ref={headerRef} className="menu-sticky-nav" style={{ position: "sticky", top: 0, zIndex: 100, overflowAnchor: "none" }}>
-        <div style={{ padding:"10px 16px 0", maxWidth:720, margin:"0 auto" }}>
+        <div className="menu-sticky-nav-inner">
           <SocialTopStrip />
           <div style={{ display:"flex", justifyContent:"flex-end", alignItems:"center", gap:"8px", marginBottom:"10px", paddingTop:"2px" }}>
             {["en","ka","ru"].map((l) => (
@@ -1954,10 +2028,7 @@ function CustomerMenu({ tableId, store, lang, setLang }) {
           >
             <div style={{ padding:"14px 18px 10px", borderBottom:"1px solid rgba(255,255,255,0.06)", display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0 }}>
               <div id="cart-sheet-title" style={{ fontFamily:"var(--font-display)", fontSize:"22px", fontStyle:"italic", color:"var(--cream)" }}>{t.cart}</div>
-              <button type="button" onClick={() => setCartOpen(false)} className="action-btn" style={{
-                padding:"6px 12px", border:"1px solid rgba(61,191,176,0.25)", background:"transparent",
-                color:"var(--muted)", fontSize:"9px", letterSpacing:"2px", textTransform:"uppercase", cursor:"pointer", fontFamily:"var(--font-body)", borderRadius:"2px",
-              }}>{t.cancel}</button>
+              <button type="button" onClick={() => setCartOpen(false)} className="action-btn menu-cart-sheet-close">{t.cancel}</button>
             </div>
             <div style={{ overflowY:"auto", flex:1, padding:"12px 18px" }}>
               {cartLines.length === 0 ? (
@@ -1968,21 +2039,29 @@ function CustomerMenu({ tableId, store, lang, setLang }) {
                     display:"flex", gap:"12px", alignItems:"center", padding:"12px 0",
                     borderBottom:"1px solid rgba(255,255,255,0.05)",
                   }}>
-                    <img src={dish.image} alt="" style={{ width:"52px", height:"52px", objectFit:"cover", borderRadius:"2px", flexShrink:0 }} />
+                    <img
+                      src={dish.image}
+                      alt=""
+                      width={52}
+                      height={52}
+                      loading="lazy"
+                      decoding="async"
+                      style={{ width:"52px", height:"52px", objectFit:"cover", borderRadius:"2px", flexShrink:0 }}
+                    />
                     <div style={{ flex:1, minWidth:0 }}>
                       <div style={{ fontFamily:"var(--font-display)", fontSize:"15px", color:"var(--cream)", lineHeight:1.25 }}>{dish.name[lang]}</div>
                       <div style={{ fontSize:"10px", color:"var(--muted)", marginTop:"4px" }}>₾{formatLari(dish.price)} × {qty}</div>
                     </div>
-                    <div onClick={(e) => e.stopPropagation()} style={{ display:"flex", alignItems:"center", gap:"6px", flexShrink:0 }}>
-                      <button type="button" onClick={() => bumpCartQty(dish.id, -1)} style={{
-                        width:"30px", height:"30px", borderRadius:"2px", border:"1px solid rgba(61,191,176,0.25)",
-                        background:"rgba(255,255,255,0.04)", color:"var(--cream)", fontSize:"16px", cursor:"pointer", lineHeight:1, padding:0,
-                      }}>−</button>
+                    <div onClick={(e) => e.stopPropagation()} style={{ display:"flex", alignItems:"center", gap:"4px", flexShrink:0 }}>
+                      <button type="button" className="menu-cart-sheet-qty-btn" aria-label={t.cartQty + " −"} onClick={() => bumpCartQty(dish.id, -1)}>−</button>
                       <span style={{ minWidth:"22px", textAlign:"center", fontSize:"12px", color:"var(--gold-pale)", fontWeight:600 }}>{qty}</span>
-                      <button type="button" onClick={() => dish.available && bumpCartQty(dish.id, 1)} disabled={!dish.available} style={{
-                        width:"30px", height:"30px", borderRadius:"2px", border:"1px solid rgba(61,191,176,0.35)",
-                        background:"rgba(61,191,176,0.12)", color:"var(--gold)", fontSize:"16px", cursor: dish.available ? "pointer" : "not-allowed", opacity: dish.available ? 1 : 0.35, lineHeight:1, padding:0,
-                      }}>+</button>
+                      <button
+                        type="button"
+                        className={`menu-cart-sheet-qty-btn menu-cart-sheet-qty-btn--plus`}
+                        aria-label={t.cartQty + " +"}
+                        onClick={() => dish.available && bumpCartQty(dish.id, 1)}
+                        disabled={!dish.available}
+                      >+</button>
                     </div>
                     <div style={{ fontFamily:"var(--font-display)", fontSize:"17px", color:"var(--gold-light)", flexShrink:0, minWidth:"56px", textAlign:"right" }}>₾{formatLari(lineTotal)}</div>
                   </div>
@@ -2522,6 +2601,10 @@ function AdminCloudMenu({ store }) {
               <img
                 src={selectedDish.image}
                 alt=""
+                width={72}
+                height={72}
+                loading="lazy"
+                decoding="async"
                 style={{ width:"72px", height:"72px", objectFit:"cover", borderRadius:"2px", flexShrink:0, border:"1px solid rgba(255,255,255,0.08)" }}
               />
             ) : (
@@ -3181,7 +3264,7 @@ function AdminMenu({ store }) {
         ↑ / ↓ — კერძის თანმიმდევრობა იმავე კატეგორიაში (სტუმრის მენიუ). Supabase: გაუშვი SQL ცხრილზე <code style={{ color:"var(--gold)" }}>sort_order</code> თუ ბაზა ძველია (<code style={{ color:"var(--gold)" }}>supabase/schema.sql</code>).
       </div>
 
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))", gap:"12px" }}>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(min(100%, 260px), 1fr))", gap:"12px" }}>
         {shownSorted.map(dish => {
           const cat = categories.find(c=>c.id===dish.categoryId);
           const sibs = dishesByCatSorted.get(dish.categoryId) || [];
@@ -3189,7 +3272,15 @@ function AdminMenu({ store }) {
           return (
             <div key={dish.id} style={{ background:"var(--charcoal)", border:"1px solid rgba(255,255,255,0.06)", overflow:"hidden" }}>
               <div style={{ position:"relative", height:"160px" }}>
-                <img src={dish.image} alt="" style={{ width:"100%", height:"160px", objectFit:"cover", display:"block", filter:dish.available?"none":"grayscale(1) opacity(0.5)" }} />
+                <img
+                  src={dish.image}
+                  alt=""
+                  width={400}
+                  height={160}
+                  loading="lazy"
+                  decoding="async"
+                  style={{ width:"100%", height:"160px", objectFit:"cover", display:"block", filter:dish.available?"none":"grayscale(1) opacity(0.5)" }}
+                />
                 <div style={{ position:"absolute", inset:0, background:"linear-gradient(0deg, rgba(7,6,8,0.7) 0%, transparent 60%)" }} />
                 <div style={{ position:"absolute", bottom:"10px", left:"12px", right:"12px", display:"flex", justifyContent:"space-between", alignItems:"flex-end" }}>
                   <div style={{ fontFamily:"var(--font-display)", fontSize:"18px", fontStyle:"italic", color:"#fff" }}>{dish.name.en}</div>
@@ -3393,7 +3484,15 @@ function TableQrImage({ tableId, tableName, zone }) {
   return (
     <div style={{ textAlign:"center", padding:"16px", background:"linear-gradient(160deg, #d4f7f2, #f5ddd6)", marginBottom:"14px" }}>
       {dataUrl && (
-        <img src={dataUrl} alt={`QR: ${tableName}`} style={{ width:"160px", height:"160px", display:"block", margin:"0 auto", imageRendering:"pixelated" }} />
+        <img
+          src={dataUrl}
+          alt={`QR: ${tableName}`}
+          width={160}
+          height={160}
+          loading="lazy"
+          decoding="async"
+          style={{ width:"160px", height:"160px", display:"block", margin:"0 auto", imageRendering:"pixelated" }}
+        />
       )}
       {!dataUrl && !failed && (
         <div style={{ fontSize:"10px", color:"#333", padding:"48px 8px" }}>…</div>
