@@ -19,11 +19,15 @@ create table if not exists public.menu (
   badges text[] not null default '{}',
   available boolean not null default true,
   featured boolean not null default false,
+  sort_order integer not null default 0,
   created_at timestamptz not null default now()
 );
 
+alter table public.menu add column if not exists sort_order integer not null default 0;
+
 create index if not exists menu_category_id_idx on public.menu (category_id);
 create index if not exists menu_created_at_idx on public.menu (created_at);
+create index if not exists menu_category_sort_idx on public.menu (category_id, sort_order);
 
 alter table public.menu enable row level security;
 

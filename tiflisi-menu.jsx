@@ -21,6 +21,7 @@ import {
   insertMenuCategory,
   updateMenuCategory,
   updateMenuCategorySortOrders,
+  updateMenuDishSortOrders,
   deleteMenuCategory,
 } from "./src/supabaseMenu.js";
 
@@ -767,13 +768,14 @@ function CustomerMenu({ tableId, store, lang, setLang }) {
   }, [dishes, search, lang]);
 
   const grouped = useMemo(() => {
+    const byOrder = (a, b) => ((a.order ?? 0) - (b.order ?? 0)) || String(a.id).localeCompare(String(b.id));
     const base = sortedCategories
       .map((cat) => ({
         ...cat,
-        dishes: filtered.filter((d) => d.categoryId === cat.id),
+        dishes: filtered.filter((d) => d.categoryId === cat.id).sort(byOrder),
       }))
       .filter((c) => c.dishes.length > 0);
-    const orphan = filtered.filter((d) => !sortedCategories.some((c) => c.id === d.categoryId));
+    const orphan = filtered.filter((d) => !sortedCategories.some((c) => c.id === d.categoryId)).sort(byOrder);
     if (orphan.length === 0) return base;
     return [
       ...base,
@@ -1365,6 +1367,8 @@ function AdminCloudMenu({ store }) {
       const oa = catOrder.get(a.categoryId) ?? 999;
       const ob = catOrder.get(b.categoryId) ?? 999;
       if (oa !== ob) return oa - ob;
+      const ord = (a.order ?? 0) - (b.order ?? 0);
+      if (ord !== 0) return ord;
       const ta = a.name?.en || a.name?.ka || "";
       const tb = b.name?.en || b.name?.ka || "";
       return ta.localeCompare(tb, "ka");
@@ -1456,6 +1460,8 @@ function AdminCloudMenu({ store }) {
         return;
       }
       const priceNum = parsePriceValue(price);
+      const catDishes = dishes.filter((d) => d.categoryId === Number(categoryId));
+      const maxOrder = catDishes.reduce((m, d) => Math.max(m, d.order ?? 0), 0);
       await insertMenuItem({
         categoryId: Number(categoryId),
         name: name.trim(),
@@ -1466,6 +1472,7 @@ function AdminCloudMenu({ store }) {
         },
         price: priceNum,
         imageUrl,
+        sortOrder: maxOrder + 1,
       });
       setMsg("Saved to Supabase. Menu refreshed.");
       setName("");
@@ -1886,7 +1893,19 @@ function AdminMenu({ store }) {
       setDishCloudErr("Enter a valid price.");
       return;
     }
-    const payload = { ...form, price: priceNum, categoryId: Number(form.categoryId) };
+    let payload = { ...form, price: priceNum, categoryId: Number(form.categoryId) };
+    if (modal === "new") {
+      const maxOrder = dishes.filter((d) => d.categoryId === payload.categoryId).reduce((m, d) => Math.max(m, d.order ?? 0), 0);
+      payload = { ...payload, order: maxOrder + 1 };
+    } else {
+      const prev = dishes.find((d) => String(d.id) === String(modal));
+      if (prev && prev.categoryId !== payload.categoryId) {
+        const maxOrder = dishes
+          .filter((d) => d.categoryId === payload.categoryId && String(d.id) !== String(modal))
+          .reduce((m, d) => Math.max(m, d.order ?? 0), 0);
+        payload = { ...payload, order: maxOrder + 1 };
+      }
+    }
 
     if (syncDishesToSupabase) {
       setDishSaving(true);
@@ -2050,7 +2069,67 @@ function AdminMenu({ store }) {
     [setCategories, syncDishesToSupabase, clearMenuError]
   );
 
-  const shown = filter ? dishes.filter(d => d.categoryId === filter) : dishes;
+  const dishesByCatSorted = useMemo(() => {
+    const m = new Map();
+    for (const d of dishes) {
+      const k = d.categoryId;
+      if (!m.has(k)) m.set(k, []);
+      m.get(k).push(d);
+    }
+    for (const arr of m.values()) {
+      arr.sort((a, b) => ((a.order ?? 0) - (b.order ?? 0)) || String(a.id).localeCompare(String(b.id)));
+    }
+    return m;
+  }, [dishes]);
+
+  const shownSorted = useMemo(() => {
+    const base = filter != null ? dishes.filter((d) => d.categoryId === filter) : [...dishes];
+    const byOrder = (a, b) => ((a.order ?? 0) - (b.order ?? 0)) || String(a.id).localeCompare(String(b.id));
+    if (filter != null) return base.sort(byOrder);
+    const catIdx = new Map(sortedCats.map((c, i) => [c.id, i]));
+    return base.sort((a, b) => {
+      const ia = catIdx.has(a.categoryId) ? catIdx.get(a.categoryId) : 999;
+      const ib = catIdx.has(b.categoryId) ? catIdx.get(b.categoryId) : 999;
+      if (ia !== ib) return ia - ib;
+      return byOrder(a, b);
+    });
+  }, [dishes, filter, sortedCats]);
+
+  const moveDish = useCallback(
+    async (dishId, delta) => {
+      setDishCloudErr(null);
+      const row = dishes.find((d) => String(d.id) === String(dishId));
+      if (!row) return;
+      const catId = row.categoryId;
+      let orderById = null;
+      setDishes((prev) => {
+        const inCat = prev.filter((d) => d.categoryId === catId);
+        const sorted = [...inCat].sort((a, b) => ((a.order ?? 0) - (b.order ?? 0)) || String(a.id).localeCompare(String(b.id)));
+        const idx = sorted.findIndex((x) => String(x.id) === String(dishId));
+        const j = idx + delta;
+        if (idx < 0 || j < 0 || j >= sorted.length) return prev;
+        const copy = [...sorted];
+        [copy[idx], copy[j]] = [copy[j], copy[idx]];
+        const map = {};
+        copy.forEach((d, i) => {
+          map[d.id] = i + 1;
+        });
+        orderById = map;
+        return prev.map((d) => (d.categoryId !== catId ? d : { ...d, order: map[d.id] ?? d.order ?? 0 }));
+      });
+      if (!syncDishesToSupabase || !orderById) return;
+      setDishSaving(true);
+      try {
+        await updateMenuDishSortOrders(orderById);
+        clearMenuError();
+      } catch (e) {
+        setDishCloudErr(e?.message || "Could not save dish order");
+      } finally {
+        setDishSaving(false);
+      }
+    },
+    [dishes, syncDishesToSupabase, clearMenuError]
+  );
 
   const tabBtn = (active) => ({
     padding: "8px 18px",
@@ -2143,9 +2222,15 @@ function AdminMenu({ store }) {
         {sortedCats.map(c=><CatBtn key={c.id} active={filter===c.id} onClick={()=>setFilter(c.id)} label={c.name.en} icon={c.icon} />)}
       </div>
 
+      <div style={{ fontSize:"10px", color:"var(--muted)", marginBottom:"12px", letterSpacing:"0.3px", lineHeight:1.5 }}>
+        ↑ / ↓ — კერძის თანმიმდევრობა იმავე კატეგორიაში (სტუმრის მენიუ). Supabase: გაუშვი SQL ცხრილზე <code style={{ color:"var(--gold)" }}>sort_order</code> თუ ბაზა ძველია (<code style={{ color:"var(--gold)" }}>supabase/schema.sql</code>).
+      </div>
+
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))", gap:"12px" }}>
-        {shown.map(dish => {
+        {shownSorted.map(dish => {
           const cat = categories.find(c=>c.id===dish.categoryId);
+          const sibs = dishesByCatSorted.get(dish.categoryId) || [];
+          const di = sibs.findIndex((x) => String(x.id) === String(dish.id));
           return (
             <div key={dish.id} style={{ background:"var(--charcoal)", border:"1px solid rgba(255,255,255,0.06)", overflow:"hidden" }}>
               <div style={{ position:"relative", height:"160px" }}>
@@ -2161,6 +2246,16 @@ function AdminMenu({ store }) {
               </div>
               <div style={{ padding:"14px 14px 10px" }}>
                 <div style={{ fontSize:"9px", color:"var(--muted)", letterSpacing:"1px", marginBottom:"10px" }}>{cat?.icon} {cat?.name.en}</div>
+                <div style={{ display:"flex", gap:"6px", marginBottom:"8px" }}>
+                  <button type="button" aria-label="Move dish up" disabled={di <= 0 || dishSaving} onClick={() => moveDish(dish.id, -1)} style={{
+                    padding:"8px 12px", background: di <= 0 || dishSaving ? "rgba(255,255,255,0.02)" : "rgba(61,191,176,0.08)", border:`1px solid ${di <= 0 || dishSaving ? "rgba(255,255,255,0.06)" : "rgba(61,191,176,0.25)"}`,
+                    color: di <= 0 || dishSaving ? "var(--subtle)" : "var(--gold)", fontSize:"14px", cursor: di <= 0 || dishSaving ? "not-allowed" : "pointer", lineHeight:1, opacity: di <= 0 || dishSaving ? 0.45 : 1,
+                  }}>↑</button>
+                  <button type="button" aria-label="Move dish down" disabled={di < 0 || di >= sibs.length - 1 || dishSaving} onClick={() => moveDish(dish.id, 1)} style={{
+                    padding:"8px 12px", background: di < 0 || di >= sibs.length - 1 || dishSaving ? "rgba(255,255,255,0.02)" : "rgba(61,191,176,0.08)", border:`1px solid ${di < 0 || di >= sibs.length - 1 || dishSaving ? "rgba(255,255,255,0.06)" : "rgba(61,191,176,0.25)"}`,
+                    color: di < 0 || di >= sibs.length - 1 || dishSaving ? "var(--subtle)" : "var(--gold)", fontSize:"14px", cursor: di < 0 || di >= sibs.length - 1 || dishSaving ? "not-allowed" : "pointer", lineHeight:1, opacity: di < 0 || di >= sibs.length - 1 || dishSaving ? 0.45 : 1,
+                  }}>↓</button>
+                </div>
                 <div style={{ display:"flex", gap:"6px" }}>
                   <button type="button" disabled={dishSaving} onClick={()=>openEdit(dish)} style={{ flex:1, padding:"7px", background:"rgba(61,191,176,0.08)", border:"1px solid rgba(61,191,176,0.2)", color:"var(--gold)", fontSize:"9px", letterSpacing:"1.5px", cursor: dishSaving ? "wait" : "pointer", fontFamily:"var(--font-body)", opacity: dishSaving ? 0.6 : 1 }}>EDIT</button>
                   <button type="button" disabled={dishSaving} onClick={()=>toggle(dish.id)} style={{ flex:1, padding:"7px", background:dish.available?"rgba(16,185,129,0.06)":"rgba(239,68,68,0.06)", border:`1px solid ${dish.available?"rgba(16,185,129,0.2)":"rgba(239,68,68,0.2)"}`, color:dish.available?"#10b981":"#ef4444", fontSize:"9px", letterSpacing:"1.5px", cursor: dishSaving ? "wait" : "pointer", fontFamily:"var(--font-body)", opacity: dishSaving ? 0.6 : 1 }}>

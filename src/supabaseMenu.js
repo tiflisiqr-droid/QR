@@ -41,6 +41,7 @@ export function dishToDbInsert(dish) {
     badges: Array.isArray(dish.badges) ? dish.badges : [],
     available: dish.available !== false,
     featured: !!dish.featured,
+    sort_order: Number.isFinite(Number(dish.order)) ? Number(dish.order) : 0,
   };
 }
 
@@ -76,6 +77,7 @@ export function mapMenuRowToDish(row) {
     badges,
     available: row.available !== false,
     featured: !!row.featured,
+    order: Number(row.sort_order) || 0,
   };
 }
 
@@ -84,6 +86,7 @@ export async function fetchMenuDishes() {
   const { data, error } = await supabase
     .from("menu")
     .select("*")
+    .order("sort_order", { ascending: true })
     .order("created_at", { ascending: true });
   if (error) throw error;
   if (!data?.length) return [];
@@ -167,6 +170,19 @@ export async function updateMenuCategorySortOrders(orderById) {
   if (firstErr) throw firstErr;
 }
 
+/** Persist dish order within category after ↑/↓ in admin (batch). Keys = row ids (uuid or string). */
+export async function updateMenuDishSortOrders(orderById) {
+  if (!supabase) throw new Error("Supabase is not configured");
+  const entries = Object.entries(orderById).filter(([k]) => k != null && String(k) !== "");
+  const results = await Promise.all(
+    entries.map(([id, order]) =>
+      supabase.from("menu").update({ sort_order: Number(order) || 0 }).eq("id", id)
+    )
+  );
+  const firstErr = results.find((r) => r.error)?.error;
+  if (firstErr) throw firstErr;
+}
+
 export async function deleteMenuCategory(id) {
   if (!supabase) throw new Error("Supabase is not configured");
   const { error } = await supabase.from("menu_categories").delete().eq("id", id);
@@ -197,6 +213,7 @@ export async function insertMenuItem({
   imageUrl,
   available = true,
   featured = false,
+  sortOrder,
 }) {
   if (!supabase) throw new Error("Supabase is not configured");
   const desc =
@@ -207,6 +224,10 @@ export async function insertMenuItem({
           ka: description?.ka ?? "",
           ru: description?.ru ?? "",
         };
+  const orderVal =
+    sortOrder !== undefined && sortOrder !== null && Number.isFinite(Number(sortOrder))
+      ? Number(sortOrder)
+      : Math.floor(Date.now() / 1000) % 1_000_000;
   const row = dishToDbInsert({
     categoryId,
     name: { en: name, ka: "", ru: "" },
@@ -217,6 +238,7 @@ export async function insertMenuItem({
     badges: [],
     available,
     featured,
+    order: orderVal,
   });
   const { error } = await supabase.from("menu").insert(row);
   if (error) throw error;
