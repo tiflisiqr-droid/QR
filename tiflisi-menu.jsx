@@ -119,6 +119,13 @@ const GlobalStyles = () => {
         min-height: 100dvh;
         background: linear-gradient(185deg, #030807 0%, var(--obsidian) 18%, var(--obsidian) 100%);
       }
+      /* Space for fixed bottom dock (waiter/bill + optional cart row) + iOS home indicator */
+      .menu-main-column {
+        padding: 0 16px max(168px, calc(132px + env(safe-area-inset-bottom, 0px)));
+      }
+      .menu-main-column--cart {
+        padding-bottom: max(232px, calc(196px + env(safe-area-inset-bottom, 0px)));
+      }
       .menu-sticky-nav {
         background: rgba(5, 10, 10, 0.78) !important;
         backdrop-filter: blur(22px) saturate(1.2);
@@ -207,6 +214,9 @@ const GlobalStyles = () => {
         min-width: 24px;
       }
       .menu-dish-list { display: flex; flex-direction: column; gap: 16px; }
+      @media (max-width: 520px) {
+        .menu-dish-list { gap: 12px; }
+      }
       .dish-card.menu-dish-card {
         position: relative;
         isolation: isolate;
@@ -342,13 +352,47 @@ const GlobalStyles = () => {
         .dish-card-inner { flex-direction: column; }
         .dish-card.menu-dish-card .dish-card-media {
           width: 100% !important;
-          min-height: min(48vw, 200px) !important;
-          max-height: 52vw;
+          aspect-ratio: 4 / 3;
+          min-height: min(42vw, 180px) !important;
+          max-height: none;
           border-right: none;
           border-bottom: 1px solid rgba(201, 169, 98, 0.1);
         }
-        .dish-card.menu-dish-card .dish-card-media .dish-img { min-height: min(48vw, 200px) !important; max-height: 52vw; }
-        .dish-card.menu-dish-card .dish-card-media .dish-img-placeholder { min-height: min(48vw, 190px) !important; }
+        .dish-card.menu-dish-card .dish-card-media .dish-img {
+          width: 100%;
+          height: 100%;
+          min-height: 0 !important;
+          max-height: none;
+          object-fit: cover;
+          object-position: center;
+        }
+        .dish-card.menu-dish-card .dish-card-media .dish-img-placeholder {
+          min-height: 0 !important;
+          height: 100%;
+        }
+        .menu-dish-card-body { padding: 12px 14px !important; }
+        .menu-dish-price-row {
+          flex-direction: column !important;
+          align-items: stretch !important;
+          gap: 12px !important;
+        }
+        .menu-dish-price-row .menu-dish-price-controls {
+          justify-content: space-between;
+          width: 100%;
+        }
+      }
+      @media (max-width: 380px) {
+        .menu-add-btn {
+          padding: 10px 16px;
+          font-size: 9px;
+          letter-spacing: 0.16em;
+        }
+        .menu-cart-step {
+          width: 42px;
+          height: 42px;
+          min-width: 42px;
+          min-height: 42px;
+        }
       }
       .menu-feature-pill {
         display: inline-flex;
@@ -468,14 +512,36 @@ const GlobalStyles = () => {
         background: linear-gradient(180deg, rgba(61, 191, 176, 0.06), rgba(5, 10, 10, 0.5));
         animation: fadeIn 0.35s ease;
       }
+      .menu-bottom-dock {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 10100;
+        width: 100%;
+        max-width: none;
+        margin: 0;
+        background: linear-gradient(0deg, rgba(2, 6, 6, 0.99) 0%, rgba(4, 10, 10, 0.96) 50%, rgba(4, 10, 10, 0.82) 100%);
+        padding-top: 10px;
+        padding-left: max(12px, env(safe-area-inset-left, 0px));
+        padding-right: max(12px, env(safe-area-inset-right, 0px));
+        padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
+        box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.45);
+      }
+      .menu-bottom-dock-inner {
+        max-width: 720px;
+        margin: 0 auto;
+        width: 100%;
+      }
       .menu-cart-bar {
-        background: linear-gradient(0deg, rgba(2, 6, 6, 0.98) 0%, rgba(4, 10, 10, 0.94) 55%, transparent 100%);
-        padding: 12px 16px max(20px, env(safe-area-inset-bottom));
+        background: transparent;
+        padding: 0 4px 0;
       }
       .menu-cart-open-btn {
         width: 100%;
-        min-height: 52px;
+        min-height: 56px;
         margin-bottom: 10px;
+        touch-action: manipulation;
         padding: 14px 18px;
         border: 1px solid rgba(201, 169, 98, 0.4);
         border-radius: 999px;
@@ -494,6 +560,7 @@ const GlobalStyles = () => {
       .menu-cart-open-btn:hover { transform: translateY(-2px); box-shadow: 0 14px 44px rgba(0,0,0,0.5), 0 0 48px rgba(61, 191, 176, 0.18); }
       .menu-service-btn {
         min-height: 52px;
+        touch-action: manipulation;
         padding: 14px 12px;
         border-radius: 999px;
         font-size: 11px;
@@ -565,6 +632,7 @@ const GlobalStyles = () => {
         backdrop-filter: blur(24px);
         -webkit-backdrop-filter: blur(24px);
         box-shadow: 0 -28px 80px rgba(0,0,0,0.65) !important;
+        padding-bottom: max(8px, env(safe-area-inset-bottom, 0px)) !important;
       }
       @keyframes socialGoldShimmer {
         0%   { transform: translate3d(-135%, 0, 0) skewX(-13deg); opacity: 0; }
@@ -1814,8 +1882,11 @@ function CustomerMenu({ tableId, store, lang, setLang }) {
         </div>
       )}
 
-      {/* DISH SECTIONS */}
-      <div style={{ padding:`0 16px ${cartItemCount > 0 ? "240px" : "160px"}`, maxWidth:720, margin:"0 auto", width:"100%" }}>
+      {/* DISH SECTIONS — bottom padding clears fixed dock + home indicator */}
+      <div
+        className={`menu-main-column${cartItemCount > 0 ? " menu-main-column--cart" : ""}`}
+        style={{ maxWidth: 720, margin: "0 auto", width: "100%" }}
+      >
         {menuLoading && dishes.length === 0 && (
           <div style={{ textAlign:"center", padding:"80px 20px", fontFamily:"var(--font-display)", fontSize:"20px", fontStyle:"italic", color:"var(--muted)" }}>
             Loading menu…
@@ -1931,28 +2002,31 @@ function CustomerMenu({ tableId, store, lang, setLang }) {
         </>
       )}
 
-      {/* BOTTOM ACTIONS */}
-      <div style={{ position:"fixed", bottom:0, left:0, right:0, zIndex:10100, maxWidth:720, margin:"0 auto", width:"100%" }}>
-        <div className="menu-cart-bar">
-          {cartItemCount > 0 && (
-            <button
-              type="button"
-              onClick={() => setCartOpen(true)}
-              className="action-btn menu-cart-open-btn"
-            >
-              <span style={{ fontSize:"9px", letterSpacing:"0.22em", textTransform:"uppercase", color:"rgba(244,241,234,0.9)" }}>{t.cart}</span>
-              <span style={{ fontSize:"11px", color:"rgba(109,143,137,0.95)", letterSpacing:"0.08em" }}>{cartItemCount}</span>
-              <span style={{ fontFamily:"var(--font-display)", fontSize:"clamp(1.15rem,4vw,1.4rem)", fontWeight:300, color:"#c9a962", marginLeft:"auto" }}>₾{formatLari(cartGrandTotal)}</span>
-              <span style={{ fontSize:"11px", color:"rgba(201,169,98,0.55)" }} aria-hidden="true">▴</span>
-            </button>
-          )}
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"10px" }}>
-            <button type="button" onClick={callWaiter} className="action-btn menu-service-btn menu-service-btn--waiter">
-              ✦ {t.callWaiter}
-            </button>
-            <button type="button" onClick={requestBill} className="action-btn menu-service-btn menu-service-btn--bill">
-              ◇ {t.requestBill}
-            </button>
+      {/* BOTTOM ACTIONS — full-width fixed strip; cart CTA stays above thumb reach */}
+      <div className="menu-bottom-dock">
+        <div className="menu-bottom-dock-inner">
+          <div className="menu-cart-bar">
+            {cartItemCount > 0 && (
+              <button
+                type="button"
+                onClick={() => setCartOpen(true)}
+                className="action-btn menu-cart-open-btn"
+                aria-label={`${t.cart}, ${cartItemCount}, ₾${formatLari(cartGrandTotal)}`}
+              >
+                <span style={{ fontSize:"9px", letterSpacing:"0.22em", textTransform:"uppercase", color:"rgba(244,241,234,0.9)" }}>{t.cart}</span>
+                <span style={{ fontSize:"11px", color:"rgba(109,143,137,0.95)", letterSpacing:"0.08em" }}>{cartItemCount}</span>
+                <span style={{ fontFamily:"var(--font-display)", fontSize:"clamp(1.15rem,4vw,1.4rem)", fontWeight:300, color:"#c9a962", marginLeft:"auto" }}>₾{formatLari(cartGrandTotal)}</span>
+                <span style={{ fontSize:"11px", color:"rgba(201,169,98,0.55)" }} aria-hidden="true">▴</span>
+              </button>
+            )}
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"10px" }}>
+              <button type="button" onClick={callWaiter} className="action-btn menu-service-btn menu-service-btn--waiter">
+                ✦ {t.callWaiter}
+              </button>
+              <button type="button" onClick={requestBill} className="action-btn menu-service-btn menu-service-btn--bill">
+                ◇ {t.requestBill}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -2059,7 +2133,7 @@ function DishRow({ dish, lang, t, expanded, onToggle, style, cartQty = 0, onAddT
           )}
         </div>
 
-        <div style={{ flex:1, padding:"16px 18px", display:"flex", flexDirection:"column", justifyContent:"space-between", minWidth:0 }}>
+        <div className="menu-dish-card-body" style={{ flex:1, padding:"16px 18px", display:"flex", flexDirection:"column", justifyContent:"space-between", minWidth:0 }}>
           <div>
             <div style={{ display:"flex", gap:"6px", flexWrap:"wrap", marginBottom:"8px", alignItems:"center" }}>
               {displayBadges.map((b, bi) => (
@@ -2109,9 +2183,9 @@ function DishRow({ dish, lang, t, expanded, onToggle, style, cartQty = 0, onAddT
               </div>
             ) : null}
           </div>
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginTop:"12px", gap:"10px" }}>
+          <div className="menu-dish-price-row" style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginTop:"12px", gap:"10px" }}>
             <div className="menu-dish-price">₾{formatLari(dish.price)}</div>
-            <div style={{ display:"flex", alignItems:"center", gap:"10px", flexShrink:0 }}>
+            <div className="menu-dish-price-controls" style={{ display:"flex", alignItems:"center", gap:"10px", flexShrink:0 }}>
               <div
                 onClick={(e) => e.stopPropagation()}
                 onKeyDown={(e) => e.stopPropagation()}
