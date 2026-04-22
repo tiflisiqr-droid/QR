@@ -1880,7 +1880,6 @@ function CustomerMenu({ tableId, store, lang }) {
   const { categories, dishes, tables, addNotification, trackView, menuLoading, menuError } = store;
   const supabaseMenu = isSupabaseConfigured();
   const [activeCat, setActiveCat] = useState(null);
-  const [scrollTargetTick, setScrollTargetTick] = useState(0);
   const [search, setSearch] = useState("");
   const [toast, setToast] = useState(null);
   const [expanded, setExpanded] = useState(null);
@@ -1889,7 +1888,7 @@ function CustomerMenu({ tableId, store, lang }) {
   const catRefs = useRef({});
   const headerRef = useRef(null);
   const catScrollRef = useRef(null);
-  const pendingScrollCatId = useRef(null);
+  const menuTopRef = useRef(null);
   const skipScrollSpyRef = useRef(false);
   const table = tables.find((tb) => String(tb.id) === String(tableId)) || { name: `Table ${tableId}`, zone: "Hall" };
 
@@ -1998,29 +1997,48 @@ function CustomerMenu({ tableId, store, lang }) {
 
   const scrollTo = useCallback((id) => {
     skipScrollSpyRef.current = true;
-    pendingScrollCatId.current = id;
     setActiveCat(id);
-    setScrollTargetTick((n) => n + 1);
+
+    const scrollToTarget = () => {
+      const key = String(id);
+      const el =
+        catRefs.current[key] ||
+        (typeof document !== "undefined" ? document.getElementById(menuCategorySectionDomId(id)) : null);
+      if (!el) return false;
+      const pad = (headerRef.current?.offsetHeight ?? 0) + 12;
+      el.style.scrollMarginTop = `${pad}px`;
+      const absoluteTop = window.scrollY + el.getBoundingClientRect().top - pad;
+      const reduceMotion =
+        typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      window.scrollTo({ top: Math.max(0, absoluteTop), behavior: reduceMotion ? "auto" : "smooth" });
+      return true;
+    };
+
+    if (!scrollToTarget()) {
+      requestAnimationFrame(scrollToTarget);
+    }
     window.setTimeout(() => {
       skipScrollSpyRef.current = false;
-    }, 800);
+    }, 900);
   }, []);
 
-  useLayoutEffect(() => {
-    const id = pendingScrollCatId.current;
-    if (id == null) return;
-    pendingScrollCatId.current = null;
-    const key = String(id);
-    const el =
-      catRefs.current[key] ||
-      (typeof document !== "undefined" ? document.getElementById(menuCategorySectionDomId(id)) : null);
-    if (!el) return;
-    const pad = (headerRef.current?.offsetHeight ?? 0) + 12;
-    el.style.scrollMarginTop = `${pad}px`;
-    const reduceMotion =
-      typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    el.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start", inline: "nearest" });
-  }, [scrollTargetTick]);
+  const scrollToMenuTop = useCallback(() => {
+    skipScrollSpyRef.current = true;
+    setActiveCat(null);
+    const el = menuTopRef.current;
+    if (el) {
+      const pad = (headerRef.current?.offsetHeight ?? 0) + 12;
+      const absoluteTop = window.scrollY + el.getBoundingClientRect().top - pad;
+      const reduceMotion =
+        typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      window.scrollTo({ top: Math.max(0, absoluteTop), behavior: reduceMotion ? "auto" : "smooth" });
+    } else {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+    window.setTimeout(() => {
+      skipScrollSpyRef.current = false;
+    }, 900);
+  }, []);
 
   /** Sync active category chip with scroll position (spy). */
   useEffect(() => {
@@ -2108,14 +2126,7 @@ function CustomerMenu({ tableId, store, lang }) {
             <CatBtn
               tabKey="all"
               active={!activeCat}
-              onClick={() => {
-                skipScrollSpyRef.current = true;
-                setActiveCat(null);
-                window.scrollTo({ top: 0, behavior: "smooth" });
-                window.setTimeout(() => {
-                  skipScrollSpyRef.current = false;
-                }, 900);
-              }}
+              onClick={scrollToMenuTop}
               label={t.all}
             />
             {/* One chip per rendered section only — was sortedCategories (orphan sections missing → scroll found no el). */}
@@ -2141,6 +2152,7 @@ function CustomerMenu({ tableId, store, lang }) {
 
       {/* DISH SECTIONS — bottom padding clears fixed dock + home indicator */}
       <div
+        ref={menuTopRef}
         className={`menu-main-column${cartItemCount > 0 ? " menu-main-column--cart" : ""}`}
         style={{ maxWidth: 720, margin: "0 auto", width: "100%" }}
       >
