@@ -153,6 +153,13 @@ const GlobalStyles = () => {
       .menu-main-column--cart {
         padding-bottom: max(232px, calc(196px + env(safe-area-inset-bottom, 0px)));
       }
+      /* Anchor targets: match html scroll-padding + sticky nav; JS refines with header height */
+      .menu-cat-section-anchor {
+        scroll-margin-top: min(132px, 34vw);
+      }
+      @media (min-width: 521px) {
+        .menu-cat-section-anchor { scroll-margin-top: 108px; }
+      }
       .menu-sticky-nav {
         background: rgba(5, 10, 10, 0.78) !important;
         backdrop-filter: blur(22px) saturate(1.2);
@@ -1953,6 +1960,10 @@ function CustomerMenu({ tableId, store, lang }) {
 
   const ORPHAN_CAT_KEY = "__orphan__";
 
+  /** Safe DOM id for category scroll targets (matches ref + querySelector fallback). */
+  const menuCategorySectionDomId = (catId) =>
+    catId === ORPHAN_CAT_KEY ? "menu-cat-orphan" : `menu-cat-${String(catId).replace(/[^a-zA-Z0-9_-]/g, "-")}`;
+
   /** Search only — category chips scroll to section (no hide-other-categories; avoids wrong scroll after filter). */
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -1999,11 +2010,16 @@ function CustomerMenu({ tableId, store, lang }) {
     const id = pendingScrollCatId.current;
     if (id == null) return;
     pendingScrollCatId.current = null;
-    const el = catRefs.current[id];
+    const key = String(id);
+    const el =
+      catRefs.current[key] ||
+      (typeof document !== "undefined" ? document.getElementById(menuCategorySectionDomId(id)) : null);
     if (!el) return;
     const pad = (headerRef.current?.offsetHeight ?? 0) + 12;
     el.style.scrollMarginTop = `${pad}px`;
-    el.scrollIntoView({ behavior: "smooth", block: "start" });
+    const reduceMotion =
+      typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    el.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start", inline: "nearest" });
   }, [scrollTargetTick]);
 
   /** Sync active category chip with scroll position (spy). */
@@ -2015,11 +2031,11 @@ function CustomerMenu({ tableId, store, lang }) {
       const line = nav.getBoundingClientRect().bottom + 10;
       let current = null;
       for (const cat of grouped) {
-        const el = catRefs.current[cat.id];
+        const el = catRefs.current[String(cat.id)];
         if (!el) continue;
         if (el.getBoundingClientRect().top <= line) current = cat.id;
       }
-      setActiveCat((prev) => (prev === current ? prev : current));
+      setActiveCat((prev) => (String(prev) === String(current) ? prev : current));
     };
 
     let raf = 0;
@@ -2102,12 +2118,17 @@ function CustomerMenu({ tableId, store, lang }) {
               }}
               label={t.all}
             />
-            {sortedCategories.map((c) => (
-              <CatBtn key={c.id} tabKey={c.id} active={activeCat === c.id} onClick={() => scrollTo(c.id)} label={c.name[lang]} icon={c.icon} />
+            {/* One chip per rendered section only — was sortedCategories (orphan sections missing → scroll found no el). */}
+            {grouped.map((c) => (
+              <CatBtn
+                key={c.id}
+                tabKey={c.id}
+                active={activeCat != null && String(activeCat) === String(c.id)}
+                onClick={() => scrollTo(c.id)}
+                label={c.id === ORPHAN_CAT_KEY ? (lang === "ka" ? "სხვა" : lang === "ru" ? "Прочее" : "Other") : c.name[lang]}
+                icon={c.icon}
+              />
             ))}
-            {grouped.some((g) => g.id === ORPHAN_CAT_KEY) && (
-              <CatBtn tabKey={ORPHAN_CAT_KEY} active={activeCat === ORPHAN_CAT_KEY} onClick={() => scrollTo(ORPHAN_CAT_KEY)} label={lang === "ka" ? "სხვა" : lang === "ru" ? "Прочее" : "Other"} icon="◇" />
-            )}
           </div>
         </div>
       </div>
@@ -2138,9 +2159,12 @@ function CustomerMenu({ tableId, store, lang }) {
         {grouped.map((cat, gi) => (
           <div
             key={cat.id}
+            id={menuCategorySectionDomId(cat.id)}
+            className="menu-cat-section-anchor"
             ref={(el) => {
-              if (el) catRefs.current[cat.id] = el;
-              else delete catRefs.current[cat.id];
+              const k = String(cat.id);
+              if (el) catRefs.current[k] = el;
+              else delete catRefs.current[k];
             }}
             style={{ marginTop: gi === 0 ? 28 : 44 }}
           >
