@@ -1995,31 +1995,46 @@ function CustomerMenu({ tableId, store, lang }) {
     ];
   }, [sortedCategories, filtered]);
 
+  const prefersReducedMotion = () =>
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const scrollToElementUnderStickyNav = (el) => {
+    if (!el) return;
+    const pad = (headerRef.current?.offsetHeight ?? 0) + 12;
+    el.style.scrollMarginTop = `${pad}px`;
+    // First perform native section scroll; then force-correct exact offset under sticky nav.
+    el.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start", inline: "nearest" });
+    window.requestAnimationFrame(() => {
+      const absoluteTop = window.scrollY + el.getBoundingClientRect().top - pad;
+      window.scrollTo({ top: Math.max(0, absoluteTop), behavior: prefersReducedMotion() ? "auto" : "smooth" });
+    });
+  };
+
   const scrollTo = useCallback((id) => {
     skipScrollSpyRef.current = true;
     setActiveCat(id);
+    const key = String(id);
 
-    const scrollToTarget = () => {
-      const key = String(id);
+    let tries = 0;
+    const tryScroll = () => {
       const el =
         catRefs.current[key] ||
         (typeof document !== "undefined" ? document.getElementById(menuCategorySectionDomId(id)) : null);
-      if (!el) return false;
-      const pad = (headerRef.current?.offsetHeight ?? 0) + 12;
-      el.style.scrollMarginTop = `${pad}px`;
-      const absoluteTop = window.scrollY + el.getBoundingClientRect().top - pad;
-      const reduceMotion =
-        typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      window.scrollTo({ top: Math.max(0, absoluteTop), behavior: reduceMotion ? "auto" : "smooth" });
-      return true;
+      if (el) {
+        scrollToElementUnderStickyNav(el);
+        return;
+      }
+      // Sections can mount a frame later right after filter / state transitions.
+      tries += 1;
+      if (tries < 12) requestAnimationFrame(tryScroll);
     };
+    tryScroll();
 
-    if (!scrollToTarget()) {
-      requestAnimationFrame(scrollToTarget);
-    }
     window.setTimeout(() => {
       skipScrollSpyRef.current = false;
-    }, 900);
+    }, 950);
   }, []);
 
   const scrollToMenuTop = useCallback(() => {
@@ -2027,17 +2042,13 @@ function CustomerMenu({ tableId, store, lang }) {
     setActiveCat(null);
     const el = menuTopRef.current;
     if (el) {
-      const pad = (headerRef.current?.offsetHeight ?? 0) + 12;
-      const absoluteTop = window.scrollY + el.getBoundingClientRect().top - pad;
-      const reduceMotion =
-        typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      window.scrollTo({ top: Math.max(0, absoluteTop), behavior: reduceMotion ? "auto" : "smooth" });
+      scrollToElementUnderStickyNav(el);
     } else {
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? "auto" : "smooth" });
     }
     window.setTimeout(() => {
       skipScrollSpyRef.current = false;
-    }, 900);
+    }, 950);
   }, []);
 
   /** Sync active category chip with scroll position (spy). */
