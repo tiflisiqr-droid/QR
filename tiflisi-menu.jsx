@@ -198,6 +198,9 @@ const GlobalStyles = () => {
       }
       .menu-cat-scroll::-webkit-scrollbar { display: none; }
       .menu-cat-tab {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
         flex-shrink: 0;
         min-height: 48px;
         min-width: 44px;
@@ -221,7 +224,7 @@ const GlobalStyles = () => {
       .menu-cat-tab:hover {
         border-color: rgba(201, 169, 98, 0.35);
         color: var(--cream);
-        transform: translateY(-1px);
+        box-shadow: 0 0 18px rgba(61, 191, 176, 0.12);
       }
       }
       .menu-cat-tab:active {
@@ -894,7 +897,7 @@ const GlobalStyles = () => {
         }
       }
       @media (hover: hover) {
-      .nav-btn:hover { letter-spacing: 2.5px !important; }
+      .nav-btn:hover { color: var(--cream) !important; }
       .action-btn:hover { transform: translateY(-2px); }
       .admin-nav-item:hover { background: rgba(61,191,176,0.1) !important; }
       }
