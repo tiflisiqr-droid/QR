@@ -155,7 +155,7 @@ const GlobalStyles = () => {
       }
       /* Keep section title visible below sticky category nav. */
       .menu-cat-section-anchor {
-        scroll-margin-top: 100px;
+        scroll-margin-top: 132px;
       }
       .menu-sticky-nav {
         background: rgba(5, 10, 10, 0.78) !important;
@@ -1326,7 +1326,7 @@ const GlobalStyles = () => {
 const CATEGORIES = [
   { id: 1, name: { en: "Khinkali", ka: "ხინკალი", ru: "Хинкали" }, icon: "◈", order: 1 },
   { id: 2, name: { en: "Khachapuri", ka: "ხაჭაპური", ru: "Хачапури" }, icon: "◇", order: 2 },
-  { id: 3, name: { en: "BBQ & Grill", ka: "შამფური", ru: "Гриль" }, icon: "◉", order: 3 },
+  { id: 3, name: { en: "Grill & Josper", ka: "შამფური და ჯოსპერი", ru: "Мангал и джоспер" }, icon: "◉", order: 3 },
   { id: 4, name: { en: "Salads", ka: "სალათები", ru: "Салаты" }, icon: "◌", order: 4 },
   { id: 5, name: { en: "Desserts", ka: "დესერტები", ru: "Десерты" }, icon: "◎", order: 5 },
   { id: 6, name: { en: "Cellar", ka: "სასმელები", ru: "Погреб" }, icon: "◊", order: 6 },
@@ -1972,11 +1972,15 @@ function CustomerMenu({ tableId, store, lang }) {
     typeof window.matchMedia === "function" &&
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+  const stickyOffset = () => (headerRef.current?.offsetHeight ?? 120) + 12;
+
   const scrollToSection = useCallback((sectionId) => {
     if (typeof document === "undefined") return false;
     const element = document.getElementById(sectionId);
     if (!element) return false;
-    element.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
+    element.style.scrollMarginTop = `${stickyOffset()}px`;
+    const top = window.scrollY + element.getBoundingClientRect().top - stickyOffset();
+    window.scrollTo({ top: Math.max(0, top), behavior: prefersReducedMotion() ? "auto" : "smooth" });
     return true;
   }, []);
 
@@ -2018,17 +2022,11 @@ function CustomerMenu({ tableId, store, lang }) {
       if (!nav) return;
       const line = nav.getBoundingClientRect().bottom + 10;
       let current = grouped[0]?.id ?? null;
-      let firstBelow = null;
       for (const cat of grouped) {
         const el = catRefs.current[String(cat.id)];
         if (!el) continue;
         const top = el.getBoundingClientRect().top;
         if (top <= line) current = cat.id;
-        if (top > line && firstBelow == null) firstBelow = { id: cat.id, delta: top - line };
-      }
-      // Near the end/bottom, the clicked section may not cross the line; keep nearest upcoming section active.
-      if (firstBelow && firstBelow.delta < 96) {
-        current = firstBelow.id;
       }
       const nearBottom =
         typeof window !== "undefined" &&
