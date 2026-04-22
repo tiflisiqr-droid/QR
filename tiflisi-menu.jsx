@@ -1287,30 +1287,6 @@ const GlobalStyles = () => {
           to { opacity: 1; }
         }
       }
-      .app-floating-toolbar {
-        position: fixed;
-        top: max(8px, env(safe-area-inset-top, 0px));
-        right: max(8px, env(safe-area-inset-right, 0px));
-        left: auto;
-        bottom: auto;
-        transform: none;
-        z-index: 200;
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        justify-content: flex-end;
-        gap: 6px;
-        max-width: min(100vw - 16px, 400px);
-        background: rgba(7, 6, 8, 0.94);
-        padding: 8px 10px;
-        border: 1px solid rgba(61, 191, 176, 0.2);
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-        -webkit-tap-highlight-color: transparent;
-      }
-      .app-floating-toolbar select,
-      .app-floating-toolbar button { touch-action: manipulation; }
       .admin-panel-layout {
         min-height: 100vh;
         width: 100%;
@@ -4202,38 +4178,6 @@ export default function App() {
           tables={store.tables}
           onTableChange={syncTableParams}
         />
-      )}
-
-      {enteredMenu && !isAdminRoute && (
-        <div className="app-floating-toolbar" role="navigation" aria-label="Table and navigation">
-          <select
-            value={String(tableId)}
-            onChange={(e) => {
-              const raw = e.target.value;
-              const id = /^\d+$/.test(raw) ? Number(raw) : raw;
-              syncTableParams(id);
-            }}
-            style={{ padding:"5px 8px", background:"var(--charcoal)", border:"1px solid rgba(61,191,176,0.2)", color:"var(--gold)", fontSize:"9px", letterSpacing:"1px", fontFamily:"var(--font-body)" }}
-          >
-            {store.tables.map((t) => (
-              <option key={t.id} value={String(t.id)}>{t.name}</option>
-            ))}
-          </select>
-          <button
-            type="button"
-            onClick={() => go({ pathname: "/", search: location.search })}
-            style={{ padding:"5px 14px", background:"rgba(61,191,176,0.15)", border:"1px solid var(--gold)", color:"var(--gold)", fontSize:"9px", letterSpacing:"2px", cursor:"pointer", fontFamily:"var(--font-body)" }}
-          >
-            MENU
-          </button>
-          <button
-            type="button"
-            onClick={() => go("/admin")}
-            style={{ padding:"5px 14px", background:"transparent", border:"1px solid rgba(61,191,176,0.15)", color:"var(--muted)", fontSize:"9px", letterSpacing:"2px", cursor:"pointer", fontFamily:"var(--font-body)" }}
-          >
-            ADMIN
-          </button>
-        </div>
       )}
 
       {enteredMenu && !isAdminRoute && <CustomerMenu tableId={tableId} store={store} lang={lang} />}
