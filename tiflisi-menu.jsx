@@ -3074,31 +3074,30 @@ function AdminPanel({ store, onLogout }) {
       const now = ctx.currentTime;
       const master = ctx.createGain();
       master.gain.setValueAtTime(0.0001, now);
-      master.gain.exponentialRampToValueAtTime(0.08, now + 0.03);
-      master.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
+      master.gain.exponentialRampToValueAtTime(0.12, now + 0.06);
+      master.gain.exponentialRampToValueAtTime(0.08, now + 3.65);
+      master.gain.exponentialRampToValueAtTime(0.0001, now + 4.02);
       master.connect(ctx.destination);
 
-      const o1 = ctx.createOscillator();
-      o1.type = "sine";
-      o1.frequency.setValueAtTime(880, now);
-      const g1 = ctx.createGain();
-      g1.gain.setValueAtTime(0.0001, now);
-      g1.gain.exponentialRampToValueAtTime(0.7, now + 0.02);
-      g1.gain.exponentialRampToValueAtTime(0.0001, now + 0.28);
-      o1.connect(g1).connect(master);
-      o1.start(now);
-      o1.stop(now + 0.3);
+      const playTone = (start, freq, type = "sine", duration = 0.42, gainPeak = 0.68) => {
+        const osc = ctx.createOscillator();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, start);
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(gainPeak, start + 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+        osc.connect(gain).connect(master);
+        osc.start(start);
+        osc.stop(start + duration + 0.02);
+      };
 
-      const o2 = ctx.createOscillator();
-      o2.type = "triangle";
-      o2.frequency.setValueAtTime(1174, now + 0.18);
-      const g2 = ctx.createGain();
-      g2.gain.setValueAtTime(0.0001, now + 0.16);
-      g2.gain.exponentialRampToValueAtTime(0.55, now + 0.2);
-      g2.gain.exponentialRampToValueAtTime(0.0001, now + 0.52);
-      o2.connect(g2).connect(master);
-      o2.start(now + 0.18);
-      o2.stop(now + 0.54);
+      // 4-second "hotel-style" alert: four distinct pulses, easy to hear.
+      const pulses = [0, 0.98, 1.96, 2.94];
+      for (const t of pulses) {
+        playTone(now + t, 988, "triangle", 0.34, 0.62);
+        playTone(now + t + 0.11, 1318, "sine", 0.34, 0.5);
+      }
     } catch {
       /* audio not available / blocked */
     }
