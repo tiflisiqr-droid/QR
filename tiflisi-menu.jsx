@@ -1825,7 +1825,9 @@ function CustomerMenu({ tableId, store, lang }) {
   const [cartOpen, setCartOpen] = useState(false);
   const catRefs = useRef({});
   const headerRef = useRef(null);
+  const catScrollRef = useRef(null);
   const pendingScrollCatId = useRef(null);
+  const skipScrollSpyRef = useRef(false);
   const table = tables.find((tb) => String(tb.id) === String(tableId)) || { name: `Table ${tableId}`, zone: "Hall" };
 
   const cartLines = useMemo(() => {
@@ -1927,11 +1929,15 @@ function CustomerMenu({ tableId, store, lang }) {
     ];
   }, [sortedCategories, filtered]);
 
-  const scrollTo = (id) => {
+  const scrollTo = useCallback((id) => {
+    skipScrollSpyRef.current = true;
     pendingScrollCatId.current = id;
     setActiveCat(id);
     setScrollTargetTick((n) => n + 1);
-  };
+    window.setTimeout(() => {
+      skipScrollSpyRef.current = false;
+    }, 800);
+  }, []);
 
   useLayoutEffect(() => {
     const id = pendingScrollCatId.current;
@@ -1943,6 +1949,53 @@ function CustomerMenu({ tableId, store, lang }) {
     el.style.scrollMarginTop = `${pad}px`;
     el.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [scrollTargetTick]);
+
+  /** Sync active category chip with scroll position (spy). */
+  useEffect(() => {
+    const updateActiveFromScroll = () => {
+      if (skipScrollSpyRef.current) return;
+      const nav = headerRef.current;
+      if (!nav) return;
+      const line = nav.getBoundingClientRect().bottom + 10;
+      let current = null;
+      for (const cat of grouped) {
+        const el = catRefs.current[cat.id];
+        if (!el) continue;
+        if (el.getBoundingClientRect().top <= line) current = cat.id;
+      }
+      setActiveCat((prev) => (prev === current ? prev : current));
+    };
+
+    let raf = 0;
+    const onScrollOrResize = () => {
+      if (raf) cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        updateActiveFromScroll();
+      });
+    };
+
+    window.addEventListener("scroll", onScrollOrResize, { passive: true });
+    window.addEventListener("resize", onScrollOrResize, { passive: true });
+    updateActiveFromScroll();
+    return () => {
+      window.removeEventListener("scroll", onScrollOrResize);
+      window.removeEventListener("resize", onScrollOrResize);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, [grouped]);
+
+  /** Keep the active chip visible inside the horizontal category strip. */
+  useLayoutEffect(() => {
+    const wrap = catScrollRef.current;
+    if (!wrap) return;
+    const key = activeCat == null ? "all" : String(activeCat);
+    const esc = typeof CSS !== "undefined" && typeof CSS.escape === "function" ? CSS.escape(key) : key.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+    const btn = wrap.querySelector(`[data-cat-tab="${esc}"]`);
+    if (btn && typeof btn.scrollIntoView === "function") {
+      btn.scrollIntoView({ inline: "center", block: "nearest", behavior: "auto" });
+    }
+  }, [activeCat]);
 
   return (
     <div className="menu-page-shell" style={{ color:"var(--cream)", fontFamily:"var(--font-body)" }}>
@@ -1979,13 +2032,25 @@ function CustomerMenu({ tableId, store, lang }) {
             />
           </div>
 
-          <div className="menu-cat-scroll">
-            <CatBtn active={!activeCat} onClick={() => setActiveCat(null)} label={t.all} />
+          <div ref={catScrollRef} className="menu-cat-scroll">
+            <CatBtn
+              tabKey="all"
+              active={!activeCat}
+              onClick={() => {
+                skipScrollSpyRef.current = true;
+                setActiveCat(null);
+                window.scrollTo({ top: 0, behavior: "smooth" });
+                window.setTimeout(() => {
+                  skipScrollSpyRef.current = false;
+                }, 900);
+              }}
+              label={t.all}
+            />
             {sortedCategories.map((c) => (
-              <CatBtn key={c.id} active={activeCat === c.id} onClick={() => scrollTo(c.id)} label={c.name[lang]} icon={c.icon} />
+              <CatBtn key={c.id} tabKey={c.id} active={activeCat === c.id} onClick={() => scrollTo(c.id)} label={c.name[lang]} icon={c.icon} />
             ))}
             {grouped.some((g) => g.id === ORPHAN_CAT_KEY) && (
-              <CatBtn active={activeCat === ORPHAN_CAT_KEY} onClick={() => scrollTo(ORPHAN_CAT_KEY)} label={lang === "ka" ? "სხვა" : lang === "ru" ? "Прочее" : "Other"} icon="◇" />
+              <CatBtn tabKey={ORPHAN_CAT_KEY} active={activeCat === ORPHAN_CAT_KEY} onClick={() => scrollTo(ORPHAN_CAT_KEY)} label={lang === "ka" ? "სხვა" : lang === "ru" ? "Прочее" : "Other"} icon="◇" />
             )}
           </div>
         </div>
@@ -2015,7 +2080,14 @@ function CustomerMenu({ tableId, store, lang }) {
           </div>
         )}
         {grouped.map((cat, gi) => (
-          <div key={cat.id} ref={el => catRefs.current[cat.id] = el} style={{ marginTop: gi === 0 ? 28 : 44 }}>
+          <div
+            key={cat.id}
+            ref={(el) => {
+              if (el) catRefs.current[cat.id] = el;
+              else delete catRefs.current[cat.id];
+            }}
+            style={{ marginTop: gi === 0 ? 28 : 44 }}
+          >
             <div className="menu-section-head">
               <span className="menu-section-icon" aria-hidden="true">{cat.icon}</span>
               <h2 className="menu-section-title">{cat.name[lang]}</h2>
@@ -2169,9 +2241,14 @@ function CustomerMenu({ tableId, store, lang }) {
   );
 }
 
-function CatBtn({ active, onClick, label, icon }) {
+function CatBtn({ active, onClick, label, icon, tabKey }) {
   return (
-    <button type="button" onClick={onClick} className={`menu-cat-tab${active ? " menu-cat-tab--active" : ""}`}>
+    <button
+      type="button"
+      onClick={onClick}
+      className={`menu-cat-tab${active ? " menu-cat-tab--active" : ""}`}
+      {...(tabKey != null ? { "data-cat-tab": String(tabKey) } : {})}
+    >
       {icon && <span style={{ marginRight: "7px", opacity: active ? 1 : 0.65 }}>{icon}</span>}
       {label}
     </button>
