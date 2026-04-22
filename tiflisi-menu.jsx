@@ -920,6 +920,115 @@ const GlobalStyles = () => {
       }
 
       /* ─── Welcome hero (luxury first screen) ─────────────────────────── */
+      .welcome-preloader {
+        position: fixed;
+        inset: 0;
+        z-index: 12000;
+        background:
+          radial-gradient(ellipse at 18% 20%, rgba(64, 224, 208, 0.12), transparent 42%),
+          radial-gradient(ellipse at 82% 80%, rgba(201, 169, 98, 0.12), transparent 44%),
+          linear-gradient(180deg, #020405 0%, #04090b 45%, #020506 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 1;
+        transition: opacity 0.9s ease;
+        pointer-events: auto;
+        overflow: hidden;
+      }
+      .welcome-preloader::before {
+        content: "";
+        position: absolute;
+        inset: -20%;
+        background:
+          radial-gradient(circle at center, rgba(64, 224, 208, 0.08), transparent 45%),
+          conic-gradient(from 0deg, rgba(64, 224, 208, 0.1), transparent 45%, rgba(201, 169, 98, 0.1), transparent 85%);
+        filter: blur(36px);
+        animation: preloaderAura 9s linear infinite;
+        pointer-events: none;
+      }
+      .welcome-preloader::after {
+        content: "";
+        position: absolute;
+        left: -20%;
+        right: -20%;
+        top: 50%;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(64, 224, 208, 0.38), transparent);
+        opacity: 0.45;
+        transform: translateY(-50%);
+        pointer-events: none;
+      }
+      .welcome-preloader--fade {
+        opacity: 0;
+        pointer-events: none;
+      }
+      .welcome-preloader-inner {
+        position: relative;
+        z-index: 2;
+        width: min(90vw, 920px);
+        padding: 18px 14px;
+      }
+      .welcome-preloader-svg {
+        width: 100%;
+        height: auto;
+      }
+      .welcome-preloader-title-base {
+        fill: rgba(64, 224, 208, 0.06);
+        stroke: none;
+      }
+      .welcome-preloader-title {
+        fill: none;
+        stroke: #40e0d0;
+        stroke-width: 1.9;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-dasharray: 1620;
+        stroke-dashoffset: 1620;
+        filter:
+          drop-shadow(0 0 6px rgba(64, 224, 208, 0.45))
+          drop-shadow(0 0 18px rgba(64, 224, 208, 0.25));
+        animation: preloaderStrokeDraw 2.9s cubic-bezier(0.2, 0.75, 0.2, 1) forwards;
+      }
+      .welcome-preloader-title-glow {
+        fill: none;
+        stroke: rgba(64, 224, 208, 0.38);
+        stroke-width: 0.95;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-dasharray: 1620;
+        stroke-dashoffset: 1620;
+        filter: blur(0.25px);
+        animation: preloaderStrokeDraw 2.9s cubic-bezier(0.2, 0.75, 0.2, 1) forwards;
+      }
+      .welcome-preloader-sheen {
+        fill: none;
+        stroke: rgba(255, 255, 255, 0.4);
+        stroke-width: 0.7;
+        stroke-dasharray: 120 1500;
+        stroke-dashoffset: 0;
+        opacity: 0;
+        animation: preloaderSheen 2.6s ease 1.4s forwards;
+      }
+      @keyframes preloaderStrokeDraw {
+        to { stroke-dashoffset: 0; }
+      }
+      @keyframes preloaderSheen {
+        0% { opacity: 0; stroke-dashoffset: 420; }
+        20% { opacity: 0.95; }
+        100% { opacity: 0; stroke-dashoffset: -1320; }
+      }
+      @keyframes preloaderAura {
+        from { transform: rotate(0deg) scale(1); }
+        to { transform: rotate(360deg) scale(1.03); }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .welcome-preloader { transition: none; }
+        .welcome-preloader::before { animation: none; }
+        .welcome-preloader-title,
+        .welcome-preloader-title-glow,
+        .welcome-preloader-sheen { animation: none; stroke-dashoffset: 0; opacity: 1; }
+      }
       .welcome-hero-root {
         --welcome-champagne: #c9a962;
         --welcome-champagne-dim: rgba(201, 169, 98, 0.55);
@@ -3985,6 +4094,57 @@ function readSavedWelcomeLang() {
 const WELCOME_HERO_SRC = welcomeHeroImage;
 const WELCOME_HERO_SRCSET = `${welcomeHeroImage} 1280w, ${welcomeHeroImage} 1920w`;
 
+function WelcomePreloader({ fading }) {
+  return (
+    <div className={`welcome-preloader${fading ? " welcome-preloader--fade" : ""}`} aria-label="Loading welcome screen">
+      <div className="welcome-preloader-inner">
+        <svg className="welcome-preloader-svg" viewBox="0 0 960 240" role="img" aria-label="Restaurant Tiflisi">
+          <text
+            x="50%"
+            y="55%"
+            textAnchor="middle"
+            dominantBaseline="middle"
+            className="welcome-preloader-title-base"
+            style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "126px", fontStyle: "italic", letterSpacing: "0.03em" }}
+          >
+            Restaurant Tiflisi
+          </text>
+          <text
+            x="50%"
+            y="55%"
+            textAnchor="middle"
+            dominantBaseline="middle"
+            className="welcome-preloader-title-glow"
+            style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "126px", fontStyle: "italic", letterSpacing: "0.03em" }}
+          >
+            Restaurant Tiflisi
+          </text>
+          <text
+            x="50%"
+            y="55%"
+            textAnchor="middle"
+            dominantBaseline="middle"
+            className="welcome-preloader-title"
+            style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "126px", fontStyle: "italic", letterSpacing: "0.03em" }}
+          >
+            Restaurant Tiflisi
+          </text>
+          <text
+            x="50%"
+            y="55%"
+            textAnchor="middle"
+            dominantBaseline="middle"
+            className="welcome-preloader-sheen"
+            style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "126px", fontStyle: "italic", letterSpacing: "0.03em" }}
+          >
+            Restaurant Tiflisi
+          </text>
+        </svg>
+      </div>
+    </div>
+  );
+}
+
 function WelcomeScreen({ onChooseLang, tableId, tables, onTableChange }) {
   const [finePointer, setFinePointer] = useState(false);
   const [shift, setShift] = useState({ x: 0, y: 0 });
@@ -4139,6 +4299,8 @@ export default function App() {
   const [lang, setLang] = useState(savedLang ?? "ka");
   const [tableId, setTableId] = useState(() => readTableIdFromUrl() ?? 1);
   const [adminAuth, setAdminAuth] = useState(false);
+  const [showWelcomePreloader, setShowWelcomePreloader] = useState(true);
+  const [fadeWelcomePreloader, setFadeWelcomePreloader] = useState(false);
 
   useLayoutEffect(() => {
     if (isAdminRoute) setEnteredMenu(true);
@@ -4148,6 +4310,24 @@ export default function App() {
     if (isAdminRoute || enteredMenu || isWelcomeRoute) return;
     go({ pathname: "/welcome", search: location.search }, { replace: true });
   }, [go, isAdminRoute, enteredMenu, isWelcomeRoute, location.search]);
+
+  const shouldShowWelcome = !isAdminRoute && (isWelcomeRoute || !enteredMenu);
+
+  useEffect(() => {
+    if (!shouldShowWelcome) {
+      setShowWelcomePreloader(false);
+      setFadeWelcomePreloader(false);
+      return;
+    }
+    setShowWelcomePreloader(true);
+    setFadeWelcomePreloader(false);
+    const fadeTimer = window.setTimeout(() => setFadeWelcomePreloader(true), 2400);
+    const hideTimer = window.setTimeout(() => setShowWelcomePreloader(false), 3100);
+    return () => {
+      window.clearTimeout(fadeTimer);
+      window.clearTimeout(hideTimer);
+    };
+  }, [shouldShowWelcome]);
 
   const syncTableParams = useCallback(
     (id) => {
@@ -4196,7 +4376,14 @@ export default function App() {
 
   return (
     <div>
-      {!isAdminRoute && (isWelcomeRoute || !enteredMenu) && (
+      {shouldShowWelcome && showWelcomePreloader && (
+        <>
+          <GlobalStyles />
+          <FontLoader />
+          <WelcomePreloader fading={fadeWelcomePreloader} />
+        </>
+      )}
+      {shouldShowWelcome && !showWelcomePreloader && (
         <WelcomeScreen
           onChooseLang={enterWithLang}
           tableId={tableId}
