@@ -1980,12 +1980,9 @@ function CustomerMenu({ tableId, store, lang }) {
     if (!el) return;
     const pad = (headerRef.current?.offsetHeight ?? 0) + 12;
     el.style.scrollMarginTop = `${pad}px`;
-    // First perform native section scroll; then force-correct exact offset under sticky nav.
-    el.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start", inline: "nearest" });
-    window.requestAnimationFrame(() => {
-      const absoluteTop = window.scrollY + el.getBoundingClientRect().top - pad;
-      window.scrollTo({ top: Math.max(0, absoluteTop), behavior: prefersReducedMotion() ? "auto" : "smooth" });
-    });
+    // Single scroll command avoids double-animation jitter on some devices.
+    const absoluteTop = window.scrollY + el.getBoundingClientRect().top - pad;
+    window.scrollTo({ top: Math.max(0, absoluteTop), behavior: prefersReducedMotion() ? "auto" : "smooth" });
   };
 
   const scrollTo = useCallback((id) => {
