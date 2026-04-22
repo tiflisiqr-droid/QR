@@ -20,4 +20,16 @@ export default defineConfig({
   plugins: [react()],
   server: { port: 3001, strictPort: true },
   preview: { port: 3001, strictPort: true },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return;
+          if (id.includes("react-router")) return "router";
+          if (id.includes("@supabase")) return "supabase";
+          if (id.includes("react-dom") || /[/\\]node_modules[/\\]react[/\\]/.test(id)) return "react-vendor";
+        },
+      },
+    },
+  },
 });

@@ -2,6 +2,22 @@ import { supabase } from "./supabaseClient.js";
 
 const BUCKET = "menu-images";
 
+/** Transient network failures (mobile / flaky Wi‑Fi) — retry a few times with backoff. */
+export async function withRetry(fn, { retries = 2, delayMs = 400 } = {}) {
+  let last;
+  for (let i = 0; i <= retries; i++) {
+    try {
+      return await fn();
+    } catch (e) {
+      last = e;
+      if (i < retries) {
+        await new Promise((r) => setTimeout(r, delayMs * (i + 1)));
+      }
+    }
+  }
+  throw last;
+}
+
 /** Accepts admin/form input: trims, allows comma as decimal separator (e.g. 12,50). */
 export function parsePriceValue(value) {
   if (value === "" || value == null) return NaN;
@@ -109,14 +125,16 @@ export function mapMenuRowToDish(row) {
 
 export async function fetchMenuDishes() {
   if (!supabase) throw new Error("Supabase is not configured");
-  const { data, error } = await supabase
-    .from("menu")
-    .select("*")
-    .order("sort_order", { ascending: true })
-    .order("created_at", { ascending: true });
-  if (error) throw error;
-  if (!data?.length) return [];
-  return data.map(mapMenuRowToDish).filter(Boolean);
+  return withRetry(async () => {
+    const { data, error } = await supabase
+      .from("menu")
+      .select("*")
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true });
+    if (error) throw error;
+    if (!data?.length) return [];
+    return data.map(mapMenuRowToDish).filter(Boolean);
+  });
 }
 
 /* ─── Menu categories (Admin → Cuisine → Categories) ───────────────────── */
@@ -148,13 +166,15 @@ function categoryToDbRow(cat) {
 
 export async function fetchMenuCategories() {
   if (!supabase) throw new Error("Supabase is not configured");
-  const { data, error } = await supabase
-    .from("menu_categories")
-    .select("*")
-    .order("sort_order", { ascending: true })
-    .order("id", { ascending: true });
-  if (error) throw error;
-  return (data ?? []).map(mapMenuCategoryRow).filter(Boolean);
+  return withRetry(async () => {
+    const { data, error } = await supabase
+      .from("menu_categories")
+      .select("*")
+      .order("sort_order", { ascending: true })
+      .order("id", { ascending: true });
+    if (error) throw error;
+    return (data ?? []).map(mapMenuCategoryRow).filter(Boolean);
+  });
 }
 
 export async function insertMenuCategory(cat) {
@@ -320,13 +340,15 @@ export function mapSeatingRow(row) {
 
 export async function fetchSeatingTables() {
   if (!supabase) throw new Error("Supabase is not configured");
-  const { data, error } = await supabase
-    .from("seating")
-    .select("*")
-    .order("sort_order", { ascending: true })
-    .order("created_at", { ascending: true });
-  if (error) throw error;
-  return (data ?? []).map(mapSeatingRow).filter(Boolean);
+  return withRetry(async () => {
+    const { data, error } = await supabase
+      .from("seating")
+      .select("*")
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true });
+    if (error) throw error;
+    return (data ?? []).map(mapSeatingRow).filter(Boolean);
+  });
 }
 
 export async function insertSeatingTable({ name, zone }) {

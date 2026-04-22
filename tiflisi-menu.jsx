@@ -1,4 +1,5 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import QRCode from "qrcode";
 import { supabase, isSupabaseConfigured } from "./src/supabaseClient.js";
 import {
@@ -1278,6 +1279,61 @@ const GlobalStyles = () => {
           from { opacity: 0; }
           to { opacity: 1; }
         }
+      }
+      .app-floating-toolbar {
+        position: fixed;
+        top: max(8px, env(safe-area-inset-top, 0px));
+        right: max(8px, env(safe-area-inset-right, 0px));
+        left: auto;
+        bottom: auto;
+        transform: none;
+        z-index: 200;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 6px;
+        max-width: min(100vw - 16px, 400px);
+        background: rgba(7, 6, 8, 0.94);
+        padding: 8px 10px;
+        border: 1px solid rgba(61, 191, 176, 0.2);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        -webkit-tap-highlight-color: transparent;
+      }
+      .app-floating-toolbar select,
+      .app-floating-toolbar button { touch-action: manipulation; }
+      .admin-panel-layout {
+        min-height: 100vh;
+        width: 100%;
+        max-width: 100vw;
+        overflow-x: clip;
+        background: var(--void);
+        display: flex;
+        font-family: var(--font-body);
+      }
+      @media (max-width: 900px) {
+        .admin-panel-layout { flex-direction: column; }
+        .admin-panel-sidebar {
+          width: 100% !important;
+          max-width: 100% !important;
+          border-right: none !important;
+          border-bottom: 1px solid rgba(61, 191, 176, 0.1) !important;
+        }
+        .admin-panel-sidebar nav {
+          display: flex;
+          flex-direction: row;
+          flex-wrap: nowrap;
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+          overflow-y: hidden;
+          gap: 4px;
+          padding: 8px 10px 12px;
+          overscroll-behavior-x: contain;
+        }
+        .admin-panel-sidebar nav button { flex: 0 0 auto; white-space: nowrap; }
+        .admin-panel-main { min-width: 0; }
       }
     `;
     document.head.appendChild(style);
@@ -2851,12 +2907,12 @@ function AdminPanel({ store, onLogout }) {
   ];
 
   return (
-    <div style={{ minHeight:"100vh", background:"var(--void)", display:"flex", fontFamily:"var(--font-body)", width:"100%", maxWidth:"100vw", overflowX:"clip" }}>
+    <div className="admin-panel-layout">
       <GlobalStyles /><FontLoader />
       <div className="noise" />
 
       {/* SIDEBAR */}
-      <div style={{ width:"210px", background:"var(--charcoal)", borderRight:"1px solid rgba(61,191,176,0.1)", display:"flex", flexDirection:"column", flexShrink:0, position:"relative", zIndex:10 }}>
+      <div className="admin-panel-sidebar" style={{ width:"210px", background:"var(--charcoal)", borderRight:"1px solid rgba(61,191,176,0.1)", display:"flex", flexDirection:"column", flexShrink:0, position:"relative", zIndex:10 }}>
         <div style={{ padding:"28px 20px 24px", borderBottom:"1px solid rgba(61,191,176,0.1)" }}>
           <div style={{ fontFamily:"var(--font-display)", fontSize:"26px", fontStyle:"italic", fontWeight:300, color:"var(--cream)" }}>Tiflisi</div>
           <div style={{ fontSize:"8px", color:"var(--muted)", letterSpacing:"3px", textTransform:"uppercase", marginTop:"4px" }}>Admin Console</div>
@@ -2891,7 +2947,7 @@ function AdminPanel({ store, onLogout }) {
       </div>
 
       {/* CONTENT */}
-      <div style={{ flex:1, minWidth:0, overflow:"auto", WebkitOverflowScrolling:"touch", position:"relative", zIndex:1 }}>
+      <div className="admin-panel-main" style={{ flex:1, minWidth:0, overflow:"auto", WebkitOverflowScrolling:"touch", position:"relative", zIndex:1 }}>
         {section==="dashboard"  && <AdminDash store={store} />}
         {section==="menu"       && <AdminMenu store={store} />}
         {section==="cloud"      && <AdminCloudMenu store={store} />}
@@ -3845,20 +3901,16 @@ function AdminAnalytics({ store }) {
 ═══════════════════════════════════════════════════════════════════════════ */
 const WELCOME_STORAGE_KEY = "tiflisi_welcome_v1";
 
-/** Vite `base` (e.g. `/` or `/repo-name/`); home and admin URLs must include it on GitHub Pages. */
-const APP_HOME_URL = import.meta.env.BASE_URL || "/";
-const BASE_WITH_SLASH = APP_HOME_URL.endsWith("/") ? APP_HOME_URL : `${APP_HOME_URL}/`;
-const APP_ADMIN_PATH = `${BASE_WITH_SLASH}admin`.replace(/([^:]\/)\/+/g, "$1");
-
-function getRouteSegment() {
-  const p = (window.location.pathname || "/").replace(/\/+$/, "") || "/";
-  const admin = APP_ADMIN_PATH.replace(/\/+$/, "");
-  return p === admin ? "admin" : "customer";
+/** `location.pathname` (React Router, after basename) or full `window.location.pathname` (e.g. …/admin on GitHub Pages). */
+function pathMatchesAdmin(pathname) {
+  const p = (pathname || "/").replace(/\/+$/, "") || "/";
+  return p === "/admin" || p.endsWith("/admin");
 }
 
-function readTableIdFromUrl() {
+function readTableIdFromUrl(search) {
   try {
-    const q = new URLSearchParams(window.location.search).get("table");
+    const s = search ?? (typeof window !== "undefined" ? window.location.search : "");
+    const q = new URLSearchParams(s).get("table");
     if (q == null || q === "") return null;
     const trimmed = q.trim();
     const n = Number(trimmed);
@@ -4031,41 +4083,56 @@ function WelcomeScreen({ onChooseLang, tableId, tables, onTableChange }) {
 ═══════════════════════════════════════════════════════════════════════════ */
 export default function App() {
   const store = useStore();
-  const [routeSeg, setRouteSeg] = useState(() => getRouteSegment());
-  const isAdminRoute = routeSeg === "admin";
+  const location = useLocation();
+  const go = useNavigate();
 
+  const isAdminRoute = useMemo(() => pathMatchesAdmin(location.pathname), [location.pathname]);
+
+  const [enteredMenu, setEnteredMenu] = useState(() => {
+    if (readSavedWelcomeLang() !== null) return true;
+    if (typeof window === "undefined") return false;
+    return pathMatchesAdmin(window.location.pathname);
+  });
   const savedLang = readSavedWelcomeLang();
-  const [enteredMenu, setEnteredMenu] = useState(() => savedLang !== null || getRouteSegment() === "admin");
   const [lang, setLang] = useState(savedLang ?? "ka");
   const [tableId, setTableId] = useState(() => readTableIdFromUrl() ?? 1);
   const [adminAuth, setAdminAuth] = useState(false);
+
+  useLayoutEffect(() => {
+    if (isAdminRoute) setEnteredMenu(true);
+  }, [isAdminRoute]);
+
+  const syncTableParams = useCallback(
+    (id) => {
+      setTableId(id);
+      try {
+        const sp = new URLSearchParams(location.search);
+        sp.set("table", String(id));
+        const next = sp.toString();
+        go({ search: next ? `?${next}` : "" }, { replace: true });
+      } catch {
+        /* ignore */
+      }
+    },
+    [go, location.search]
+  );
 
   useEffect(() => {
     if (store.tables.length === 0) return;
     setTableId((prev) => {
       if (store.tables.some((t) => String(t.id) === String(prev))) return prev;
-      const u = readTableIdFromUrl();
+      const u = readTableIdFromUrl(location.search);
       if (u != null && store.tables.some((t) => String(t.id) === String(u))) return u;
       return store.tables[0].id;
     });
-  }, [store.tables]);
-
-  const navigate = useCallback((path) => {
-    window.history.pushState({}, "", path);
-    setRouteSeg(getRouteSegment());
-    const t = readTableIdFromUrl();
-    if (t != null) setTableId(t);
-  }, []);
+  }, [store.tables, location.search]);
 
   useEffect(() => {
-    const sync = () => {
-      setRouteSeg(getRouteSegment());
-      const t = readTableIdFromUrl();
-      if (t != null) setTableId(t);
-    };
-    window.addEventListener("popstate", sync);
-    return () => window.removeEventListener("popstate", sync);
-  }, []);
+    const t = readTableIdFromUrl(location.search);
+    if (t == null) return;
+    if (store.tables.length > 0 && !store.tables.some((x) => String(x.id) === String(t))) return;
+    setTableId(t);
+  }, [location.search, store.tables]);
 
   useEffect(() => {
     document.documentElement.lang = lang === "ka" ? "ka" : lang === "ru" ? "ru" : "en";
@@ -4086,40 +4153,37 @@ export default function App() {
           onChooseLang={enterWithLang}
           tableId={tableId}
           tables={store.tables}
-          onTableChange={(id) => {
-            setTableId(id);
-            try {
-              const u = new URL(window.location.href);
-              u.searchParams.set("table", String(id));
-              window.history.replaceState({}, "", `${u.pathname}${u.search}${u.hash}`);
-            } catch {
-              /* ignore */
-            }
-          }}
+          onTableChange={syncTableParams}
         />
       )}
 
       {enteredMenu && !isAdminRoute && (
-        <div style={{ position:"fixed", bottom:"16px", left:"50%", transform:"translateX(-50%)", zIndex:9999, display:"flex", gap:"6px", background:"rgba(7,6,8,0.92)", padding:"8px 10px", border:"1px solid rgba(61,191,176,0.2)", backdropFilter:"blur(20px)" }}>
-          <select value={String(tableId)} onChange={(e) => {
-            const raw = e.target.value;
-            const id = /^\d+$/.test(raw) ? Number(raw) : raw;
-            setTableId(id);
-            try {
-              const u = new URL(window.location.href);
-              u.searchParams.set("table", String(id));
-              window.history.replaceState({}, "", `${u.pathname}${u.search}${u.hash}`);
-            } catch {}
-          }}
-            style={{ padding:"5px 8px", background:"var(--charcoal)", border:"1px solid rgba(61,191,176,0.2)", color:"var(--gold)", fontSize:"9px", letterSpacing:"1px", fontFamily:"var(--font-body)" }}>
+        <div className="app-floating-toolbar" role="navigation" aria-label="Table and navigation">
+          <select
+            value={String(tableId)}
+            onChange={(e) => {
+              const raw = e.target.value;
+              const id = /^\d+$/.test(raw) ? Number(raw) : raw;
+              syncTableParams(id);
+            }}
+            style={{ padding:"5px 8px", background:"var(--charcoal)", border:"1px solid rgba(61,191,176,0.2)", color:"var(--gold)", fontSize:"9px", letterSpacing:"1px", fontFamily:"var(--font-body)" }}
+          >
             {store.tables.map((t) => (
               <option key={t.id} value={String(t.id)}>{t.name}</option>
             ))}
           </select>
-          <button type="button" onClick={() => navigate(APP_HOME_URL)} style={{ padding:"5px 14px", background:"rgba(61,191,176,0.15)", border:"1px solid var(--gold)", color:"var(--gold)", fontSize:"9px", letterSpacing:"2px", cursor:"pointer", fontFamily:"var(--font-body)" }}>
+          <button
+            type="button"
+            onClick={() => go({ pathname: "/", search: location.search })}
+            style={{ padding:"5px 14px", background:"rgba(61,191,176,0.15)", border:"1px solid var(--gold)", color:"var(--gold)", fontSize:"9px", letterSpacing:"2px", cursor:"pointer", fontFamily:"var(--font-body)" }}
+          >
             MENU
           </button>
-          <button type="button" onClick={() => navigate(APP_ADMIN_PATH)} style={{ padding:"5px 14px", background:"transparent", border:"1px solid rgba(61,191,176,0.15)", color:"var(--muted)", fontSize:"9px", letterSpacing:"2px", cursor:"pointer", fontFamily:"var(--font-body)" }}>
+          <button
+            type="button"
+            onClick={() => go("/admin")}
+            style={{ padding:"5px 14px", background:"transparent", border:"1px solid rgba(61,191,176,0.15)", color:"var(--muted)", fontSize:"9px", letterSpacing:"2px", cursor:"pointer", fontFamily:"var(--font-body)" }}
+          >
             ADMIN
           </button>
         </div>
@@ -4130,7 +4194,7 @@ export default function App() {
         <AdminLogin onLogin={() => { setAdminAuth(true); }} />
       )}
       {enteredMenu && isAdminRoute && adminAuth && (
-        <AdminPanel store={store} onLogout={() => { setAdminAuth(false); navigate(APP_HOME_URL); }} />
+        <AdminPanel store={store} onLogout={() => { setAdminAuth(false); go("/"); }} />
       )}
     </div>
   );
