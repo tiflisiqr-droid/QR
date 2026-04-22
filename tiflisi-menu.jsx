@@ -153,12 +153,9 @@ const GlobalStyles = () => {
       .menu-main-column--cart {
         padding-bottom: max(232px, calc(196px + env(safe-area-inset-bottom, 0px)));
       }
-      /* Anchor targets: match html scroll-padding + sticky nav; JS refines with header height */
+      /* Keep section title visible below sticky category nav. */
       .menu-cat-section-anchor {
-        scroll-margin-top: min(132px, 34vw);
-      }
-      @media (min-width: 521px) {
-        .menu-cat-section-anchor { scroll-margin-top: 108px; }
+        scroll-margin-top: 100px;
       }
       .menu-sticky-nav {
         background: rgba(5, 10, 10, 0.78) !important;
@@ -1934,10 +1931,9 @@ function CustomerMenu({ tableId, store, lang }) {
   const sortedCategories = useMemo(() => [...categories].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)), [categories]);
 
   const ORPHAN_CAT_KEY = "__orphan__";
-
-  /** Safe DOM id for category scroll targets (matches ref + querySelector fallback). */
-  const menuCategorySectionDomId = (catId) =>
-    catId === ORPHAN_CAT_KEY ? "menu-cat-orphan" : `menu-cat-${String(catId).replace(/[^a-zA-Z0-9_-]/g, "-")}`;
+  const MENU_TOP_SECTION_ID = "menu-section-top";
+  const sectionIdForCategory = (catId) =>
+    catId === ORPHAN_CAT_KEY ? "menu-section-orphan" : `menu-section-${String(catId)}`;
 
   /** Search only — category chips scroll to section (no hide-other-categories; avoids wrong scroll after filter). */
   const filtered = useMemo(() => {
@@ -1976,29 +1972,22 @@ function CustomerMenu({ tableId, store, lang }) {
     typeof window.matchMedia === "function" &&
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  const scrollToElementUnderStickyNav = (el) => {
-    if (!el) return;
-    const pad = (headerRef.current?.offsetHeight ?? 0) + 12;
-    el.style.scrollMarginTop = `${pad}px`;
-    // Single scroll command avoids double-animation jitter on some devices.
-    const absoluteTop = window.scrollY + el.getBoundingClientRect().top - pad;
-    window.scrollTo({ top: Math.max(0, absoluteTop), behavior: prefersReducedMotion() ? "auto" : "smooth" });
-  };
+  const scrollToSection = useCallback((sectionId) => {
+    if (typeof document === "undefined") return false;
+    const element = document.getElementById(sectionId);
+    if (!element) return false;
+    element.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
+    return true;
+  }, []);
 
   const scrollTo = useCallback((id) => {
     skipScrollSpyRef.current = true;
     setActiveCat(id);
-    const key = String(id);
+    const sectionId = sectionIdForCategory(id);
 
     let tries = 0;
     const tryScroll = () => {
-      const el =
-        catRefs.current[key] ||
-        (typeof document !== "undefined" ? document.getElementById(menuCategorySectionDomId(id)) : null);
-      if (el) {
-        scrollToElementUnderStickyNav(el);
-        return;
-      }
+      if (scrollToSection(sectionId)) return;
       // Sections can mount a frame later right after filter / state transitions.
       tries += 1;
       if (tries < 12) requestAnimationFrame(tryScroll);
@@ -2008,21 +1997,18 @@ function CustomerMenu({ tableId, store, lang }) {
     window.setTimeout(() => {
       skipScrollSpyRef.current = false;
     }, 950);
-  }, []);
+  }, [scrollToSection]);
 
   const scrollToMenuTop = useCallback(() => {
     skipScrollSpyRef.current = true;
     setActiveCat(null);
-    const el = menuTopRef.current;
-    if (el) {
-      scrollToElementUnderStickyNav(el);
-    } else {
+    if (!scrollToSection(MENU_TOP_SECTION_ID)) {
       window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? "auto" : "smooth" });
     }
     window.setTimeout(() => {
       skipScrollSpyRef.current = false;
     }, 950);
-  }, []);
+  }, [scrollToSection]);
 
   /** Sync active category chip with scroll position (spy). */
   useEffect(() => {
@@ -2031,11 +2017,24 @@ function CustomerMenu({ tableId, store, lang }) {
       const nav = headerRef.current;
       if (!nav) return;
       const line = nav.getBoundingClientRect().bottom + 10;
-      let current = null;
+      let current = grouped[0]?.id ?? null;
+      let firstBelow = null;
       for (const cat of grouped) {
         const el = catRefs.current[String(cat.id)];
         if (!el) continue;
-        if (el.getBoundingClientRect().top <= line) current = cat.id;
+        const top = el.getBoundingClientRect().top;
+        if (top <= line) current = cat.id;
+        if (top > line && firstBelow == null) firstBelow = { id: cat.id, delta: top - line };
+      }
+      // Near the end/bottom, the clicked section may not cross the line; keep nearest upcoming section active.
+      if (firstBelow && firstBelow.delta < 96) {
+        current = firstBelow.id;
+      }
+      const nearBottom =
+        typeof window !== "undefined" &&
+        window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4;
+      if (nearBottom && grouped.length > 0) {
+        current = grouped[grouped.length - 1].id;
       }
       setActiveCat((prev) => (String(prev) === String(current) ? prev : current));
     };
@@ -2137,6 +2136,7 @@ function CustomerMenu({ tableId, store, lang }) {
       {/* DISH SECTIONS — bottom padding clears fixed dock + home indicator */}
       <div
         ref={menuTopRef}
+        id={MENU_TOP_SECTION_ID}
         className={`menu-main-column${cartItemCount > 0 ? " menu-main-column--cart" : ""}`}
         style={{ maxWidth: 720, margin: "0 auto", width: "100%" }}
       >
@@ -2155,7 +2155,7 @@ function CustomerMenu({ tableId, store, lang }) {
         {grouped.map((cat, gi) => (
           <div
             key={cat.id}
-            id={menuCategorySectionDomId(cat.id)}
+            id={sectionIdForCategory(cat.id)}
             className="menu-cat-section-anchor"
             ref={(el) => {
               const k = String(cat.id);
