@@ -4301,6 +4301,7 @@ export default function App() {
   const [adminAuth, setAdminAuth] = useState(false);
   const [showWelcomePreloader, setShowWelcomePreloader] = useState(true);
   const [fadeWelcomePreloader, setFadeWelcomePreloader] = useState(false);
+  const preloaderPlayedRef = useRef(false);
 
   useLayoutEffect(() => {
     if (isAdminRoute) setEnteredMenu(true);
@@ -4314,11 +4315,12 @@ export default function App() {
   const shouldShowWelcome = !isAdminRoute && (isWelcomeRoute || !enteredMenu);
 
   useEffect(() => {
-    if (!shouldShowWelcome) {
+    if (preloaderPlayedRef.current || isAdminRoute) {
       setShowWelcomePreloader(false);
       setFadeWelcomePreloader(false);
       return;
     }
+    preloaderPlayedRef.current = true;
     setShowWelcomePreloader(true);
     setFadeWelcomePreloader(false);
     const fadeTimer = window.setTimeout(() => setFadeWelcomePreloader(true), 2400);
@@ -4327,7 +4329,7 @@ export default function App() {
       window.clearTimeout(fadeTimer);
       window.clearTimeout(hideTimer);
     };
-  }, [shouldShowWelcome]);
+  }, [isAdminRoute]);
 
   const syncTableParams = useCallback(
     (id) => {
@@ -4376,7 +4378,7 @@ export default function App() {
 
   return (
     <div>
-      {shouldShowWelcome && showWelcomePreloader && (
+      {!isAdminRoute && showWelcomePreloader && (
         <>
           <GlobalStyles />
           <FontLoader />
