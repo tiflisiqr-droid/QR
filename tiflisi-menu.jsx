@@ -1,6 +1,7 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import QRCode from "qrcode";
+import welcomeHeroImage from "./hero picture.jpeg";
 import { supabase, isSupabaseConfigured } from "./src/supabaseClient.js";
 import {
   fetchMenuDishes,
@@ -3965,14 +3966,9 @@ function readSavedWelcomeLang() {
   return null;
 }
 
-/** Optimized Unsplash still — responsive srcSet, fixed dimensions hint for CLS. */
-const WELCOME_HERO_SRC =
-  "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80";
-const WELCOME_HERO_SRCSET =
-  "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=640&q=75 640w, " +
-  "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=960&q=78 960w, " +
-  "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1280&q=80 1280w, " +
-  "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1920&q=82 1920w";
+/** Local restaurant hero photo (bundled by Vite). */
+const WELCOME_HERO_SRC = welcomeHeroImage;
+const WELCOME_HERO_SRCSET = `${welcomeHeroImage} 1280w, ${welcomeHeroImage} 1920w`;
 
 function WelcomeScreen({ onChooseLang, tableId, tables, onTableChange }) {
   const [finePointer, setFinePointer] = useState(false);
