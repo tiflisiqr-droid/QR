@@ -45,13 +45,14 @@ const GlobalStyles = () => {
       /* Mobile-first: anchor scroll clears sticky header; pinch zoom still allowed (a11y) */
       html {
         scroll-behavior: auto;
-        scroll-padding-top: min(168px, 42vw);
+        /* Sticky nav is shorter without in-menu language row */
+        scroll-padding-top: min(132px, 34vw);
         -webkit-text-size-adjust: 100%;
         width: 100%;
         overflow-x: clip;
       }
       @media (min-width: 521px) {
-        html { scroll-padding-top: 132px; }
+        html { scroll-padding-top: 108px; }
       }
       body {
         width: 100%;
@@ -672,30 +673,6 @@ const GlobalStyles = () => {
           radial-gradient(ellipse at 40% 0%, rgba(61, 191, 176, 0.12), transparent 55%);
         z-index: 1;
         pointer-events: none;
-      }
-      .menu-lang-btn {
-        min-width: 48px;
-        min-height: 48px;
-        padding: 0 12px;
-        touch-action: manipulation;
-        border-radius: 999px;
-        border: 1px solid rgba(61, 191, 176, 0.2);
-        background: rgba(6, 12, 12, 0.55);
-        color: rgba(238, 246, 244, 0.55);
-        font-size: 10px;
-        font-weight: 700;
-        cursor: pointer;
-        letter-spacing: 0.14em;
-        text-transform: uppercase;
-        font-family: var(--font-body);
-        transition: all 0.22s ease;
-        -webkit-tap-highlight-color: transparent;
-      }
-      .menu-lang-btn--on {
-        border-color: rgba(201, 169, 98, 0.55);
-        background: linear-gradient(135deg, rgba(201, 169, 98, 0.25), rgba(61, 191, 176, 0.12));
-        color: #0a1010;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.35);
       }
       .menu-cart-sheet {
         background: linear-gradient(180deg, rgba(18, 32, 30, 0.98), rgba(8, 14, 14, 0.99)) !important;
@@ -1835,7 +1812,7 @@ function SocialTopStrip({ className = "" }) {
 /* ═══════════════════════════════════════════════════════════════════════════
    CUSTOMER MENU
 ═══════════════════════════════════════════════════════════════════════════ */
-function CustomerMenu({ tableId, store, lang, setLang }) {
+function CustomerMenu({ tableId, store, lang }) {
   const t = T[lang];
   const { categories, dishes, tables, addNotification, trackView, menuLoading, menuError } = store;
   const supabaseMenu = isSupabaseConfigured();
@@ -1992,19 +1969,6 @@ function CustomerMenu({ tableId, store, lang, setLang }) {
       {/* STICKY NAV */}
       <div ref={headerRef} className="menu-sticky-nav" style={{ position: "sticky", top: 0, zIndex: 100, overflowAnchor: "none" }}>
         <div className="menu-sticky-nav-inner">
-          <div style={{ display:"flex", justifyContent:"flex-end", alignItems:"center", gap:"8px", marginBottom:"10px", paddingTop:"2px" }}>
-            {["en","ka","ru"].map((l) => (
-              <button
-                key={l}
-                type="button"
-                onClick={() => setLang(l)}
-                className={`menu-lang-btn${lang === l ? " menu-lang-btn--on" : ""}`}
-              >
-                {l}
-              </button>
-            ))}
-          </div>
-
           <div className="menu-search-wrap">
             <span className="menu-search-icon" aria-hidden="true">✦</span>
             <input
@@ -4084,7 +4048,7 @@ export default function App() {
         </div>
       )}
 
-      {enteredMenu && !isAdminRoute && <CustomerMenu tableId={tableId} store={store} lang={lang} setLang={setLang} />}
+      {enteredMenu && !isAdminRoute && <CustomerMenu tableId={tableId} store={store} lang={lang} />}
       {enteredMenu && isAdminRoute && !adminAuth && (
         <AdminLogin onLogin={() => { setAdminAuth(true); }} />
       )}
