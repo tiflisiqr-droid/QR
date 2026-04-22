@@ -3059,6 +3059,72 @@ function AdminCloudMenu({ store }) {
 function AdminPanel({ store, onLogout }) {
   const [section, setSection] = useState("dashboard");
   const unread = store.notifications.filter(n=>!n.read).length;
+  const audioCtxRef = useRef(null);
+  const prevUnreadRef = useRef(unread);
+  const mountedRef = useRef(false);
+
+  const playAlertChime = useCallback(() => {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      if (!audioCtxRef.current) audioCtxRef.current = new AudioCtx();
+      const ctx = audioCtxRef.current;
+      if (ctx.state === "suspended") ctx.resume().catch(() => {});
+
+      const now = ctx.currentTime;
+      const master = ctx.createGain();
+      master.gain.setValueAtTime(0.0001, now);
+      master.gain.exponentialRampToValueAtTime(0.08, now + 0.03);
+      master.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
+      master.connect(ctx.destination);
+
+      const o1 = ctx.createOscillator();
+      o1.type = "sine";
+      o1.frequency.setValueAtTime(880, now);
+      const g1 = ctx.createGain();
+      g1.gain.setValueAtTime(0.0001, now);
+      g1.gain.exponentialRampToValueAtTime(0.7, now + 0.02);
+      g1.gain.exponentialRampToValueAtTime(0.0001, now + 0.28);
+      o1.connect(g1).connect(master);
+      o1.start(now);
+      o1.stop(now + 0.3);
+
+      const o2 = ctx.createOscillator();
+      o2.type = "triangle";
+      o2.frequency.setValueAtTime(1174, now + 0.18);
+      const g2 = ctx.createGain();
+      g2.gain.setValueAtTime(0.0001, now + 0.16);
+      g2.gain.exponentialRampToValueAtTime(0.55, now + 0.2);
+      g2.gain.exponentialRampToValueAtTime(0.0001, now + 0.52);
+      o2.connect(g2).connect(master);
+      o2.start(now + 0.18);
+      o2.stop(now + 0.54);
+    } catch {
+      /* audio not available / blocked */
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      prevUnreadRef.current = unread;
+      return;
+    }
+    if (unread > prevUnreadRef.current) {
+      playAlertChime();
+    }
+    prevUnreadRef.current = unread;
+  }, [unread, playAlertChime]);
+
+  useEffect(() => {
+    return () => {
+      try {
+        if (audioCtxRef.current && audioCtxRef.current.state !== "closed") {
+          audioCtxRef.current.close();
+        }
+      } catch {}
+    };
+  }, []);
 
   const navItems = [
     { id:"dashboard", icon:"◈", label:"Overview" },
