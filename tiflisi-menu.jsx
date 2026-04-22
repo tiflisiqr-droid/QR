@@ -3934,6 +3934,11 @@ function pathMatchesAdmin(pathname) {
   return p === "/admin" || p.endsWith("/admin");
 }
 
+function pathMatchesWelcome(pathname) {
+  const p = (pathname || "/").replace(/\/+$/, "") || "/";
+  return p === "/welcome" || p.endsWith("/welcome");
+}
+
 function readTableIdFromUrl(search) {
   try {
     const s = search ?? (typeof window !== "undefined" ? window.location.search : "");
@@ -4114,6 +4119,7 @@ export default function App() {
   const go = useNavigate();
 
   const isAdminRoute = useMemo(() => pathMatchesAdmin(location.pathname), [location.pathname]);
+  const isWelcomeRoute = useMemo(() => pathMatchesWelcome(location.pathname), [location.pathname]);
 
   const [enteredMenu, setEnteredMenu] = useState(() => {
     if (readSavedWelcomeLang() !== null) return true;
@@ -4128,6 +4134,11 @@ export default function App() {
   useLayoutEffect(() => {
     if (isAdminRoute) setEnteredMenu(true);
   }, [isAdminRoute]);
+
+  useEffect(() => {
+    if (isAdminRoute || enteredMenu || isWelcomeRoute) return;
+    go({ pathname: "/welcome", search: location.search }, { replace: true });
+  }, [go, isAdminRoute, enteredMenu, isWelcomeRoute, location.search]);
 
   const syncTableParams = useCallback(
     (id) => {
@@ -4171,11 +4182,12 @@ export default function App() {
       sessionStorage.setItem(WELCOME_STORAGE_KEY, JSON.stringify({ lang: l }));
     } catch {}
     setEnteredMenu(true);
-  }, []);
+    go({ pathname: "/", search: location.search }, { replace: true });
+  }, [go, location.search]);
 
   return (
     <div>
-      {!enteredMenu && !isAdminRoute && (
+      {!isAdminRoute && (isWelcomeRoute || !enteredMenu) && (
         <WelcomeScreen
           onChooseLang={enterWithLang}
           tableId={tableId}
@@ -4184,7 +4196,7 @@ export default function App() {
         />
       )}
 
-      {enteredMenu && !isAdminRoute && <CustomerMenu tableId={tableId} store={store} lang={lang} />}
+      {enteredMenu && !isAdminRoute && !isWelcomeRoute && <CustomerMenu tableId={tableId} store={store} lang={lang} />}
       {enteredMenu && isAdminRoute && !adminAuth && (
         <AdminLogin onLogin={() => { setAdminAuth(true); }} />
       )}
