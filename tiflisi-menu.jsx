@@ -986,7 +986,7 @@ const GlobalStyles = () => {
         justify-content: center;
         padding: max(28px, env(safe-area-inset-top, 0px)) max(22px, env(safe-area-inset-right, 0px)) max(28px, env(safe-area-inset-bottom, 0px)) max(22px, env(safe-area-inset-left, 0px));
         width: 100%;
-        max-width: 520px;
+        max-width: 560px;
         margin: 0 auto;
         text-align: center;
       }
@@ -1013,7 +1013,7 @@ const GlobalStyles = () => {
       }
       .welcome-hero-eyebrow {
         font-size: clamp(9px, 2.4vw, 11px);
-        letter-spacing: 0.55em;
+        letter-spacing: 0.42em;
         text-transform: uppercase;
         font-weight: 600;
         color: var(--welcome-champagne);
@@ -1025,9 +1025,9 @@ const GlobalStyles = () => {
         font-family: var(--font-display);
         font-weight: 300;
         font-style: italic;
-        font-size: clamp(2.65rem, 10vw, 4.25rem);
+        font-size: clamp(2.5rem, 9vw, 4rem);
         line-height: 1.02;
-        letter-spacing: 0.04em;
+        letter-spacing: 0.03em;
         color: #f4f7f6;
         text-shadow: 0 4px 48px rgba(0,0,0,0.55);
         margin: 0;
@@ -1038,7 +1038,7 @@ const GlobalStyles = () => {
         display: block;
         font-style: normal;
         font-weight: 400;
-        letter-spacing: 0.22em;
+        letter-spacing: 0.18em;
         text-transform: uppercase;
         font-size: clamp(0.72rem, 2.8vw, 0.85rem);
         margin-top: 0.65em;
@@ -1049,9 +1049,9 @@ const GlobalStyles = () => {
         font-size: clamp(14px, 3.6vw, 16px);
         font-weight: 400;
         line-height: 1.55;
-        letter-spacing: 0.06em;
+        letter-spacing: 0.03em;
         color: rgba(238,246,244,0.88);
-        max-width: 34em;
+        max-width: 36em;
         margin-left: auto;
         margin-right: auto;
         opacity: 0;
@@ -1078,7 +1078,7 @@ const GlobalStyles = () => {
       .welcome-hero-table label {
         display: block;
         font-size: 9px;
-        letter-spacing: 0.35em;
+        letter-spacing: 0.24em;
         text-transform: uppercase;
         color: var(--welcome-champagne-dim);
         margin-bottom: 10px;
@@ -1097,7 +1097,7 @@ const GlobalStyles = () => {
         color: var(--cream);
         font-family: var(--font-body);
         font-size: 13px;
-        letter-spacing: 0.12em;
+        letter-spacing: 0.06em;
         cursor: pointer;
         box-shadow:
           0 0 0 1px rgba(0,0,0,0.4),
@@ -1107,6 +1107,13 @@ const GlobalStyles = () => {
         -webkit-backdrop-filter: blur(14px);
         background-image: linear-gradient(180deg, rgba(255,255,255,0.06), transparent);
         transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.2s ease;
+      }
+      .welcome-hero-table select:focus-visible {
+        outline: none;
+        border-color: rgba(61, 191, 176, 0.65);
+        box-shadow:
+          0 0 0 2px rgba(61, 191, 176, 0.22),
+          0 16px 48px rgba(0,0,0,0.4);
       }
       @media (hover: hover) {
       .welcome-hero-table select:hover {
@@ -1190,6 +1197,13 @@ const GlobalStyles = () => {
         -webkit-tap-highlight-color: transparent;
         overflow: hidden;
       }
+      .welcome-btn-primary:focus-visible,
+      .welcome-btn-ghost:focus-visible {
+        outline: none;
+        box-shadow:
+          0 0 0 2px rgba(61, 191, 176, 0.3),
+          0 0 0 4px rgba(4, 8, 10, 0.6);
+      }
       .welcome-btn-primary::before {
         content: "";
         position: absolute;
@@ -1265,7 +1279,7 @@ const GlobalStyles = () => {
       .welcome-hero-hint {
         margin-top: clamp(20px, 4vw, 26px);
         font-size: 10px;
-        letter-spacing: 0.2em;
+        letter-spacing: 0.14em;
         color: rgba(109, 143, 137, 0.75);
         line-height: 1.6;
         opacity: 0;
@@ -1280,8 +1294,9 @@ const GlobalStyles = () => {
         .welcome-btn-primary::before { animation: none; }
         .welcome-hero-eyebrow, .welcome-hero-title, .welcome-hero-sub, .welcome-hero-ka,
         .welcome-hero-table, .welcome-hero-divider, .welcome-hero-actions, .welcome-hero-hint {
-          animation: welcomeFadeIn 0.6s ease forwards !important;
-          opacity: 1;
+          animation: none !important;
+          opacity: 1 !important;
+          transform: none !important;
         }
         @keyframes welcomeFadeIn {
           from { opacity: 0; }
@@ -4013,8 +4028,6 @@ function WelcomeScreen({ onChooseLang, tableId, tables, onTableChange }) {
 
   return (
     <div
-      role="dialog"
-      aria-modal="true"
       aria-labelledby="welcome-title"
       className={`welcome-hero-root${finePointer ? " welcome-hero--parallax" : ""}`}
     >
@@ -4040,16 +4053,16 @@ function WelcomeScreen({ onChooseLang, tableId, tables, onTableChange }) {
 
       <div className="welcome-hero-inner">
         <header>
-          <p className="welcome-hero-eyebrow">Georgian fine dining</p>
+          <p className="welcome-hero-eyebrow">Tiflisi Georgian Restaurant</p>
           <h1 id="welcome-title" className="welcome-hero-title">
             Welcome to Tiflisi
-            <span>Fine dining</span>
+            <span>Digital menu</span>
           </h1>
           <p className="welcome-hero-sub">
-            Scan the QR code to browse our menu and send orders from your table—crafted for a calm, unhurried evening.
+            Scan the QR code to open the menu, choose your language, and order directly from your table.
           </p>
           <p className="welcome-hero-ka" lang="ka">
-            კეთილი იყოს თქვენი მობრძანება · Welcome · Добро пожаловать
+            კეთილი იყოს თქვენი მობრძანება · Добро пожаловать
           </p>
         </header>
 
@@ -4059,7 +4072,7 @@ function WelcomeScreen({ onChooseLang, tableId, tables, onTableChange }) {
 
         {showTable && typeof onTableChange === "function" && (
           <div className="welcome-hero-table">
-            <label htmlFor="welcome-table-select">Seating</label>
+            <label htmlFor="welcome-table-select">Table · მაგიდა</label>
             <div className="welcome-hero-table-wrap">
               <select
                 id="welcome-table-select"
@@ -4089,8 +4102,8 @@ function WelcomeScreen({ onChooseLang, tableId, tables, onTableChange }) {
 
         <div className="welcome-hero-actions">
           <button type="button" className="welcome-btn-primary" onClick={() => onChooseLang("ka")}>
-            View menu
-            <small>ქართული</small>
+            ქართული
+            <small>მენიუს გახსნა</small>
           </button>
           <button type="button" className="welcome-btn-ghost" onClick={() => onChooseLang("en")}>
             English
@@ -4100,7 +4113,7 @@ function WelcomeScreen({ onChooseLang, tableId, tables, onTableChange }) {
           </button>
         </div>
 
-        <p className="welcome-hero-hint">აირჩიეთ ენა მენიუს სანახავად · Choose a language to open the menu</p>
+        <p className="welcome-hero-hint">აირჩიეთ ენა · Choose language · Выберите язык</p>
       </div>
     </div>
   );
