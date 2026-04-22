@@ -2064,15 +2064,17 @@ function CustomerMenu({ tableId, store, lang }) {
   const sectionIdForCategory = (catId) =>
     catId === ORPHAN_CAT_KEY ? "menu-section-orphan" : `menu-section-${String(catId)}`;
 
+  const searchQuery = useMemo(() => search.trim().toLowerCase(), [search]);
+
   /** Search only — category chips scroll to section (no hide-other-categories; avoids wrong scroll after filter). */
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = searchQuery;
     return dishes.filter((d) => {
       const nm = d?.name && typeof d.name === "object" ? d.name : {};
       const label = String(nm[lang] || nm.en || "").toLowerCase();
       return !q || label.includes(q);
     });
-  }, [dishes, search, lang]);
+  }, [dishes, searchQuery, lang]);
 
   const grouped = useMemo(() => {
     const byOrder = (a, b) => ((a.order ?? 0) - (b.order ?? 0)) || String(a.id).localeCompare(String(b.id));
@@ -2080,12 +2082,12 @@ function CustomerMenu({ tableId, store, lang }) {
       .map((cat) => ({
         ...cat,
         dishes: filtered.filter((d) => d.categoryId === cat.id).sort(byOrder),
-      }))
-      .filter((c) => c.dishes.length > 0);
+      }));
+    const visibleBase = searchQuery ? base.filter((c) => c.dishes.length > 0) : base;
     const orphan = filtered.filter((d) => !sortedCategories.some((c) => c.id === d.categoryId)).sort(byOrder);
-    if (orphan.length === 0) return base;
+    if (orphan.length === 0) return visibleBase;
     return [
-      ...base,
+      ...visibleBase,
       {
         id: ORPHAN_CAT_KEY,
         name: { en: "Other", ka: "სხვა", ru: "Прочее" },
@@ -2094,7 +2096,7 @@ function CustomerMenu({ tableId, store, lang }) {
         dishes: orphan,
       },
     ];
-  }, [sortedCategories, filtered]);
+  }, [sortedCategories, filtered, searchQuery]);
 
   const prefersReducedMotion = () =>
     typeof window !== "undefined" &&
@@ -2311,6 +2313,15 @@ function CustomerMenu({ tableId, store, lang }) {
                   onAddToCart={addToCart}
                   onBumpCartQty={bumpCartQty} />
               ))}
+              {cat.dishes.length === 0 && (
+                <div style={{ padding:"10px 4px 2px", color:"var(--muted)", fontSize:"11px", letterSpacing:"0.03em" }}>
+                  {lang === "ka"
+                    ? "ამ ჯგუფში კერძები ჯერ არ დამატებულა."
+                    : lang === "ru"
+                      ? "В этой категории пока нет блюд."
+                      : "No dishes in this category yet."}
+                </div>
+              )}
             </div>
           </div>
         ))}
