@@ -1863,6 +1863,7 @@ function CustomerMenu({ tableId, store, lang }) {
   const catScrollRef = useRef(null);
   const menuTopRef = useRef(null);
   const skipScrollSpyRef = useRef(false);
+  const chipCenterRequestedRef = useRef(false);
   const table = tables.find((tb) => String(tb.id) === String(tableId)) || { name: `Table ${tableId}`, zone: "Hall" };
 
   const cartLines = useMemo(() => {
@@ -1986,6 +1987,7 @@ function CustomerMenu({ tableId, store, lang }) {
 
   const scrollTo = useCallback((id) => {
     skipScrollSpyRef.current = true;
+    chipCenterRequestedRef.current = true;
     setActiveCat(id);
     const sectionId = sectionIdForCategory(id);
 
@@ -2005,6 +2007,7 @@ function CustomerMenu({ tableId, store, lang }) {
 
   const scrollToMenuTop = useCallback(() => {
     skipScrollSpyRef.current = true;
+    chipCenterRequestedRef.current = true;
     setActiveCat(null);
     if (!scrollToSection(MENU_TOP_SECTION_ID)) {
       window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? "auto" : "smooth" });
@@ -2056,15 +2059,18 @@ function CustomerMenu({ tableId, store, lang }) {
     };
   }, [grouped]);
 
-  /** Keep the active chip visible inside the horizontal category strip. */
+  /** Keep chip strip stable while page scrolls; center chip only for explicit clicks. */
   useLayoutEffect(() => {
+    if (!chipCenterRequestedRef.current) return;
+    chipCenterRequestedRef.current = false;
     const wrap = catScrollRef.current;
     if (!wrap) return;
     const key = activeCat == null ? "all" : String(activeCat);
     const esc = typeof CSS !== "undefined" && typeof CSS.escape === "function" ? CSS.escape(key) : key.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
     const btn = wrap.querySelector(`[data-cat-tab="${esc}"]`);
-    if (btn && typeof btn.scrollIntoView === "function") {
-      btn.scrollIntoView({ inline: "center", block: "nearest", behavior: "auto" });
+    if (btn) {
+      const targetLeft = btn.offsetLeft - (wrap.clientWidth - btn.offsetWidth) / 2;
+      wrap.scrollTo({ left: Math.max(0, targetLeft), behavior: "auto" });
     }
   }, [activeCat]);
 
