@@ -4096,15 +4096,61 @@ const WELCOME_HERO_SRCSET = `${welcomeHeroImage} 1280w, ${welcomeHeroImage} 1920
 
 function WelcomePreloader({ fading }) {
   return (
-    <div className={`welcome-preloader${fading ? " welcome-preloader--fade" : ""}`} aria-label="Loading welcome screen">
-      <div className="welcome-preloader-inner">
-        <svg className="welcome-preloader-svg" viewBox="0 0 960 240" role="img" aria-label="Restaurant Tiflisi">
+    <div
+      aria-label="Loading welcome screen"
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 12000,
+        background:
+          "radial-gradient(ellipse at 18% 20%, rgba(64, 224, 208, 0.12), transparent 42%), radial-gradient(ellipse at 82% 80%, rgba(201, 169, 98, 0.12), transparent 44%), linear-gradient(180deg, #020405 0%, #04090b 45%, #020506 100%)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        opacity: fading ? 0 : 1,
+        transition: "opacity 0.9s ease",
+        pointerEvents: fading ? "none" : "auto",
+        overflow: "hidden",
+      }}
+    >
+      <style>{`
+        .rt-preloader-inner { position: relative; z-index: 2; width: min(90vw, 920px); padding: 18px 14px; }
+        .rt-preloader-svg { width: 100%; height: auto; }
+        .rt-preloader-title-base { fill: rgba(64, 224, 208, 0.06); stroke: none; }
+        .rt-preloader-title {
+          fill: none; stroke: #40e0d0; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round;
+          stroke-dasharray: 1620; stroke-dashoffset: 1620;
+          filter: drop-shadow(0 0 6px rgba(64, 224, 208, 0.45)) drop-shadow(0 0 18px rgba(64, 224, 208, 0.25));
+          animation: rtPreloaderStrokeDraw 2.9s cubic-bezier(0.2, 0.75, 0.2, 1) forwards;
+        }
+        .rt-preloader-title-glow {
+          fill: none; stroke: rgba(64, 224, 208, 0.38); stroke-width: 0.95; stroke-linecap: round; stroke-linejoin: round;
+          stroke-dasharray: 1620; stroke-dashoffset: 1620; filter: blur(0.25px);
+          animation: rtPreloaderStrokeDraw 2.9s cubic-bezier(0.2, 0.75, 0.2, 1) forwards;
+        }
+        .rt-preloader-sheen {
+          fill: none; stroke: rgba(255, 255, 255, 0.4); stroke-width: 0.7;
+          stroke-dasharray: 120 1500; stroke-dashoffset: 0; opacity: 0;
+          animation: rtPreloaderSheen 2.6s ease 1.4s forwards;
+        }
+        @keyframes rtPreloaderStrokeDraw { to { stroke-dashoffset: 0; } }
+        @keyframes rtPreloaderSheen {
+          0% { opacity: 0; stroke-dashoffset: 420; }
+          20% { opacity: 0.95; }
+          100% { opacity: 0; stroke-dashoffset: -1320; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .rt-preloader-title, .rt-preloader-title-glow, .rt-preloader-sheen { animation: none; stroke-dashoffset: 0; opacity: 1; }
+        }
+      `}</style>
+      <div className="rt-preloader-inner">
+        <svg className="rt-preloader-svg" viewBox="0 0 960 240" role="img" aria-label="Restaurant Tiflisi">
           <text
             x="50%"
             y="55%"
             textAnchor="middle"
             dominantBaseline="middle"
-            className="welcome-preloader-title-base"
+            className="rt-preloader-title-base"
             style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "126px", fontStyle: "italic", letterSpacing: "0.03em" }}
           >
             Restaurant Tiflisi
@@ -4114,7 +4160,7 @@ function WelcomePreloader({ fading }) {
             y="55%"
             textAnchor="middle"
             dominantBaseline="middle"
-            className="welcome-preloader-title-glow"
+            className="rt-preloader-title-glow"
             style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "126px", fontStyle: "italic", letterSpacing: "0.03em" }}
           >
             Restaurant Tiflisi
@@ -4124,7 +4170,7 @@ function WelcomePreloader({ fading }) {
             y="55%"
             textAnchor="middle"
             dominantBaseline="middle"
-            className="welcome-preloader-title"
+            className="rt-preloader-title"
             style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "126px", fontStyle: "italic", letterSpacing: "0.03em" }}
           >
             Restaurant Tiflisi
@@ -4134,7 +4180,7 @@ function WelcomePreloader({ fading }) {
             y="55%"
             textAnchor="middle"
             dominantBaseline="middle"
-            className="welcome-preloader-sheen"
+            className="rt-preloader-sheen"
             style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "126px", fontStyle: "italic", letterSpacing: "0.03em" }}
           >
             Restaurant Tiflisi
