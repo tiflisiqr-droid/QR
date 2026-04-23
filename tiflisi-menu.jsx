@@ -3495,6 +3495,11 @@ function AdminPanel({ store, onLogout }) {
           <button type="button" onClick={onLogout} style={{ width:"100%", padding:"10px 12px", background:"transparent", border:"1px solid rgba(239,68,68,0.2)", color:"rgba(239,68,68,0.6)", fontSize:"9px", letterSpacing:"2px", textTransform:"uppercase", cursor:"pointer", fontFamily:"var(--font-body)", transition:"all 0.2s", touchAction:"manipulation", WebkitTapHighlightColor:"transparent" }}>
             EXIT SESSION
           </button>
+          {import.meta.env.VITE_DEPLOY_STAMP ? (
+            <div style={{ marginTop:"10px", fontSize:"7px", lineHeight:1.35, color:"var(--muted)", letterSpacing:"0.3px", wordBreak:"break-all", opacity:0.75 }} title="GitHub Actions build id — თუ ეს ტექსტი არ ჩანს, ძველი bundle იტვირთება (cache).">
+              build {String(import.meta.env.VITE_DEPLOY_STAMP)}
+            </div>
+          ) : null}
         </div>
       </div>
 
