@@ -27,6 +27,11 @@ create table if not exists public.menu (
 
 alter table public.menu add column if not exists sort_order integer not null default 0;
 
+alter table public.menu add column if not exists price_variants jsonb not null default '[]'::jsonb;
+
+comment on column public.menu.price_variants is
+  'Array of { id, label: {en,ka,ru}, price, amount?, unit? }. Empty [] = guest uses menu.price only.';
+
 create index if not exists menu_category_id_idx on public.menu (category_id);
 create index if not exists menu_created_at_idx on public.menu (created_at);
 create index if not exists menu_category_sort_idx on public.menu (category_id, sort_order);

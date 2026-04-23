@@ -40,6 +40,50 @@ export function formatLari(amount) {
   return v.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 }
 
+/** Normalize DB / JSON `price_variants` → app `priceVariants` (stable ids + labels). */
+export function normalizePriceVariantsFromRow(value) {
+  let arr = value;
+  if (value == null) return [];
+  if (typeof value === "string") {
+    const t = value.trim();
+    if (!t) return [];
+    try {
+      arr = JSON.parse(t);
+    } catch {
+      return [];
+    }
+  }
+  if (!Array.isArray(arr)) return [];
+  const seen = new Set();
+  const out = [];
+  for (const x of arr) {
+    if (!x || typeof x !== "object") continue;
+    const id = String(x.id ?? "").trim();
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    const price = Number(x.price);
+    if (!Number.isFinite(price) || price < 0) continue;
+    const le = x.label && typeof x.label === "object" && !Array.isArray(x.label) ? x.label : {};
+    const row = {
+      id,
+      price,
+      label: {
+        en: String(le.en ?? "").trim(),
+        ka: String(le.ka ?? "").trim(),
+        ru: String(le.ru ?? "").trim(),
+      },
+    };
+    if (Number.isFinite(Number(x.amount))) row.amount = Number(x.amount);
+    if (typeof x.unit === "string" && x.unit.trim()) row.unit = x.unit.trim().slice(0, 24);
+    out.push(row);
+  }
+  return out;
+}
+
+function priceVariantsForDb(dish) {
+  return normalizePriceVariantsFromRow(dish?.priceVariants);
+}
+
 /** Maps app dish shape → DB row (no `id`). */
 export function dishToDbInsert(dish) {
   const price = parsePriceValue(dish.price);
@@ -58,6 +102,7 @@ export function dishToDbInsert(dish) {
     available: dish.available !== false,
     featured: !!dish.featured,
     sort_order: Number.isFinite(Number(dish.order)) ? Number(dish.order) : 0,
+    price_variants: priceVariantsForDb(dish),
   };
 }
 
@@ -120,6 +165,7 @@ export function mapMenuRowToDish(row) {
     available: row.available !== false,
     featured: !!row.featured,
     order: Number(row.sort_order) || 0,
+    priceVariants: normalizePriceVariantsFromRow(row.price_variants),
   };
 }
 

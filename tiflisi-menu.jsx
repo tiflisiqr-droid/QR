@@ -25,6 +25,7 @@ import {
   updateMenuCategorySortOrders,
   updateMenuDishSortOrders,
   deleteMenuCategory,
+  normalizePriceVariantsFromRow,
 } from "./src/supabaseMenu.js";
 
 /* ─── GOOGLE FONTS INJECTION ─────────────────────────────────────────────── */
@@ -1469,8 +1470,8 @@ const DISHES = [
   { id:6, categoryId:3, name:{en:"Lamb Short Ribs",ka:"კრავის ნეკნები",ru:"Короткие Рёбра"}, description:{en:"72-hour braised lamb ribs, walnut-herb gremolata, charcoal finish",ka:"72-საათიანი კრავი",ru:"72-часовая баранина"}, price:44, image:"https://images.unsplash.com/photo-1544025162-d76694265947?w=600&q=90", ingredients:["Lamb Ribs","Walnuts","Gremolata","Charcoal Ash"], badges:["Popular"], available:true, featured:false },
   { id:7, categoryId:4, name:{en:"Heritage Tomato",ka:"ძველი ჯიშის პომიდვრები",ru:"Помидоры Хэритедж"}, description:{en:"Seven-variety tomatoes, walnut-tarragon vinaigrette, pressed herb oil",ka:"შვიდი ჯიშის პომიდვრები",ru:"Семь сортов томатов с эстрагоном"}, price:19, image:"https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=600&q=90", ingredients:["Heritage Tomatoes","Walnuts","Tarragon","Red Onion","Herb Oil"], badges:["Seasonal"], available:true, featured:false },
   { id:8, categoryId:5, name:{en:"Churchkhela Parfait",ka:"ჩურჩხელა პარფე",ru:"Чурчхела Парфе"}, description:{en:"Deconstructed churchkhela, Kakhetian grape gelée, walnut praline",ka:"დეკონსტრუქცია ჩურჩხელა",ru:"Деконструированная чурчхела"}, price:18, image:"https://images.unsplash.com/photo-1587314168485-3236d6710814?w=600&q=90", ingredients:["Grape Must","Walnuts","Almond Praline","Vanilla"], badges:["New"], available:true, featured:false },
-  { id:9, categoryId:6, name:{en:"Saperavi Reserve",ka:"საფერავი რეზერვი",ru:"Саперави Резерв"}, description:{en:"Single vineyard Kakheti, 2018 vintage, 48-month oak aged",ka:"ერთი ვენახი, 2018",ru:"Односортовой Саперави 2018"}, price:28, image:"https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=600&q=90", ingredients:["Saperavi","Kakheti","2018 Vintage","48-month Oak"], badges:["Popular","Signature"], available:true, featured:true },
-  { id:10, categoryId:6, name:{en:"Rkatsiteli Natural",ka:"რქაწითელი",ru:"Ркацители Натурал"}, description:{en:"Amphora-aged skin-contact white, golden amber hue, stone fruit",ka:"ქვევრში მომწიფებული",ru:"Вино в амфоре"}, price:22, image:"https://images.unsplash.com/photo-1506377247377-2a5b3b417ebb?w=600&q=90", ingredients:["Rkatsiteli","Amphora","Kakheti","Skin-Contact"], badges:["Rare"], available:true, featured:false },
+  { id:9, categoryId:6, name:{en:"Saperavi Reserve",ka:"საფერავი რეზერვი",ru:"Саперави Резерв"}, description:{en:"Single vineyard Kakheti, 2018 vintage, 48-month oak aged",ka:"ერთი ვენახი, 2018",ru:"Односортовой Саперави 2018"}, price:28, priceVariants:[{id:"bottle",label:{en:"1 bottle · 0.75 L",ka:"1 ბოთლი · 0,75 ლ",ru:"1 бутылка · 0,75 л"},price:55},{id:"glass",label:{en:"1 glass · 0.25 L",ka:"1 ჭიქა · 0,25 ლ",ru:"1 бокал · 0,25 л"},price:18}], image:"https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=600&q=90", ingredients:["Saperavi","Kakheti","2018 Vintage","48-month Oak"], badges:["Popular","Signature"], available:true, featured:true },
+  { id:10, categoryId:6, name:{en:"Rkatsiteli Natural",ka:"რქაწითელი",ru:"Ркацители Натурал"}, description:{en:"Amphora-aged skin-contact white, golden amber hue, stone fruit",ka:"ქვევრში მომწიფებული",ru:"Вино в амфоре"}, price:22, priceVariants:[{id:"bottle",label:{en:"1 bottle · 0.75 L",ka:"1 ბოთლი · 0,75 ლ",ru:"1 бутылка · 0,75 л"},price:42},{id:"glass",label:{en:"1 glass · 0.25 L",ka:"1 ჭიქა · 0,25 ლ",ru:"1 бокал · 0,25 л"},price:14}], image:"https://images.unsplash.com/photo-1506377247377-2a5b3b417ebb?w=600&q=90", ingredients:["Rkatsiteli","Amphora","Kakheti","Skin-Contact"], badges:["Rare"], available:true, featured:false },
 ];
 
 const TABLES = [
@@ -1482,6 +1483,58 @@ const TABLES = [
   { id:6, name:"Wine Cellar", zone:"Private", active:true },
 ];
 
+/** Cart line key: `dishId` or `dishId::variantId` (price variants / local test). */
+const CART_KEY_SEP = "::";
+
+function dishPriceVariants(dish) {
+  const v = dish?.priceVariants;
+  if (!Array.isArray(v) || v.length === 0) return [];
+  return v.filter((x) => x && x.id != null && String(x.id) !== "" && Number.isFinite(Number(x.price)));
+}
+
+function cartLineKey(dishId, variantId) {
+  const id = String(dishId);
+  if (variantId == null || variantId === "") return id;
+  return `${id}${CART_KEY_SEP}${String(variantId)}`;
+}
+
+function parseCartLineKey(key) {
+  const s = String(key);
+  const i = s.indexOf(CART_KEY_SEP);
+  if (i === -1) return { dishId: s, variantId: null };
+  return { dishId: s.slice(0, i), variantId: s.slice(i + CART_KEY_SEP.length) };
+}
+
+function variantOptionLabel(v, lang) {
+  if (!v) return "";
+  if (typeof v.label === "string") return v.label.trim() || "—";
+  const o = v.label && typeof v.label === "object" ? v.label : {};
+  return String(o[lang] || o.en || o.ka || o.ru || "").trim() || "—";
+}
+
+function unitPriceForCartLine(dish, variantId) {
+  if (!variantId) return Number(dish.price) || 0;
+  const v = dishPriceVariants(dish).find((x) => String(x.id) === String(variantId));
+  return v ? Number(v.price) || 0 : Number(dish.price) || 0;
+}
+
+function minMaxVariantPrice(dish) {
+  const vars = dishPriceVariants(dish);
+  if (vars.length === 0) return null;
+  const prices = vars.map((x) => Number(x.price) || 0);
+  return { min: Math.min(...prices), max: Math.max(...prices) };
+}
+
+function sumCartQtyForDish(cart, dishId) {
+  const id = String(dishId);
+  let sum = 0;
+  for (const [k, qty] of Object.entries(cart)) {
+    const { dishId: d } = parseCartLineKey(k);
+    if (String(d) === id) sum += Number(qty) || 0;
+  }
+  return sum;
+}
+
 /** Shared across tabs so guest menu (/) and admin (/admin) see the same alerts. */
 const NOTIF_STORAGE_KEY = "tiflisi_notifications_v1";
 
@@ -1489,7 +1542,7 @@ const NOTIF_STORAGE_KEY = "tiflisi_notifications_v1";
 const TABLES_STORAGE_KEY = "tiflisi_tables_v1";
 
 /** Offline / no-Supabase: persist dish list so admin edits survive refresh (not used when live Supabase menu loads). */
-const MENU_DISHES_STORAGE_KEY = "tiflisi_menu_dishes_v1";
+const MENU_DISHES_STORAGE_KEY = "tiflisi_menu_dishes_v2";
 
 function normalizeTableRows(arr) {
   if (!Array.isArray(arr)) return [];
@@ -1586,9 +1639,9 @@ const BADGE_CFG = {
 };
 
 const T = {
-  en:{menu:"Menu",callWaiter:"Summon Waiter",requestBill:"Request Bill",ingredients:"Provenance",soldOut:"Unavailable",table:"Table",waiterCalled:"Your waiter is on the way.",billRequested:"Your bill is being prepared.",search:"Search the menu…",all:"All",adminLogin:"Staff Access",login:"Enter",dashboard:"Overview",menuMgmt:"Cuisine",tables:"Seating",notifications:"Alerts",analytics:"Insights",logout:"Exit",addDish:"New Dish",save:"Save",cancel:"Cancel",available:"Available",featured:"Recommended",chefChoice:"Chef's choice",badges:"Distinctions",badgeDry:"Dry",badgeSemiDry:"Semi-Dry",badgeSemiSweet:"Semi-Sweet",cart:"Basket",cartTotal:"Total",addToCart:"Add",cartHint:"Estimated total for your selection (reference only).",emptyCart:"Your basket is empty.",cartQty:"Qty",cartClose:"Close"},
-  ka:{menu:"მენიუ",callWaiter:"მიმტანის გამოძახება",requestBill:"ანგარიშის მოთხოვნა",ingredients:"წარმომავლობა",soldOut:"მიუწვდომელი",table:"მაგიდა",waiterCalled:"მიმტანი მოდის.",billRequested:"ანგარიში მზადდება.",search:"მოძებნეთ…",all:"ყველა",adminLogin:"პერსონალი",login:"შესვლა",dashboard:"მიმოხილვა",menuMgmt:"სამზარეულო",tables:"მოსასვლელი",notifications:"შეტყობინებები",analytics:"ანალიტიკა",logout:"გამოსვლა",addDish:"ახალი კერძი",save:"შენახვა",cancel:"გაუქმება",available:"ხელმისაწვდომი",featured:"რეკომენდებული",chefChoice:"შეფის არჩევანი",badges:"გამოჩენილი",badgeDry:"მშრალი",badgeSemiDry:"ნახევრადმშრალი",badgeSemiSweet:"ნახევრადტკბილი",cart:"კალათა",cartTotal:"ჯამი",addToCart:"დამატება",cartHint:"არჩეული კერძების სავარაუდო ჯამი (საინფორმაციოდ).",emptyCart:"კალათა ცარიელია.",cartQty:"რაოდ.",cartClose:"დახურვა"},
-  ru:{menu:"Меню",callWaiter:"Позвать Официанта",requestBill:"Попросить Счёт",ingredients:"Происхождение",soldOut:"Недоступно",table:"Стол",waiterCalled:"Официант уже идёт.",billRequested:"Счёт готовится.",search:"Поиск…",all:"Все",adminLogin:"Персонал",login:"Войти",dashboard:"Обзор",menuMgmt:"Кухня",tables:"Места",notifications:"Оповещения",analytics:"Аналитика",logout:"Выйти",addDish:"Новое Блюдо",save:"Сохранить",cancel:"Отмена",available:"Доступно",featured:"Рекомендуем",chefChoice:"Выбор шефа",badges:"Отличия",badgeDry:"Сухое",badgeSemiDry:"Полусухое",badgeSemiSweet:"Полусладкое",cart:"Корзина",cartTotal:"Итого",addToCart:"В корзину",cartHint:"Ориентировочная сумма выбранных блюд (справочно).",emptyCart:"Корзина пуста.",cartQty:"Кол-во",cartClose:"Закрыть"},
+  en:{menu:"Menu",callWaiter:"Summon Waiter",requestBill:"Request Bill",ingredients:"Provenance",soldOut:"Unavailable",table:"Table",waiterCalled:"Your waiter is on the way.",billRequested:"Your bill is being prepared.",search:"Search the menu…",all:"All",adminLogin:"Staff Access",login:"Enter",dashboard:"Overview",menuMgmt:"Cuisine",tables:"Seating",notifications:"Alerts",analytics:"Insights",logout:"Exit",addDish:"New Dish",save:"Save",cancel:"Cancel",available:"Available",featured:"Recommended",chefChoice:"Chef's choice",badges:"Distinctions",badgeDry:"Dry",badgeSemiDry:"Semi-Dry",badgeSemiSweet:"Semi-Sweet",chooseOptions:"Choose size",cart:"Basket",cartTotal:"Total",addToCart:"Add",cartHint:"Estimated total for your selection (reference only).",emptyCart:"Your basket is empty.",cartQty:"Qty",cartClose:"Close"},
+  ka:{menu:"მენიუ",callWaiter:"მიმტანის გამოძახება",requestBill:"ანგარიშის მოთხოვნა",ingredients:"წარმომავლობა",soldOut:"მიუწვდომელი",table:"მაგიდა",waiterCalled:"მიმტანი მოდის.",billRequested:"ანგარიში მზადდება.",search:"მოძებნეთ…",all:"ყველა",adminLogin:"პერსონალი",login:"შესვლა",dashboard:"მიმოხილვა",menuMgmt:"სამზარეულო",tables:"მოსასვლელი",notifications:"შეტყობინებები",analytics:"ანალიტიკა",logout:"გამოსვლა",addDish:"ახალი კერძი",save:"შენახვა",cancel:"გაუქმება",available:"ხელმისაწვდომი",featured:"რეკომენდებული",chefChoice:"შეფის არჩევანი",badges:"გამოჩენილი",badgeDry:"მშრალი",badgeSemiDry:"ნახევრადმშრალი",badgeSemiSweet:"ნახევრადტკბილი",chooseOptions:"ზომა / ფასი",cart:"კალათა",cartTotal:"ჯამი",addToCart:"დამატება",cartHint:"არჩეული კერძების სავარაუდო ჯამი (საინფორმაციოდ).",emptyCart:"კალათა ცარიელია.",cartQty:"რაოდ.",cartClose:"დახურვა"},
+  ru:{menu:"Меню",callWaiter:"Позвать Официанта",requestBill:"Попросить Счёт",ingredients:"Происхождение",soldOut:"Недоступно",table:"Стол",waiterCalled:"Официант уже идёт.",billRequested:"Счёт готовится.",search:"Поиск…",all:"Все",adminLogin:"Персонал",login:"Войти",dashboard:"Обзор",menuMgmt:"Кухня",tables:"Места",notifications:"Оповещения",analytics:"Аналитика",logout:"Выйти",addDish:"Новое Блюдо",save:"Сохранить",cancel:"Отмена",available:"Доступно",featured:"Рекомендуем",chefChoice:"Выбор шефа",badges:"Отличия",badgeDry:"Сухое",badgeSemiDry:"Полусухое",badgeSemiSweet:"Полусладкое",chooseOptions:"Размер и цена",cart:"Корзина",cartTotal:"Итого",addToCart:"В корзину",cartHint:"Ориентировочная сумма выбранных блюд (справочно).",emptyCart:"Корзина пуста.",cartQty:"Кол-во",cartClose:"Закрыть"},
 };
 
 /* ─── SHARED STATE ───────────────────────────────────────────────────────── */
@@ -1976,6 +2029,203 @@ function SocialTopStrip({ className = "" }) {
   );
 }
 
+/** Menusa-style modal: pick a price variant then add to cart (local demo + future Supabase `priceVariants`). */
+function DishVariantModal({ dish, lang, t, onClose, onConfirm }) {
+  const vars = useMemo(() => dishPriceVariants(dish), [dish]);
+  const [selId, setSelId] = useState(() => String(vars[0]?.id ?? ""));
+
+  useEffect(() => {
+    const v0 = dishPriceVariants(dish)[0];
+    setSelId(v0 != null ? String(v0.id) : "");
+  }, [dish]);
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const selected = vars.find((x) => String(x.id) === selId) || vars[0];
+  const selPrice = selected ? Number(selected.price) || 0 : 0;
+  const nameObj = dish?.name && typeof dish.name === "object" ? dish.name : {};
+  const title = String(nameObj[lang] || nameObj.en || nameObj.ka || "—").trim() || "—";
+
+  return (
+    <>
+      <button
+        type="button"
+        aria-label={t.cartClose}
+        onClick={onClose}
+        style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 10140,
+          border: "none",
+          padding: 0,
+          margin: 0,
+          background: "rgba(0,0,0,0.78)",
+          cursor: "pointer",
+          WebkitTapHighlightColor: "transparent",
+        }}
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="dish-variant-modal-title"
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          position: "fixed",
+          left: "50%",
+          top: "50%",
+          transform: "translate(-50%, -50%)",
+          zIndex: 10150,
+          width: "min(520px, calc(100vw - 24px))",
+          maxHeight: "min(88vh, 640px)",
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
+          borderRadius: "16px",
+          boxShadow: "0 24px 80px rgba(0,0,0,0.55)",
+          border: "1px solid rgba(201,169,98,0.25)",
+          background: "linear-gradient(165deg, rgba(18,28,26,0.98), rgba(8,12,12,0.99))",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "row",
+            flex: 1,
+            minHeight: 0,
+            flexWrap: "wrap",
+          }}
+        >
+          <div
+            style={{
+              flex: "1 1 200px",
+              minWidth: 180,
+              maxHeight: 280,
+              background: "rgba(0,0,0,0.35)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "12px",
+            }}
+          >
+            {dish.image ? (
+              <img
+                src={dish.image}
+                alt=""
+                style={{ maxWidth: "100%", maxHeight: "260px", objectFit: "contain" }}
+              />
+            ) : (
+              <div style={{ color: "var(--muted)", fontSize: "12px" }}>—</div>
+            )}
+          </div>
+          <div style={{ flex: "1 1 240px", minWidth: 0, display: "flex", flexDirection: "column", padding: "18px 18px 16px", position: "relative" }}>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label={t.cartClose}
+              style={{
+                position: "absolute",
+                top: 12,
+                right: 12,
+                width: 32,
+                height: 32,
+                borderRadius: "50%",
+                border: "1px solid rgba(255,255,255,0.12)",
+                background: "rgba(0,0,0,0.35)",
+                color: "var(--cream)",
+                cursor: "pointer",
+                fontSize: "16px",
+                lineHeight: 1,
+              }}
+            >
+              ×
+            </button>
+            <h2
+              id="dish-variant-modal-title"
+              style={{
+                fontFamily: "var(--font-display)",
+                fontSize: "clamp(1.1rem, 3.5vw, 1.35rem)",
+                fontWeight: 600,
+                color: "var(--cream)",
+                margin: "0 40px 14px 0",
+                lineHeight: 1.25,
+                textTransform: "uppercase",
+                letterSpacing: "0.06em",
+              }}
+            >
+              {title}
+            </h2>
+            <div style={{ fontSize: "9px", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--gold)", marginBottom: "10px" }}>{t.chooseOptions}</div>
+            <div style={{ overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: "8px", paddingRight: "4px" }}>
+              {vars.map((v) => {
+                const active = String(v.id) === selId;
+                const lab = variantOptionLabel(v, lang);
+                const pr = Number(v.price) || 0;
+                return (
+                  <label
+                    key={String(v.id)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "12px",
+                      padding: "12px 14px",
+                      borderRadius: "10px",
+                      cursor: "pointer",
+                      border: active ? "1px solid rgba(139,92,246,0.55)" : "1px solid rgba(255,255,255,0.08)",
+                      background: active ? "rgba(139,92,246,0.12)" : "rgba(255,255,255,0.04)",
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="dish-variant"
+                      checked={active}
+                      onChange={() => setSelId(String(v.id))}
+                      style={{ accentColor: "#a78bfa", width: 18, height: 18, flexShrink: 0 }}
+                    />
+                    <span style={{ flex: 1, fontSize: "13px", color: "rgba(244,241,234,0.92)", fontFamily: "var(--font-body)" }}>{lab}</span>
+                    <span style={{ fontFamily: "var(--font-display)", fontSize: "17px", color: "var(--gold-light)", flexShrink: 0 }}>₾{formatLari(pr)}</span>
+                  </label>
+                );
+              })}
+            </div>
+            <button
+              type="button"
+              disabled={!selected}
+              onClick={() => {
+                if (selected) onConfirm(String(selected.id));
+              }}
+              style={{
+                marginTop: "16px",
+                width: "100%",
+                padding: "14px 16px",
+                borderRadius: "12px",
+                border: "none",
+                cursor: selected ? "pointer" : "not-allowed",
+                opacity: selected ? 1 : 0.5,
+                fontFamily: "var(--font-body)",
+                fontSize: "11px",
+                fontWeight: 700,
+                letterSpacing: "0.14em",
+                textTransform: "uppercase",
+                color: "#faf5ff",
+                background: "linear-gradient(135deg, #6d28d9, #7c3aed)",
+                boxShadow: "0 8px 28px rgba(109,40,217,0.35)",
+              }}
+            >
+              {t.addToCart} · ₾{formatLari(selPrice)}
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
    CUSTOMER MENU
 ═══════════════════════════════════════════════════════════════════════════ */
@@ -1989,6 +2239,8 @@ function CustomerMenu({ tableId, store, lang }) {
   const [expanded, setExpanded] = useState(null);
   const [cart, setCart] = useState({});
   const [cartOpen, setCartOpen] = useState(false);
+  /** Dish with `priceVariants` — open picker modal (local + future DB). */
+  const [variantModalDish, setVariantModalDish] = useState(null);
   const catRefs = useRef({});
   const headerRef = useRef(null);
   const catScrollRef = useRef(null);
@@ -1999,38 +2251,44 @@ function CustomerMenu({ tableId, store, lang }) {
 
   const cartLines = useMemo(() => {
     return Object.entries(cart)
-      .map(([idStr, qty]) => ({ id: idStr, qty: Number(qty) || 0 }))
+      .map(([key, qty]) => ({ key, qty: Number(qty) || 0 }))
       .filter(({ qty }) => qty > 0)
-      .map(({ id, qty }) => {
-        const dish = dishes.find((d) => String(d.id) === id);
+      .map(({ key, qty }) => {
+        const { dishId, variantId } = parseCartLineKey(key);
+        const dish = dishes.find((d) => String(d.id) === String(dishId));
         if (!dish || !dish.available) return null;
-        const unitCents = priceToCents(dish.price);
+        const unit = unitPriceForCartLine(dish, variantId);
+        const unitCents = priceToCents(unit);
         const lineTotal = (unitCents * qty) / 100;
-        return { dish, qty, lineTotal };
+        const vRow = variantId ? dishPriceVariants(dish).find((x) => String(x.id) === String(variantId)) : null;
+        const variantLabelText = vRow ? variantOptionLabel(vRow, lang) : "";
+        return { key, dish, qty, lineTotal, unitPrice: unit, variantLabelText };
       })
       .filter(Boolean);
-  }, [cart, dishes]);
+  }, [cart, dishes, lang]);
 
   const cartGrandTotal = useMemo(
-    () => cartLines.reduce((s, l) => s + priceToCents(l.dish.price) * l.qty, 0) / 100,
+    () => cartLines.reduce((s, l) => s + priceToCents(l.unitPrice) * l.qty, 0) / 100,
     [cartLines]
   );
   const cartItemCount = useMemo(() => cartLines.reduce((s, l) => s + l.qty, 0), [cartLines]);
 
-  const addToCart = useCallback((dish) => {
+  const addToCart = useCallback((dish, variantId) => {
     if (!dish?.available) return;
-    setCart((c) => ({ ...c, [dish.id]: (c[dish.id] || 0) + 1 }));
+    const vid = variantId != null && variantId !== "" ? String(variantId) : null;
+    const key = cartLineKey(dish.id, vid);
+    setCart((c) => ({ ...c, [key]: (c[key] || 0) + 1 }));
   }, []);
 
-  const bumpCartQty = useCallback((dishId, delta) => {
+  const bumpCartQty = useCallback((lineKey, delta) => {
     setCart((c) => {
-      const prev = c[dishId] || 0;
+      const prev = c[lineKey] || 0;
       const next = prev + delta;
       if (next <= 0) {
-        const { [dishId]: _, ...rest } = c;
+        const { [lineKey]: _, ...rest } = c;
         return rest;
       }
-      return { ...c, [dishId]: next };
+      return { ...c, [lineKey]: next };
     });
   }, []);
 
@@ -2046,7 +2304,8 @@ function CustomerMenu({ tableId, store, lang }) {
       const next = { ...prev };
       let changed = false;
       for (const k of Object.keys(next)) {
-        if (!ids.has(k)) {
+        const { dishId } = parseCartLineKey(k);
+        if (!ids.has(dishId)) {
           delete next[k];
           changed = true;
         }
@@ -2312,9 +2571,10 @@ function CustomerMenu({ tableId, store, lang }) {
                   style={{ animationDelay:`${(gi*3+di)*0.06}s` }}
                   expanded={expanded===dish.id}
                   onToggle={() => { setExpanded(expanded===dish.id?null:dish.id); trackView(dish.id); }}
-                  cartQty={cart[dish.id] || 0}
+                  cartQty={sumCartQtyForDish(cart, dish.id)}
                   onAddToCart={addToCart}
-                  onBumpCartQty={bumpCartQty} />
+                  onBumpCartQty={bumpCartQty}
+                  onOpenVariantModal={(d) => setVariantModalDish(d)} />
               ))}
               {cat.dishes.length === 0 && (
                 <div style={{ padding:"10px 4px 2px", color:"var(--muted)", fontSize:"11px", letterSpacing:"0.03em" }}>
@@ -2369,8 +2629,8 @@ function CustomerMenu({ tableId, store, lang }) {
               {cartLines.length === 0 ? (
                 <div style={{ textAlign:"center", padding:"36px 12px", color:"var(--muted)", fontSize:"13px", fontFamily:"var(--font-display)", fontStyle:"italic" }}>{t.emptyCart}</div>
               ) : (
-                cartLines.map(({ dish, qty, lineTotal }) => (
-                  <div key={dish.id} style={{
+                cartLines.map(({ key, dish, qty, lineTotal, unitPrice, variantLabelText }) => (
+                  <div key={key} style={{
                     display:"flex", gap:"12px", alignItems:"center", padding:"12px 0",
                     borderBottom:"1px solid rgba(255,255,255,0.05)",
                   }}>
@@ -2385,16 +2645,19 @@ function CustomerMenu({ tableId, store, lang }) {
                     />
                     <div style={{ flex:1, minWidth:0 }}>
                       <div style={{ fontFamily:"var(--font-display)", fontSize:"15px", color:"var(--cream)", lineHeight:1.25 }}>{dish.name[lang]}</div>
-                      <div style={{ fontSize:"10px", color:"var(--muted)", marginTop:"4px" }}>₾{formatLari(dish.price)} × {qty}</div>
+                      {variantLabelText ? (
+                        <div style={{ fontSize:"10px", color:"rgba(201,169,98,0.75)", marginTop:"3px" }}>{variantLabelText}</div>
+                      ) : null}
+                      <div style={{ fontSize:"10px", color:"var(--muted)", marginTop:"4px" }}>₾{formatLari(unitPrice)} × {qty}</div>
                     </div>
                     <div onClick={(e) => e.stopPropagation()} style={{ display:"flex", alignItems:"center", gap:"4px", flexShrink:0 }}>
-                      <button type="button" className="menu-cart-sheet-qty-btn" aria-label={t.cartQty + " −"} onClick={() => bumpCartQty(dish.id, -1)}>−</button>
+                      <button type="button" className="menu-cart-sheet-qty-btn" aria-label={t.cartQty + " −"} onClick={() => bumpCartQty(key, -1)}>−</button>
                       <span style={{ minWidth:"22px", textAlign:"center", fontSize:"12px", color:"var(--gold-pale)", fontWeight:600 }}>{qty}</span>
                       <button
                         type="button"
                         className={`menu-cart-sheet-qty-btn menu-cart-sheet-qty-btn--plus`}
                         aria-label={t.cartQty + " +"}
-                        onClick={() => dish.available && bumpCartQty(dish.id, 1)}
+                        onClick={() => dish.available && bumpCartQty(key, 1)}
                         disabled={!dish.available}
                       >+</button>
                     </div>
@@ -2445,6 +2708,19 @@ function CustomerMenu({ tableId, store, lang }) {
         </div>
       </div>
 
+      {variantModalDish && dishPriceVariants(variantModalDish).length > 0 && (
+        <DishVariantModal
+          dish={variantModalDish}
+          lang={lang}
+          t={t}
+          onClose={() => setVariantModalDish(null)}
+          onConfirm={(variantId) => {
+            addToCart(variantModalDish, variantId);
+            setVariantModalDish(null);
+          }}
+        />
+      )}
+
       {/* TOAST */}
       {toast && (
         <div style={{
@@ -2487,7 +2763,7 @@ function dishBlurbText(dish, lang) {
   return "";
 }
 
-function DishRow({ dish, lang, t, expanded, onToggle, style, cartQty = 0, onAddToCart, onBumpCartQty }) {
+function DishRow({ dish, lang, t, expanded, onToggle, style, cartQty = 0, onAddToCart, onBumpCartQty, onOpenVariantModal }) {
   const [addPulse, setAddPulse] = useState(false);
   const addPulseTimerRef = useRef(null);
   const nameObj = dish.name && typeof dish.name === "object" ? dish.name : {};
@@ -2496,6 +2772,8 @@ function DishRow({ dish, lang, t, expanded, onToggle, style, cartQty = 0, onAddT
   const badges = Array.isArray(dish.badges) ? dish.badges : [];
   const displayBadges = dish.featured ? badges.filter((b) => b !== "Chef's Table") : badges;
   const ingredients = Array.isArray(dish.ingredients) ? dish.ingredients : [];
+  const hasVariants = dishPriceVariants(dish).length > 0;
+  const mmPrice = minMaxVariantPrice(dish);
 
   const badgeLine = (b) => {
     if (b === "Chef's Table") return t.chefChoice;
@@ -2609,47 +2887,84 @@ function DishRow({ dish, lang, t, expanded, onToggle, style, cartQty = 0, onAddT
             ) : null}
           </div>
           <div className="menu-dish-price-row" style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginTop:"12px", gap:"10px" }}>
-            <div className="menu-dish-price">₾{formatLari(dish.price)}</div>
+            <div className="menu-dish-price">
+              {mmPrice ? `₾${formatLari(mmPrice.min)} – ₾${formatLari(mmPrice.max)}` : `₾${formatLari(dish.price)}`}
+            </div>
             <div className="menu-dish-price-controls" style={{ display:"flex", alignItems:"center", gap:"10px", flexShrink:0 }}>
               <div
                 onClick={(e) => e.stopPropagation()}
                 onKeyDown={(e) => e.stopPropagation()}
                 style={{ display:"flex", alignItems:"center", gap:"6px" }}
               >
-                {cartQty > 0 && (
+                {hasVariants ? (
                   <>
-                    <button type="button" className="menu-cart-step" aria-label={t.cartQty + " −"} onClick={() => onBumpCartQty(dish.id, -1)}>−</button>
-                    <span style={{ minWidth:"20px", textAlign:"center", fontSize:"12px", fontWeight:600, color:"rgba(212,247,242,0.95)" }}>{cartQty}</span>
+                    {cartQty > 0 && (
+                      <span
+                        style={{
+                          minWidth: "22px",
+                          textAlign: "center",
+                          fontSize: "11px",
+                          fontWeight: 700,
+                          color: "rgba(201,169,98,0.95)",
+                          letterSpacing: "0.06em",
+                        }}
+                        aria-label={t.cartQty}
+                      >
+                        ×{cartQty}
+                      </span>
+                    )}
                     <button
                       type="button"
-                      className={`menu-cart-step menu-cart-step--plus${addPulse ? " menu-cart-step--pulse" : ""}`}
-                      aria-label={t.cartQty + " +"}
+                      className={`menu-add-btn${addPulse ? " menu-add-btn--pulse" : ""}`}
                       disabled={!dish.available}
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         if (!dish.available) return;
-                        onBumpCartQty(dish.id, 1);
+                        onOpenVariantModal?.(dish);
                         triggerAddPulse();
                       }}
-                      style={{ opacity: dish.available ? 1 : 0.35, cursor: dish.available ? "pointer" : "not-allowed" }}
                     >
-                      +
+                      {cartQty > 0 ? t.addToCart : t.chooseOptions}
                     </button>
                   </>
-                )}
-                {cartQty === 0 && (
-                  <button
-                    type="button"
-                    className={`menu-add-btn${addPulse ? " menu-add-btn--pulse" : ""}`}
-                    disabled={!dish.available}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (!dish.available) return;
-                      onAddToCart(dish);
-                      triggerAddPulse();
-                    }}
-                  >
-                    {t.addToCart}
-                  </button>
+                ) : (
+                  <>
+                    {cartQty > 0 && (
+                      <>
+                        <button type="button" className="menu-cart-step" aria-label={t.cartQty + " −"} onClick={() => onBumpCartQty(String(dish.id), -1)}>−</button>
+                        <span style={{ minWidth:"20px", textAlign:"center", fontSize:"12px", fontWeight:600, color:"rgba(212,247,242,0.95)" }}>{cartQty}</span>
+                        <button
+                          type="button"
+                          className={`menu-cart-step menu-cart-step--plus${addPulse ? " menu-cart-step--pulse" : ""}`}
+                          aria-label={t.cartQty + " +"}
+                          disabled={!dish.available}
+                          onClick={() => {
+                            if (!dish.available) return;
+                            onBumpCartQty(String(dish.id), 1);
+                            triggerAddPulse();
+                          }}
+                          style={{ opacity: dish.available ? 1 : 0.35, cursor: dish.available ? "pointer" : "not-allowed" }}
+                        >
+                          +
+                        </button>
+                      </>
+                    )}
+                    {cartQty === 0 && (
+                      <button
+                        type="button"
+                        className={`menu-add-btn${addPulse ? " menu-add-btn--pulse" : ""}`}
+                        disabled={!dish.available}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!dish.available) return;
+                          onAddToCart(dish, null);
+                          triggerAddPulse();
+                        }}
+                      >
+                        {t.addToCart}
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
               <div className="menu-expand-chevron" style={{ transform: expanded ? "rotate(180deg)" : "rotate(0deg)" }} aria-hidden="true">▾</div>
@@ -3302,6 +3617,7 @@ function AdminMenu({ store }) {
     image: "",
     ingredients: [],
     badges: [],
+    priceVariants: [],
     available: true,
     featured: false,
   }), [sortedCats]);
@@ -3315,6 +3631,7 @@ function AdminMenu({ store }) {
     image: "",
     ingredients: [],
     badges: [],
+    priceVariants: [],
     available: true,
     featured: false,
   }));
@@ -3325,7 +3642,22 @@ function AdminMenu({ store }) {
   }, [categories]);
 
   const openNew = () => { setDishCloudErr(null); setForm(emptyDish()); setModal("new"); };
-  const openEdit = (d) => { setDishCloudErr(null); setForm({ ...d, ingredients: [...d.ingredients] }); setModal(d.id); };
+  const openEdit = (d) => {
+    setDishCloudErr(null);
+    const pv = Array.isArray(d.priceVariants)
+      ? d.priceVariants.map((v) => ({
+          id: String(v?.id ?? ""),
+          price: v?.price ?? "",
+          label: {
+            en: String(v?.label?.en ?? ""),
+            ka: String(v?.label?.ka ?? ""),
+            ru: String(v?.label?.ru ?? ""),
+          },
+        }))
+      : [];
+    setForm({ ...d, ingredients: [...(d.ingredients || [])], priceVariants: pv });
+    setModal(d.id);
+  };
 
   const save = async () => {
     setDishCloudErr(null);
@@ -3342,7 +3674,8 @@ function AdminMenu({ store }) {
       setDishCloudErr("Enter a valid price.");
       return;
     }
-    let payload = { ...form, price: priceNum, categoryId: Number(form.categoryId) };
+    const priceVariantsClean = normalizePriceVariantsFromRow(form.priceVariants);
+    let payload = { ...form, price: priceNum, categoryId: Number(form.categoryId), priceVariants: priceVariantsClean };
     if (modal === "new") {
       const maxOrder = dishes.filter((d) => d.categoryId === payload.categoryId).reduce((m, d) => Math.max(m, d.order ?? 0), 0);
       payload = { ...payload, order: maxOrder + 1 };
@@ -3680,6 +4013,7 @@ function AdminMenu({ store }) {
           const cat = categories.find(c=>c.id===dish.categoryId);
           const sibs = dishesByCatSorted.get(dish.categoryId) || [];
           const di = sibs.findIndex((x) => String(x.id) === String(dish.id));
+          const mmAd = minMaxVariantPrice(dish);
           return (
             <div key={dish.id} style={{ background:"var(--charcoal)", border:"1px solid rgba(255,255,255,0.06)", overflow:"hidden" }}>
               <div style={{ position:"relative", height:"160px" }}>
@@ -3695,7 +4029,9 @@ function AdminMenu({ store }) {
                 <div style={{ position:"absolute", inset:0, background:"linear-gradient(0deg, rgba(7,6,8,0.7) 0%, transparent 60%)" }} />
                 <div style={{ position:"absolute", bottom:"10px", left:"12px", right:"12px", display:"flex", justifyContent:"space-between", alignItems:"flex-end" }}>
                   <div style={{ fontFamily:"var(--font-display)", fontSize:"18px", fontStyle:"italic", color:"#fff" }}>{dish.name.en}</div>
-                  <div style={{ fontFamily:"var(--font-display)", fontSize:"20px", color:"var(--gold-light)" }}>₾{formatLari(dish.price)}</div>
+                  <div style={{ fontFamily:"var(--font-display)", fontSize:"20px", color:"var(--gold-light)" }}>
+                    {mmAd ? `₾${formatLari(mmAd.min)}–${formatLari(mmAd.max)}` : `₾${formatLari(dish.price)}`}
+                  </div>
                 </div>
                 <div style={{ position:"absolute", top:"8px", right:"8px", display:"flex", gap:"4px", flexWrap:"wrap" }}>
                   {dish.badges.map((b, bi) => <span key={`${dish.id}-ab-${bi}-${b}`} style={{ background:BADGE_CFG[b]?.bg||"#333", color:BADGE_CFG[b]?.color||"#fff", fontSize:"7px", padding:"2px 6px", fontWeight:"700", letterSpacing:"1px" }}>{b}</span>)}
@@ -3840,6 +4176,115 @@ function DishFormAdmin({ form, setForm, categories }) {
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"16px" }}>
         <div><label style={labelStyle}>Price (₾)</label><input type="number" min={0} step="any" inputMode="decimal" value={form.price === "" || form.price == null ? "" : form.price} onChange={(e) => set("price", e.target.value)} style={inputStyle} /></div>
         <div><label style={labelStyle}>Image URL</label><input value={form.image} onChange={e=>set("image",e.target.value)} style={inputStyle} /></div>
+      </div>
+      <div>
+        <label style={labelStyle}>Sizes / prices (optional)</label>
+        <div style={{ fontSize:"10px", color:"var(--muted)", marginBottom:"10px", lineHeight:1.5 }}>
+          Leave empty for a single price only. For wine: add rows (e.g. <strong style={{ color:"var(--cream)" }}>bottle</strong> / <strong style={{ color:"var(--cream)" }}>glass</strong>) with ID, ₾, and labels — guest menu opens the picker modal.
+        </div>
+        {(form.priceVariants || []).map((v, i) => (
+          <div
+            key={`pv-${i}-${v.id}`}
+            style={{
+              border: "1px solid rgba(61,191,176,0.18)",
+              borderRadius: "6px",
+              padding: "12px 12px 10px",
+              marginBottom: "10px",
+              background: "rgba(0,0,0,0.2)",
+            }}
+          >
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "10px" }}>
+              <div>
+                <label style={{ ...labelStyle, fontSize: "7px" }}>Variant ID</label>
+                <input
+                  value={v.id ?? ""}
+                  onChange={(e) => {
+                    const nv = [...(form.priceVariants || [])];
+                    nv[i] = { ...nv[i], id: e.target.value };
+                    setForm((p) => ({ ...p, priceVariants: nv }));
+                  }}
+                  placeholder="bottle"
+                  style={{ ...inputStyle, fontFamily: "var(--font-body)", fontSize: "12px" }}
+                />
+              </div>
+              <div>
+                <label style={{ ...labelStyle, fontSize: "7px" }}>Price (₾)</label>
+                <input
+                  type="number"
+                  min={0}
+                  step="any"
+                  inputMode="decimal"
+                  value={v.price === "" || v.price == null ? "" : v.price}
+                  onChange={(e) => {
+                    const nv = [...(form.priceVariants || [])];
+                    nv[i] = { ...nv[i], price: e.target.value };
+                    setForm((p) => ({ ...p, priceVariants: nv }));
+                  }}
+                  style={{ ...inputStyle, fontFamily: "var(--font-body)", fontSize: "12px" }}
+                />
+              </div>
+            </div>
+            {["en", "ka", "ru"].map((l) => (
+              <div key={l} style={{ marginBottom: "8px" }}>
+                <label style={{ ...labelStyle, fontSize: "7px" }}>Label ({l.toUpperCase()})</label>
+                <input
+                  value={v.label?.[l] ?? ""}
+                  onChange={(e) => {
+                    const nv = [...(form.priceVariants || [])];
+                    nv[i] = { ...nv[i], label: { ...(nv[i].label || {}), [l]: e.target.value } };
+                    setForm((p) => ({ ...p, priceVariants: nv }));
+                  }}
+                  style={{ ...inputStyle, fontFamily: "var(--font-body)", fontSize: "12px" }}
+                />
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={() =>
+                setForm((p) => ({
+                  ...p,
+                  priceVariants: (p.priceVariants || []).filter((_, j) => j !== i),
+                }))
+              }
+              style={{
+                marginTop: "4px",
+                padding: "6px 12px",
+                fontSize: "9px",
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                border: "1px solid rgba(239,68,68,0.35)",
+                background: "transparent",
+                color: "#fca5a5",
+                cursor: "pointer",
+                fontFamily: "var(--font-body)",
+              }}
+            >
+              Remove row
+            </button>
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={() =>
+            setForm((p) => ({
+              ...p,
+              priceVariants: [...(p.priceVariants || []), { id: `v${Date.now()}`, price: "", label: { en: "", ka: "", ru: "" } }],
+            }))
+          }
+          style={{
+            padding: "8px 14px",
+            fontSize: "9px",
+            letterSpacing: "0.14em",
+            textTransform: "uppercase",
+            border: "1px solid rgba(61,191,176,0.35)",
+            background: "rgba(61,191,176,0.08)",
+            color: "var(--gold-pale)",
+            cursor: "pointer",
+            fontFamily: "var(--font-body)",
+          }}
+        >
+          + Add size / price row
+        </button>
       </div>
       <div>
         <label style={labelStyle}>Distinctions</label>
