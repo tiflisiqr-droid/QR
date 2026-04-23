@@ -20,6 +20,15 @@ import { createClient } from "@supabase/supabase-js";
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+if (import.meta.env.DEV && typeof supabaseUrl === "string" && supabaseUrl.length > 0) {
+  const u = supabaseUrl.toLowerCase();
+  if (u.includes("supabase.com/dashboard") || u.includes("app.supabase.com")) {
+    console.warn(
+      "[Supabase] VITE_SUPABASE_URL looks like a dashboard link. Use the API URL from Project Settings → API, e.g. https://YOUR_REF.supabase.co (then restart npm run dev)."
+    );
+  }
+}
+
 export const supabase =
   typeof supabaseUrl === "string" &&
   supabaseUrl.length > 0 &&
