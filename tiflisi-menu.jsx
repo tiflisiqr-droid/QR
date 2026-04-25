@@ -505,8 +505,8 @@ const SOCIAL_TOP_ITEMS = [
   },
   {
     env: "VITE_LINK_GOOGLE",
-    label: "Google",
-    brand: "googlemaps",
+    label: "Google Reviews",
+    brand: "google",
     fallback: "https://g.page/r/CcKkKc1ypmCgEAE/review",
     bg: "#4285F4",
     border: "#4285F4",
@@ -514,9 +514,10 @@ const SOCIAL_TOP_ITEMS = [
   },
   {
     env: "VITE_LINK_TRIPADVISOR",
-    label: "Tripadvisor",
+    label: "Tripadvisor Review",
     brand: "tripadvisor",
-    fallback: "https://www.tripadvisor.com/Search?q=Tiflisi+Batumi",
+    fallback:
+      "https://www.tripadvisor.com/UserReviewEdit-g297576-d25448146-Restaurant_Tiflisi-Batumi_Adjara_Region.html",
     bg: "#00AF87",
     border: "#00AF87",
     mode: "icon",
@@ -566,7 +567,7 @@ function socialAccentFromItem(item) {
   if (typeof item.border === "string" && /^#[0-9A-Fa-f]{3,8}$/.test(item.border)) return item.border;
   if (item.brand === "instagram") return "#E1306C";
   if (item.brand === "facebook") return "#1877F2";
-  if (item.brand === "googlemaps") return "#4285F4";
+  if (item.brand === "google" || item.brand === "googlemaps") return "#4285F4";
   if (item.brand === "tripadvisor") return "#00AF87";
   return "#3dbfb0";
 }
