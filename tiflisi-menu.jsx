@@ -3326,7 +3326,7 @@ function WelcomeScreen({ onChooseLang, tableId, tables, onTableChange }) {
 
   useEffect(() => {
     let cancelled = false;
-    import("./hero picture.jpeg")
+    import("./hero picture.png")
       .then((m) => {
         if (!cancelled && m?.default) setHeroUrl(m.default);
       })
