@@ -28,6 +28,12 @@ import {
   normalizePriceVariantsFromRow,
 } from "./src/supabaseMenu.js";
 
+/** Category id match (localStorage / JSON may stringify integers vs DB numbers). */
+function sameCategoryId(a, b) {
+  if (a == null || b == null) return a == null && b == null;
+  return String(a) === String(b);
+}
+
 /* ─── GOOGLE FONTS INJECTION ─────────────────────────────────────────────── */
 const FontLoader = () => {
   useEffect(() => {
@@ -2343,10 +2349,12 @@ function CustomerMenu({ tableId, store, lang }) {
     const base = sortedCategories
       .map((cat) => ({
         ...cat,
-        dishes: filtered.filter((d) => d.categoryId === cat.id).sort(byOrder),
+        dishes: filtered.filter((d) => sameCategoryId(d.categoryId, cat.id)).sort(byOrder),
       }));
     const visibleBase = searchQuery ? base.filter((c) => c.dishes.length > 0) : base;
-    const orphan = filtered.filter((d) => !sortedCategories.some((c) => c.id === d.categoryId)).sort(byOrder);
+    const orphan = filtered
+      .filter((d) => !sortedCategories.some((c) => sameCategoryId(c.id, d.categoryId)))
+      .sort(byOrder);
     if (orphan.length === 0) return visibleBase;
     return [
       ...visibleBase,
@@ -3660,7 +3668,12 @@ function AdminMenu({ store }) {
           },
         }))
       : [];
-    setForm({ ...d, ingredients: [...(d.ingredients || [])], priceVariants: pv });
+    setForm({
+      ...d,
+      ingredients: [...(d.ingredients || [])],
+      badges: [...(d.badges || [])],
+      priceVariants: pv,
+    });
     setModal(d.id);
   };
 
@@ -3804,7 +3817,7 @@ function AdminMenu({ store }) {
   };
   const delCategory = async (id) => {
     setCategoryError(null);
-    if (dishes.some(d => d.categoryId === id)) {
+    if (dishes.some((d) => sameCategoryId(d.categoryId, id))) {
       setCategoryError("Reassign or remove dishes in this category before deleting.");
       return;
     }
@@ -3813,7 +3826,7 @@ function AdminMenu({ store }) {
       try {
         await deleteMenuCategory(id);
         setCategories((p) => p.filter((c) => c.id !== id));
-        if (filter === id) setFilter(null);
+        if (filter != null && sameCategoryId(filter, id)) setFilter(null);
         clearMenuError();
       } catch (e) {
         setCategoryError(e?.message || "Could not delete category");
@@ -3823,7 +3836,7 @@ function AdminMenu({ store }) {
       return;
     }
     setCategories(p => p.filter(c => c.id !== id));
-    if (filter === id) setFilter(null);
+    if (filter != null && sameCategoryId(filter, id)) setFilter(null);
   };
 
   /** Swap position in sorted list, then renumber order 1…n so guest menu & nav stay consistent. */
@@ -3859,7 +3872,7 @@ function AdminMenu({ store }) {
   const dishesByCatSorted = useMemo(() => {
     const m = new Map();
     for (const d of dishes) {
-      const k = d.categoryId;
+      const k = String(d.categoryId);
       if (!m.has(k)) m.set(k, []);
       m.get(k).push(d);
     }
@@ -3870,13 +3883,14 @@ function AdminMenu({ store }) {
   }, [dishes]);
 
   const shownSorted = useMemo(() => {
-    const base = filter != null ? dishes.filter((d) => d.categoryId === filter) : [...dishes];
+    const base =
+      filter != null ? dishes.filter((d) => sameCategoryId(d.categoryId, filter)) : [...dishes];
     const byOrder = (a, b) => ((a.order ?? 0) - (b.order ?? 0)) || String(a.id).localeCompare(String(b.id));
     if (filter != null) return base.sort(byOrder);
-    const catIdx = new Map(sortedCats.map((c, i) => [c.id, i]));
+    const catIdx = new Map(sortedCats.map((c, i) => [String(c.id), i]));
     return base.sort((a, b) => {
-      const ia = catIdx.has(a.categoryId) ? catIdx.get(a.categoryId) : 999;
-      const ib = catIdx.has(b.categoryId) ? catIdx.get(b.categoryId) : 999;
+      const ia = catIdx.has(String(a.categoryId)) ? catIdx.get(String(a.categoryId)) : 999;
+      const ib = catIdx.has(String(b.categoryId)) ? catIdx.get(String(b.categoryId)) : 999;
       if (ia !== ib) return ia - ib;
       return byOrder(a, b);
     });
@@ -3890,7 +3904,7 @@ function AdminMenu({ store }) {
       const catId = row.categoryId;
       let orderById = null;
       setDishes((prev) => {
-        const inCat = prev.filter((d) => d.categoryId === catId);
+        const inCat = prev.filter((d) => sameCategoryId(d.categoryId, catId));
         const sorted = [...inCat].sort((a, b) => ((a.order ?? 0) - (b.order ?? 0)) || String(a.id).localeCompare(String(b.id)));
         const idx = sorted.findIndex((x) => String(x.id) === String(dishId));
         const j = idx + delta;
@@ -3902,7 +3916,9 @@ function AdminMenu({ store }) {
           map[d.id] = i + 1;
         });
         orderById = map;
-        return prev.map((d) => (d.categoryId !== catId ? d : { ...d, order: map[d.id] ?? d.order ?? 0 }));
+        return prev.map((d) =>
+          sameCategoryId(d.categoryId, catId) ? { ...d, order: map[d.id] ?? d.order ?? 0 } : d
+        );
       });
       if (!syncDishesToSupabase || !orderById) return;
       setDishSaving(true);
@@ -4006,7 +4022,15 @@ function AdminMenu({ store }) {
       )}
       <div style={{ display:"flex", gap:"6px", marginBottom:"24px", flexWrap:"wrap" }}>
         <CatBtn active={!filter} onClick={()=>setFilter(null)} label="All" />
-        {sortedCats.map(c=><CatBtn key={c.id} active={filter===c.id} onClick={()=>setFilter(c.id)} label={c.name.en} icon={c.icon} />)}
+        {sortedCats.map((c) => (
+          <CatBtn
+            key={c.id}
+            active={filter != null && sameCategoryId(filter, c.id)}
+            onClick={() => setFilter(c.id)}
+            label={c.name.en}
+            icon={c.icon}
+          />
+        ))}
       </div>
 
       <div style={{ fontSize:"10px", color:"var(--muted)", marginBottom:"12px", letterSpacing:"0.3px", lineHeight:1.5 }}>
@@ -4015,8 +4039,8 @@ function AdminMenu({ store }) {
 
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(min(100%, 260px), 1fr))", gap:"12px" }}>
         {shownSorted.map(dish => {
-          const cat = categories.find(c=>c.id===dish.categoryId);
-          const sibs = dishesByCatSorted.get(dish.categoryId) || [];
+          const cat = categories.find((c) => sameCategoryId(c.id, dish.categoryId));
+          const sibs = dishesByCatSorted.get(String(dish.categoryId)) || [];
           const di = sibs.findIndex((x) => String(x.id) === String(dish.id));
           const mmAd = minMaxVariantPrice(dish);
           return (
@@ -4876,8 +4900,7 @@ export default function App() {
     if (typeof window === "undefined") return false;
     return pathMatchesAdmin(window.location.pathname);
   });
-  const savedLang = readSavedWelcomeLang();
-  const [lang, setLang] = useState(savedLang ?? "ka");
+  const [lang, setLang] = useState(() => readSavedWelcomeLang() ?? "ka");
   const [tableId, setTableId] = useState(() => readTableIdFromUrl() ?? 1);
   const [adminAuth, setAdminAuth] = useState(false);
   const [showWelcomePreloader, setShowWelcomePreloader] = useState(true);

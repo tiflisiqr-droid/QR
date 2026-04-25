@@ -26,7 +26,7 @@ export default defineConfig({
         manualChunks(id) {
           if (!id.includes("node_modules")) return;
           if (id.includes("react-router")) return "router";
-          if (id.includes("@supabase")) return "supabase";
+          // Do not split @supabase into its own chunk: without env it tree-shakes to empty and Rollup warns.
           if (id.includes("react-dom") || /[/\\]node_modules[/\\]react[/\\]/.test(id)) return "react-vendor";
         },
       },

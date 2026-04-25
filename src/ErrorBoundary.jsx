@@ -13,6 +13,12 @@ export class ErrorBoundary extends Component {
     return { hasError: true, message: error?.message || String(error) };
   }
 
+  componentDidCatch(error, info) {
+    if (import.meta.env.DEV) {
+      console.error("ErrorBoundary:", error, info?.componentStack);
+    }
+  }
+
   render() {
     if (this.state.hasError) {
       return (
