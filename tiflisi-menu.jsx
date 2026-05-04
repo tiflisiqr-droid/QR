@@ -26,6 +26,12 @@ import {
   deleteMenuCategory,
   normalizePriceVariantsFromRow,
 } from "./src/supabaseMenu.js";
+import {
+  insertServiceAlert,
+  fetchServiceAlerts,
+  rowToNotification,
+  syncNotificationsToSupabase,
+} from "./src/supabaseAlerts.js";
 
 /** Category id match (localStorage / JSON may stringify integers vs DB numbers). */
 function sameCategoryId(a, b) {
@@ -107,6 +113,34 @@ function minMaxVariantPrice(dish) {
   return { min: Math.min(...prices), max: Math.max(...prices) };
 }
 
+/** Multiline text for `type: "order"` staff notification (guest language for dish names). */
+function formatOrderNotificationBody(cartLines, lang, tableLabel, grandTotal) {
+  const title =
+    lang === "ka" ? `შეკვეთა · ${tableLabel}` : lang === "ru" ? `Заказ · ${tableLabel}` : `Order · ${tableLabel}`;
+  const lines = cartLines.map(({ dish, qty, lineTotal, variantLabelText }) => {
+    const nameObj = dish?.name && typeof dish.name === "object" ? dish.name : {};
+    const name = String(nameObj[lang] || nameObj.en || nameObj.ka || "—").trim();
+    const varPart = variantLabelText ? ` · ${variantLabelText}` : "";
+    return `• ${name}${varPart} × ${qty} — ₾${formatLari(lineTotal)}`;
+  });
+  const totalWord = lang === "ka" ? "ჯამი" : lang === "ru" ? "Итого" : "Total";
+  return [title, "", ...lines, "", `${totalWord}: ₾${formatLari(grandTotal)}`].join("\n");
+}
+
+function notificationVisual(type) {
+  if (type === "waiter") return { icon: "✦", accent: "var(--gold)", sheetBg: "rgba(61,191,176,0.15)", sheetBd: "rgba(61,191,176,0.35)" };
+  if (type === "order") return { icon: "◎", accent: "#f59e0b", sheetBg: "rgba(245,158,11,0.18)", sheetBd: "rgba(245,158,11,0.45)" };
+  if (type === "bill") return { icon: "◇", accent: "#a78bfa", sheetBg: "rgba(139,92,246,0.15)", sheetBd: "rgba(167,139,250,0.35)" };
+  return { icon: "◌", accent: "var(--muted)", sheetBg: "rgba(255,255,255,0.06)", sheetBd: "rgba(255,255,255,0.12)" };
+}
+
+function staffNotificationLabel(type) {
+  if (type === "waiter") return "მიმტანის გამოძახება";
+  if (type === "order") return "შეკვეთა";
+  if (type === "bill") return "ანგარიშის მოთხოვნა";
+  return String(type || "");
+}
+
 function sumCartQtyForDish(cart, dishId) {
   const id = String(dishId);
   let sum = 0;
@@ -119,6 +153,55 @@ function sumCartQtyForDish(cart, dishId) {
 
 /** Shared across tabs so guest menu (/) and admin (/admin) see the same alerts. */
 const NOTIF_STORAGE_KEY = "tiflisi_notifications_v1";
+
+/** Staff session: last chosen seating zone (hall). */
+const STAFF_ZONE_STORAGE_KEY = "tiflisi_staff_zone_v1";
+
+function readStaffZoneSession(validZones) {
+  if (!Array.isArray(validZones) || validZones.length === 0) return null;
+  try {
+    const raw = sessionStorage.getItem(STAFF_ZONE_STORAGE_KEY);
+    if (!raw || !validZones.includes(raw)) return null;
+    return raw;
+  } catch {
+    return null;
+  }
+}
+
+function writeStaffZoneSession(zone) {
+  try {
+    sessionStorage.setItem(STAFF_ZONE_STORAGE_KEY, String(zone));
+  } catch {
+    /* ignore */
+  }
+}
+
+function clearStaffZoneSession() {
+  try {
+    sessionStorage.removeItem(STAFF_ZONE_STORAGE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+function uniqueZonesFromTables(tables) {
+  const set = new Set();
+  for (const t of tables || []) {
+    const z = typeof t?.zone === "string" && t.zone.trim() ? t.zone.trim() : "";
+    if (z) set.add(z);
+  }
+  return [...set].sort((a, b) => a.localeCompare(b, "ka"));
+}
+
+/** სტუმრის მაგიდის დარბაზი — ჯერ შენახული ველი, შემდეგ მაგიდის ძიება. */
+function resolveNotificationZone(n, tables) {
+  if (n?.tableZone != null && String(n.tableZone).trim()) return String(n.tableZone).trim();
+  const tid = n?.tableId;
+  if (tid == null) return null;
+  const row = (tables || []).find((t) => String(t.id) === String(tid));
+  const z = row?.zone;
+  return typeof z === "string" && z.trim() ? z.trim() : null;
+}
 
 /** Admin seating: persisted per browser (not in Supabase). */
 const TABLES_STORAGE_KEY = "tiflisi_tables_v1";
@@ -221,9 +304,9 @@ const BADGE_CFG = {
 };
 
 const T = {
-  en:{menu:"Menu",callWaiter:"Summon Waiter",requestBill:"Request Bill",ingredients:"Provenance",soldOut:"Unavailable",table:"Table",waiterCalled:"Your waiter is on the way.",billRequested:"Your bill is being prepared.",search:"Search the menu…",all:"All",adminLogin:"Staff Access",login:"Enter",dashboard:"Overview",menuMgmt:"Cuisine",tables:"Seating",notifications:"Alerts",analytics:"Insights",logout:"Exit",addDish:"New Dish",save:"Save",cancel:"Cancel",available:"Available",featured:"Recommended",chefChoice:"Chef's choice",badges:"Distinctions",badgeDry:"Dry",badgeSemiDry:"Semi-Dry",badgeSemiSweet:"Semi-Sweet",chooseOptions:"Choose size",cart:"Basket",cartTotal:"Total",addToCart:"Add",cartHint:"Estimated total for your selection (reference only).",emptyCart:"Your basket is empty.",cartQty:"Qty",cartClose:"Close"},
-  ka:{menu:"მენიუ",callWaiter:"მიმტანის გამოძახება",requestBill:"ანგარიშის მოთხოვნა",ingredients:"წარმომავლობა",soldOut:"მიუწვდომელი",table:"მაგიდა",waiterCalled:"მიმტანი მოდის.",billRequested:"ანგარიში მზადდება.",search:"მოძებნეთ…",all:"ყველა",adminLogin:"პერსონალი",login:"შესვლა",dashboard:"მიმოხილვა",menuMgmt:"სამზარეულო",tables:"მოსასვლელი",notifications:"შეტყობინებები",analytics:"ანალიტიკა",logout:"გამოსვლა",addDish:"ახალი კერძი",save:"შენახვა",cancel:"გაუქმება",available:"ხელმისაწვდომი",featured:"რეკომენდებული",chefChoice:"შეფის არჩევანი",badges:"გამოჩენილი",badgeDry:"მშრალი",badgeSemiDry:"ნახევრადმშრალი",badgeSemiSweet:"ნახევრადტკბილი",chooseOptions:"ზომა / ფასი",cart:"კალათა",cartTotal:"ჯამი",addToCart:"დამატება",cartHint:"არჩეული კერძების სავარაუდო ჯამი (საინფორმაციოდ).",emptyCart:"კალათა ცარიელია.",cartQty:"რაოდ.",cartClose:"დახურვა"},
-  ru:{menu:"Меню",callWaiter:"Позвать Официанта",requestBill:"Попросить Счёт",ingredients:"Происхождение",soldOut:"Недоступно",table:"Стол",waiterCalled:"Официант уже идёт.",billRequested:"Счёт готовится.",search:"Поиск…",all:"Все",adminLogin:"Персонал",login:"Войти",dashboard:"Обзор",menuMgmt:"Кухня",tables:"Места",notifications:"Оповещения",analytics:"Аналитика",logout:"Выйти",addDish:"Новое Блюдо",save:"Сохранить",cancel:"Отмена",available:"Доступно",featured:"Рекомендуем",chefChoice:"Выбор шефа",badges:"Отличия",badgeDry:"Сухое",badgeSemiDry:"Полусухое",badgeSemiSweet:"Полусладкое",chooseOptions:"Размер и цена",cart:"Корзина",cartTotal:"Итого",addToCart:"В корзину",cartHint:"Ориентировочная сумма выбранных блюд (справочно).",emptyCart:"Корзина пуста.",cartQty:"Кол-во",cartClose:"Закрыть"},
+  en:{menu:"Menu",callWaiter:"Summon Waiter",requestBill:"Request Bill",ingredients:"Provenance",soldOut:"Unavailable",table:"Table",waiterCalled:"Your waiter is on the way.",billRequested:"Your bill is being prepared.",search:"Search the menu…",all:"All",adminLogin:"Staff Access",login:"Enter",dashboard:"Overview",menuMgmt:"Cuisine",tables:"Seating",notifications:"Alerts",analytics:"Insights",logout:"Exit",addDish:"New Dish",save:"Save",cancel:"Cancel",available:"Available",featured:"Recommended",chefChoice:"Chef's choice",badges:"Distinctions",badgeDry:"Dry",badgeSemiDry:"Semi-Dry",badgeSemiSweet:"Semi-Sweet",chooseOptions:"Choose size",cart:"Basket",cartTotal:"Total",addToCart:"Add",cartHint:"Estimated total for your selection (reference only).",emptyCart:"Your basket is empty.",cartQty:"Qty",cartClose:"Close",submitOrder:"Submit order",confirmOrderTitle:"Send this order?",confirmOrderBody:"Staff will receive your table order in alerts (amount is indicative — confirm at the venue).",confirmOrderBtn:"Confirm & send",orderSent:"Order sent."},
+  ka:{menu:"მენიუ",callWaiter:"მიმტანის გამოძახება",requestBill:"ანგარიშის მოთხოვნა",ingredients:"წარმომავლობა",soldOut:"მიუწვდომელი",table:"მაგიდა",waiterCalled:"მიმტანი მოდის.",billRequested:"ანგარიში მზადდება.",search:"მოძებნეთ…",all:"ყველა",adminLogin:"პერსონალი",login:"შესვლა",dashboard:"მიმოხილვა",menuMgmt:"სამზარეულო",tables:"მოსასვლელი",notifications:"შეტყობინებები",analytics:"ანალიტიკა",logout:"გამოსვლა",addDish:"ახალი კერძი",save:"შენახვა",cancel:"გაუქმება",available:"ხელმისაწვდომი",featured:"რეკომენდებული",chefChoice:"შეფის არჩევანი",badges:"გამოჩენილი",badgeDry:"მშრალი",badgeSemiDry:"ნახევრადმშრალი",badgeSemiSweet:"ნახევრადტკბილი",chooseOptions:"ზომა / ფასი",cart:"კალათა",cartTotal:"ჯამი",addToCart:"დამატება",cartHint:"არჩეული კერძების სავარაუდო ჯამი (საინფორმაციოდ).",emptyCart:"კალათა ცარიელია.",cartQty:"რაოდ.",cartClose:"დახურვა",submitOrder:"შეკვეთის გაგზავნა",confirmOrderTitle:"გავაგზავნოთ შეკვეთა?",confirmOrderBody:"პერსონალი მიიღებს შეკვეთას შეტყობინებაში (ჯამი საინფორმაციოა — დაადასტურეთ ადგილზე).",confirmOrderBtn:"დადასტურება",orderSent:"შეკვეთა გაიგზავნა."},
+  ru:{menu:"Меню",callWaiter:"Позвать Официанта",requestBill:"Попросить Счёт",ingredients:"Происхождение",soldOut:"Недоступно",table:"Стол",waiterCalled:"Официант уже идёт.",billRequested:"Счёт готовится.",search:"Поиск…",all:"Все",adminLogin:"Персонал",login:"Войти",dashboard:"Обзор",menuMgmt:"Кухня",tables:"Места",notifications:"Оповещения",analytics:"Аналитика",logout:"Выйти",addDish:"Новое Блюдо",save:"Сохранить",cancel:"Отмена",available:"Доступно",featured:"Рекомендуем",chefChoice:"Выбор шефа",badges:"Отличия",badgeDry:"Сухое",badgeSemiDry:"Полусухое",badgeSemiSweet:"Полусладкое",chooseOptions:"Размер и цена",cart:"Корзина",cartTotal:"Итого",addToCart:"В корзину",cartHint:"Ориентировочная сумма выбранных блюд (справочно).",emptyCart:"Корзина пуста.",cartQty:"Кол-во",cartClose:"Закрыть",submitOrder:"Отправить заказ",confirmOrderTitle:"Отправить заказ?",confirmOrderBody:"Персонал получит заказ в оповещениях (сумма ориентировочная — уточните у официанта).",confirmOrderBtn:"Подтвердить",orderSent:"Заказ отправлен."},
 };
 
 /* ─── SHARED STATE ───────────────────────────────────────────────────────── */
@@ -239,28 +322,53 @@ function useStore() {
   const [tables, setTables] = useState(() => (supabaseEnabled ? [] : (loadTablesFromLocalStorage() ?? TABLES)));
   const [tablesLoading, setTablesLoading] = useState(!!supabaseEnabled);
   const [tablesError, setTablesError] = useState(null);
-  const [notifications, setNotificationsState] = useState(loadNotificationsFromStorage);
+  const [notifications, setNotificationsState] = useState(() =>
+    isSupabaseConfigured() ? [] : loadNotificationsFromStorage()
+  );
   const [analytics, setAnalytics] = useState({ scans: 247, views: { 1:18, 2:24, 3:31, 5:42, 9:28 } });
 
   const setNotifications = useCallback((updater) => {
     setNotificationsState((prev) => {
       const next = typeof updater === "function" ? updater(prev) : updater;
-      saveNotificationsToStorage(next);
+      if (!supabaseEnabled) {
+        saveNotificationsToStorage(next);
+      } else if (supabase) {
+        const prevSnap = prev;
+        queueMicrotask(() => {
+          syncNotificationsToSupabase(prevSnap, next).catch((err) => console.warn("[service_alerts]", err));
+        });
+      }
       return next;
     });
-  }, []);
+  }, [supabaseEnabled]);
 
-  const addNotification = useCallback((note) => {
-    setNotificationsState((prev) => {
-      const id = `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
-      const row = { ...note, id, time: new Date(), read: false };
-      const next = [row, ...prev].slice(0, 60);
-      saveNotificationsToStorage(next);
-      return next;
-    });
-  }, []);
+  const addNotification = useCallback(
+    async (note) => {
+      if (supabaseEnabled && supabase) {
+        try {
+          const row = await insertServiceAlert(note);
+          setNotificationsState((prev) => {
+            if (prev.some((n) => String(n.id) === String(row.id))) return prev;
+            return [row, ...prev].slice(0, 100);
+          });
+          return;
+        } catch (e) {
+          console.warn("service_alerts insert failed, using localStorage", e);
+        }
+      }
+      setNotificationsState((prev) => {
+        const id = `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+        const row = { ...note, id, time: new Date(), read: false };
+        const next = [row, ...prev].slice(0, 60);
+        saveNotificationsToStorage(next);
+        return next;
+      });
+    },
+    [supabaseEnabled]
+  );
 
   useEffect(() => {
+    if (supabaseEnabled) return;
     const onStorage = (e) => {
       if (e.key !== NOTIF_STORAGE_KEY || e.newValue == null) return;
       try {
@@ -276,7 +384,62 @@ function useStore() {
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
-  }, []);
+  }, [supabaseEnabled]);
+
+  useEffect(() => {
+    if (!supabaseEnabled || !supabase) return;
+    let cancelled = false;
+    fetchServiceAlerts(100)
+      .then((rows) => {
+        if (!cancelled) setNotificationsState(rows);
+      })
+      .catch((e) => console.warn("[service_alerts] load", e));
+    return () => {
+      cancelled = true;
+    };
+  }, [supabaseEnabled]);
+
+  useEffect(() => {
+    if (!supabaseEnabled || !supabase) return;
+    const ch = supabase
+      .channel("service_alerts_realtime")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "service_alerts" },
+        (payload) => {
+          const row = rowToNotification(payload.new);
+          if (!row) return;
+          setNotificationsState((prev) => {
+            if (prev.some((n) => String(n.id) === String(row.id))) return prev;
+            return [row, ...prev].slice(0, 100);
+          });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "service_alerts" },
+        (payload) => {
+          const row = rowToNotification(payload.new);
+          if (!row) return;
+          setNotificationsState((prev) =>
+            prev.map((n) => (String(n.id) === String(row.id) ? { ...n, ...row, time: row.time } : n))
+          );
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "service_alerts" },
+        (payload) => {
+          const id = payload.old?.id;
+          if (id == null) return;
+          setNotificationsState((prev) => prev.filter((n) => String(n.id) !== String(id)));
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(ch);
+    };
+  }, [supabaseEnabled]);
 
   const trackView = useCallback((id) => {
     const key = id == null ? "" : String(id);
@@ -822,6 +985,7 @@ function CustomerMenu({ tableId, store, lang }) {
   const [expanded, setExpanded] = useState(null);
   const [cart, setCart] = useState({});
   const [cartOpen, setCartOpen] = useState(false);
+  const [orderConfirmOpen, setOrderConfirmOpen] = useState(false);
   /** Dish with `priceVariants` — open picker modal (local + future DB). */
   const [variantModalDish, setVariantModalDish] = useState(null);
   const catRefs = useRef({});
@@ -879,6 +1043,10 @@ function CustomerMenu({ tableId, store, lang }) {
     if (cartItemCount === 0) setCartOpen(false);
   }, [cartItemCount]);
 
+  useEffect(() => {
+    if (!cartOpen) setOrderConfirmOpen(false);
+  }, [cartOpen]);
+
   /** Drop cart lines for dishes removed from the menu (e.g. after Supabase reload). */
   useEffect(() => {
     if (dishes.length === 0) return;
@@ -899,8 +1067,25 @@ function CustomerMenu({ tableId, store, lang }) {
 
   const showToast = msg => { setToast(msg); setTimeout(() => setToast(null), 3500); };
 
-  const callWaiter = () => { addNotification({ type:"waiter", tableId, tableName:table.name, message:"Waiter Request" }); showToast(t.waiterCalled); };
-  const requestBill = () => { addNotification({ type:"bill", tableId, tableName:table.name, message:"Bill Request" }); showToast(t.billRequested); };
+  const confirmSendOrder = useCallback(() => {
+    if (cartLines.length === 0) return;
+    const body = formatOrderNotificationBody(cartLines, lang, table.name, cartGrandTotal);
+    addNotification({ type: "order", tableId, tableName: table.name, tableZone: table.zone, message: body });
+    setCart({});
+    setOrderConfirmOpen(false);
+    setCartOpen(false);
+    setToast(t.orderSent);
+    window.setTimeout(() => setToast(null), 3500);
+  }, [cartLines, lang, table.name, cartGrandTotal, tableId, addNotification, t.orderSent]);
+
+  const callWaiter = () => {
+    addNotification({ type: "waiter", tableId, tableName: table.name, tableZone: table.zone, message: "Waiter Request" });
+    showToast(t.waiterCalled);
+  };
+  const requestBill = () => {
+    addNotification({ type: "bill", tableId, tableName: table.name, tableZone: table.zone, message: "Bill Request" });
+    showToast(t.billRequested);
+  };
 
   const sortedCategories = useMemo(() => [...categories].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)), [categories]);
 
@@ -1257,9 +1442,100 @@ function CustomerMenu({ tableId, store, lang }) {
                   <span style={{ fontFamily:"var(--font-display)", fontSize:"32px", fontWeight:300, color:"var(--gold-light)" }}>₾{formatLari(cartGrandTotal)}</span>
                 </div>
                 <div style={{ fontSize:"10px", color:"var(--muted)", lineHeight:1.5, letterSpacing:"0.2px" }}>{t.cartHint}</div>
+                <button
+                  type="button"
+                  onClick={() => setOrderConfirmOpen(true)}
+                  className="action-btn"
+                  style={{
+                    marginTop:"16px",
+                    width:"100%",
+                    minHeight:"52px",
+                    borderRadius:"999px",
+                    border:"1px solid rgba(201,169,98,0.55)",
+                    background:"linear-gradient(135deg, rgba(201,169,98,0.22), rgba(61,191,176,0.12))",
+                    color:"#f4f1ea",
+                    fontFamily:"var(--font-body)",
+                    fontSize:"11px",
+                    fontWeight:600,
+                    letterSpacing:"0.14em",
+                    textTransform:"uppercase",
+                    cursor:"pointer",
+                    touchAction:"manipulation",
+                  }}
+                >
+                  {t.submitOrder}
+                </button>
               </div>
             )}
           </div>
+
+          {orderConfirmOpen && (
+            <>
+              <button
+                type="button"
+                aria-label={t.cancel}
+                onClick={() => setOrderConfirmOpen(false)}
+                style={{
+                  position:"fixed",
+                  inset:0,
+                  zIndex:10145,
+                  border:"none",
+                  padding:0,
+                  margin:0,
+                  background:"rgba(0,0,0,0.78)",
+                  cursor:"pointer",
+                  WebkitTapHighlightColor:"transparent",
+                }}
+              />
+              <div
+                role="alertdialog"
+                aria-modal="true"
+                aria-labelledby="order-confirm-title"
+                style={{
+                  position:"fixed",
+                  left:"50%",
+                  top:"50%",
+                  transform:"translate(-50%, -50%)",
+                  zIndex:10150,
+                  width:"min(360px, calc(100vw - 32px))",
+                  maxHeight:"min(420px, 80vh)",
+                  overflow:"auto",
+                  background:"var(--charcoal)",
+                  border:"1px solid rgba(201,169,98,0.35)",
+                  borderRadius:"16px",
+                  padding:"22px 20px 18px",
+                  boxShadow:"0 24px 80px rgba(0,0,0,0.75)",
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div id="order-confirm-title" style={{ fontFamily:"var(--font-display)", fontSize:"1.35rem", fontStyle:"italic", color:"var(--cream)", marginBottom:"10px" }}>
+                  {t.confirmOrderTitle}
+                </div>
+                <p style={{ fontSize:"12px", color:"var(--muted)", lineHeight:1.55, marginBottom:"16px" }}>{t.confirmOrderBody}</p>
+                <div style={{ fontSize:"11px", color:"rgba(201,169,98,0.9)", maxHeight:"140px", overflowY:"auto", padding:"10px 12px", background:"rgba(0,0,0,0.25)", borderRadius:"10px", whiteSpace:"pre-wrap", fontFamily:"var(--font-body)", lineHeight:1.45, marginBottom:"18px" }}>
+                  {formatOrderNotificationBody(cartLines, lang, table.name, cartGrandTotal)}
+                </div>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"10px" }}>
+                  <button
+                    type="button"
+                    onClick={() => setOrderConfirmOpen(false)}
+                    className="action-btn"
+                    style={{ minHeight:"48px", borderRadius:"999px", border:"1px solid rgba(255,255,255,0.12)", background:"transparent", color:"var(--muted)", fontSize:"10px", letterSpacing:"0.1em", textTransform:"uppercase", cursor:"pointer", fontFamily:"var(--font-body)" }}
+                  >
+                    {t.cancel}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={confirmSendOrder}
+                    className="action-btn"
+                    style={{ minHeight:"48px", borderRadius:"999px", border:"1px solid var(--gold)", background:"linear-gradient(135deg, rgba(61,191,176,0.25), rgba(61,191,176,0.08))", color:"var(--gold-pale)", fontSize:"10px", fontWeight:600, letterSpacing:"0.1em", textTransform:"uppercase", cursor:"pointer", fontFamily:"var(--font-body)" }}
+                  >
+                    {t.confirmOrderBtn}
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
         </>
       )}
 
@@ -1632,6 +1908,63 @@ function AdminLogin({ onLogin }) {
   );
 }
 
+/* მიმტანის შესვლა — ცალკე პაროლი ადმინისგან (იხ. ქვედა hint). */
+function StaffLogin({ onLogin }) {
+  const [u, setU] = useState("");
+  const [p, setP] = useState("");
+  const [err, setErr] = useState(false);
+  const submit = () => {
+    if (u === "waiter" && p === "tiflisi2024") onLogin();
+    else setErr(true);
+  };
+
+  return (
+    <div style={{ minHeight:"100vh", background:"var(--obsidian)", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"var(--font-body)", position:"relative" }}>
+      <div className="noise" />
+      <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse at 20% 70%, rgba(196,88,68,0.07) 0%, transparent 50%), radial-gradient(ellipse at 50% 30%, rgba(61,191,176,0.08) 0%, transparent 60%)" }} />
+
+      <div style={{ width:"min(380px, 92vw)", position:"relative", zIndex:1 }}>
+        <div style={{ textAlign:"center", marginBottom:"48px" }}>
+          <div style={{ fontSize:"9px", letterSpacing:"5px", color:"var(--gold)", textTransform:"uppercase", marginBottom:"14px" }}>მიმტანი · WAITER</div>
+          <div style={{ fontFamily:"var(--font-display)", fontSize:"52px", fontWeight:300, fontStyle:"italic", color:"var(--cream)", lineHeight:1 }}>Tiflisi</div>
+          <div style={{ marginTop:"16px", display:"flex", alignItems:"center", justifyContent:"center", gap:"10px" }}>
+            <div style={{ width:"40px", height:"1px", background:"linear-gradient(90deg, transparent, var(--gold))" }} />
+            <span style={{ fontSize:"8px", color:"var(--muted)", letterSpacing:"3px" }}>გამოძახება · ანგარიში · ALERT</span>
+            <div style={{ width:"40px", height:"1px", background:"linear-gradient(90deg, var(--gold), transparent)" }} />
+          </div>
+        </div>
+
+        <div style={{ background:"rgba(26,22,32,0.8)", border:"1px solid rgba(61,191,176,0.15)", padding:"40px", backdropFilter:"blur(20px)" }}>
+          {[{ label:"Username", val: u, set: setU, type: "text" }, { label:"Password", val: p, set: setP, type: "password" }].map((f) => (
+            <div key={f.label} style={{ marginBottom:"20px" }}>
+              <div style={{ fontSize:"8px", color:"var(--gold)", letterSpacing:"3px", textTransform:"uppercase", marginBottom:"8px" }}>{f.label}</div>
+              <input
+                value={f.val}
+                onChange={(e) => {
+                  f.set(e.target.value);
+                  setErr(false);
+                }}
+                type={f.type}
+                onKeyDown={(e) => e.key === "Enter" && submit()}
+                style={{ width:"100%", padding:"12px 0", background:"transparent", border:"none", borderBottom:`1px solid ${err ? "#ef4444" : "rgba(61,191,176,0.25)"}`, color:"var(--cream)", fontSize:"14px", fontFamily:"var(--font-display)", outline:"none", letterSpacing:"1px", boxSizing:"border-box" }}
+              />
+            </div>
+          ))}
+          {err && <div style={{ color:"#ef4444", fontSize:"10px", letterSpacing:"1px", marginBottom:"16px" }}>არასწორი მონაცემი</div>}
+          <div style={{ fontSize:"9px", color:"var(--muted)", marginBottom:"20px", letterSpacing:"1px" }}>waiter / tiflisi2024</div>
+          <button
+            type="button"
+            onClick={submit}
+            style={{ width:"100%", padding:"14px", background:"linear-gradient(135deg, rgba(61,191,176,0.2), rgba(61,191,176,0.08))", border:"1px solid var(--gold)", color:"var(--gold-pale)", fontSize:"10px", fontWeight:"600", letterSpacing:"4px", textTransform:"uppercase", cursor:"pointer", fontFamily:"var(--font-body)", transition:"all 0.3s" }}
+          >
+            შესვლა
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** Supabase: upload image to Storage, insert row into public.menu (see supabase/schema.sql). */
 function AdminCloudMenu({ store }) {
   const { categories, dishes, reloadMenuFromSupabase, menuLoading } = store;
@@ -1960,53 +2293,83 @@ function AdminCloudMenu({ store }) {
   );
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   ADMIN PANEL
-═══════════════════════════════════════════════════════════════════════════ */
-function AdminPanel({ store, onLogout }) {
-  const [section, setSection] = useState("dashboard");
-  const unread = store.notifications.filter(n=>!n.read).length;
-  const audioCtxRef = useRef(null);
+/** `public/alert.mp3` — ჩაანაცვლე საკუთარი ფაილით; სიძლიერე: `volume` ან ფაილის ნორმალიზაცია. */
+const ALERT_MP3_VOLUME = 1;
+
+function alertMp3Url() {
+  const base = import.meta.env.BASE_URL || "/";
+  return `${base.endsWith("/") ? base : `${base}/`}alert.mp3`;
+}
+
+/** თუ MP3 ვერ იკითხება / play() ჩავარდა — ძველი სინთეზირებული ზარი. */
+function playAlertSynthFallback() {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    if (ctx.state === "suspended") ctx.resume().catch(() => {});
+
+    const now = ctx.currentTime;
+    const masterPeak = 0.28;
+    const masterSustain = 0.18;
+    const master = ctx.createGain();
+    master.gain.setValueAtTime(0.0001, now);
+    master.gain.exponentialRampToValueAtTime(masterPeak, now + 0.06);
+    master.gain.exponentialRampToValueAtTime(masterSustain, now + 3.65);
+    master.gain.exponentialRampToValueAtTime(0.0001, now + 4.02);
+    master.connect(ctx.destination);
+
+    const playTone = (start, freq, type = "sine", duration = 0.42, gainPeak = 0.85) => {
+      const osc = ctx.createOscillator();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, start);
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(gainPeak, start + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+      osc.connect(gain).connect(master);
+      osc.start(start);
+      osc.stop(start + duration + 0.02);
+    };
+
+    const pulses = [0, 0.98, 1.96, 2.94];
+    for (const t of pulses) {
+      playTone(now + t, 988, "triangle", 0.34, 0.88);
+      playTone(now + t + 0.11, 1318, "sine", 0.34, 0.72);
+    }
+    window.setTimeout(() => {
+      try {
+        ctx.close();
+      } catch {}
+    }, 4500);
+  } catch {
+    /* ignore */
+  }
+}
+
+/** სტუმრის ახალი შეტყობინებისას — `public/alert.mp3` (HTMLAudioElement), რეზერვი: სინთეზატორი. */
+function useUnreadAlertSound(unread) {
+  const mp3Ref = useRef(null);
   const prevUnreadRef = useRef(unread);
   const mountedRef = useRef(false);
 
   const playAlertChime = useCallback(() => {
     try {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (!AudioCtx) return;
-      if (!audioCtxRef.current) audioCtxRef.current = new AudioCtx();
-      const ctx = audioCtxRef.current;
-      if (ctx.state === "suspended") ctx.resume().catch(() => {});
-
-      const now = ctx.currentTime;
-      const master = ctx.createGain();
-      master.gain.setValueAtTime(0.0001, now);
-      master.gain.exponentialRampToValueAtTime(0.12, now + 0.06);
-      master.gain.exponentialRampToValueAtTime(0.08, now + 3.65);
-      master.gain.exponentialRampToValueAtTime(0.0001, now + 4.02);
-      master.connect(ctx.destination);
-
-      const playTone = (start, freq, type = "sine", duration = 0.42, gainPeak = 0.68) => {
-        const osc = ctx.createOscillator();
-        osc.type = type;
-        osc.frequency.setValueAtTime(freq, start);
-        const gain = ctx.createGain();
-        gain.gain.setValueAtTime(0.0001, start);
-        gain.gain.exponentialRampToValueAtTime(gainPeak, start + 0.03);
-        gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
-        osc.connect(gain).connect(master);
-        osc.start(start);
-        osc.stop(start + duration + 0.02);
-      };
-
-      // 4-second "hotel-style" alert: four distinct pulses, easy to hear.
-      const pulses = [0, 0.98, 1.96, 2.94];
-      for (const t of pulses) {
-        playTone(now + t, 988, "triangle", 0.34, 0.62);
-        playTone(now + t + 0.11, 1318, "sine", 0.34, 0.5);
+      const url = alertMp3Url();
+      let a = mp3Ref.current;
+      if (!a) {
+        a = new Audio(url);
+        a.preload = "auto";
+        mp3Ref.current = a;
+      }
+      a.volume = Math.min(1, Math.max(0, ALERT_MP3_VOLUME));
+      a.currentTime = 0;
+      const p = a.play();
+      if (p && typeof p.catch === "function") {
+        p.catch(() => playAlertSynthFallback());
       }
     } catch {
-      /* audio not available / blocked */
+      playAlertSynthFallback();
     }
   }, []);
 
@@ -2025,12 +2388,24 @@ function AdminPanel({ store, onLogout }) {
   useEffect(() => {
     return () => {
       try {
-        if (audioCtxRef.current && audioCtxRef.current.state !== "closed") {
-          audioCtxRef.current.close();
+        const a = mp3Ref.current;
+        if (a) {
+          a.pause();
+          a.src = "";
         }
+        mp3Ref.current = null;
       } catch {}
     };
   }, []);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ADMIN PANEL
+═══════════════════════════════════════════════════════════════════════════ */
+function AdminPanel({ store, onLogout }) {
+  const [section, setSection] = useState("dashboard");
+  const unread = store.notifications.filter(n=>!n.read).length;
+  useUnreadAlertSound(unread);
 
   const navItems = [
     { id:"dashboard", icon:"◈", label:"Overview" },
@@ -2144,17 +2519,28 @@ function AdminDash({ store }) {
         {/* Recent Alerts */}
         <div style={{ background:"var(--charcoal)", border:"1px solid rgba(61,191,176,0.1)", padding:"24px" }}>
           <div style={{ fontSize:"8px", color:"var(--gold)", letterSpacing:"4px", textTransform:"uppercase", marginBottom:"20px" }}>Recent Alerts</div>
-          {store.notifications.slice(0,5).map(n => (
+          {store.notifications.slice(0,5).map(n => {
+            const vis = notificationVisual(n.type);
+            const msgOneLine =
+              n.type === "order" && n.message
+                ? (() => {
+                    const lines = String(n.message).split("\n").map((s) => s.trim()).filter(Boolean);
+                    if (lines.length <= 1) return lines[0] || n.message;
+                    return `${lines[0]} · ${lines[1]}…`;
+                  })()
+                : n.message;
+            return (
             <div key={n.id} style={{ display:"flex", gap:"12px", padding:"10px 0", borderBottom:"1px solid rgba(255,255,255,0.04)" }}>
-              <div style={{ width:"28px", height:"28px", background: n.type==="waiter"?"rgba(61,191,176,0.1)":"rgba(139,92,246,0.1)", border:`1px solid ${n.type==="waiter"?"rgba(61,191,176,0.3)":"rgba(139,92,246,0.3)"}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:"12px", flexShrink:0 }}>
-                {n.type==="waiter"?"◈":"◇"}
+              <div style={{ width:"28px", height:"28px", background: vis.sheetBg, border:`1px solid ${vis.sheetBd}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:"12px", flexShrink:0, color: vis.accent }}>
+                {vis.icon}
               </div>
-              <div style={{ flex:1 }}>
+              <div style={{ flex:1, minWidth:0 }}>
                 <div style={{ fontSize:"12px", color:"var(--cream)", fontWeight:500 }}>{n.tableName}</div>
-                <div style={{ fontSize:"9px", color:"var(--muted)", marginTop:"2px", letterSpacing:"0.5px" }}>{n.message} · {n.time?.toLocaleTimeString()}</div>
+                <div style={{ fontSize:"9px", color:"var(--muted)", marginTop:"2px", letterSpacing:"0.5px", whiteSpace: n.type==="order" ? "normal" : "nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{msgOneLine} · {n.time?.toLocaleTimeString()}</div>
               </div>
             </div>
-          ))}
+            );
+          })}
           {store.notifications.length===0 && <div style={{ fontSize:"11px", color:"var(--subtle)", fontStyle:"italic", fontFamily:"var(--font-display)" }}>No alerts at this time</div>}
         </div>
 
@@ -3097,29 +3483,440 @@ function AdminAlerts({ store }) {
         <div style={{ textAlign:"center", padding:"80px 0", fontFamily:"var(--font-display)", fontSize:"22px", fontStyle:"italic", color:"var(--subtle)" }}>No alerts at this time</div>
       ) : (
         <div style={{ display:"flex", flexDirection:"column", gap:"8px" }}>
-          {notifications.map(n => (
+          {notifications.map(n => {
+            const vis = notificationVisual(n.type);
+            return (
             <div key={n.id} onClick={()=>setNotifications(p=>p.map(x=>x.id===n.id?{...x,read:true}:x))} style={{
-              display:"flex", gap:"16px", alignItems:"center",
+              display:"flex", gap:"16px", alignItems: n.type==="order" ? "flex-start" : "center",
               padding:"18px 20px", background: n.read?"rgba(255,255,255,0.015)":"rgba(61,191,176,0.04)",
               border:`1px solid ${n.read?"rgba(255,255,255,0.05)":"rgba(61,191,176,0.15)"}`,
-              borderLeft:`3px solid ${n.type==="waiter"?"var(--gold)":"#8b5cf6"}`,
+              borderLeft:`3px solid ${vis.accent}`,
               cursor:"pointer", transition:"all 0.2s",
             }}>
-              <div style={{ width:"36px", height:"36px", background: n.type==="waiter"?"rgba(61,191,176,0.1)":"rgba(139,92,246,0.1)", border:`1px solid ${n.type==="waiter"?"rgba(61,191,176,0.2)":"rgba(139,92,246,0.2)"}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:"14px", flexShrink:0 }}>
-                {n.type==="waiter"?"◈":"◇"}
+              <div style={{ width:"36px", height:"36px", background: vis.sheetBg, border:`1px solid ${vis.sheetBd}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:"14px", flexShrink:0, color: vis.accent }}>
+                {vis.icon}
               </div>
-              <div style={{ flex:1 }}>
+              <div style={{ flex:1, minWidth:0 }}>
                 <div style={{ fontSize:"14px", fontFamily:"var(--font-display)", fontStyle:"italic", color: n.read?"var(--muted)":"var(--cream)" }}>{n.tableName}</div>
-                <div style={{ fontSize:"10px", color:"var(--muted)", marginTop:"2px", letterSpacing:"0.5px" }}>{n.message}</div>
+                <div style={{ fontSize:"10px", color:"var(--muted)", marginTop:"2px", letterSpacing:"0.5px", whiteSpace: n.type==="order" ? "pre-wrap" : "normal", lineHeight: 1.45, wordBreak: "break-word" }}>{n.message}</div>
               </div>
-              <div style={{ textAlign:"right" }}>
+              <div style={{ textAlign:"right", flexShrink:0 }}>
                 <div style={{ fontSize:"11px", color:"var(--gold)", fontFamily:"var(--font-display)" }}>{n.time?.toLocaleTimeString()}</div>
                 {!n.read && <div style={{ fontSize:"7px", letterSpacing:"2px", color:"var(--gold)", marginTop:"4px" }}>NEW</div>}
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
+    </div>
+  );
+}
+
+/** Staff: ჯერ აირჩიე დარბაზი — მერე მხოლოდ ამ ზონის მაგიდების შეტყობინებები. */
+function StaffZonePicker({ zones, tablesLoading, onChooseZone, onLogout }) {
+  return (
+    <div className="staff-waiter-screen" style={{ minHeight: "100vh", background: "var(--obsidian)", color: "var(--cream)", position: "relative", display: "flex", flexDirection: "column" }}>
+      <div className="noise" />
+      <header
+        style={{
+          padding: "16px 18px",
+          borderBottom: "1px solid rgba(61,191,176,0.12)",
+          background: "linear-gradient(180deg, rgba(15,18,20,0.98), rgba(15,18,20,0.88))",
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+          <div>
+            <div style={{ fontSize: "8px", letterSpacing: "0.35em", color: "var(--gold)", textTransform: "uppercase" }}>მიმტანი</div>
+            <div style={{ fontFamily: "var(--font-display)", fontSize: "clamp(1.2rem, 4vw, 1.5rem)", fontStyle: "italic", marginTop: 4 }}>აირჩიეთ დარბაზი</div>
+          </div>
+          <button
+            type="button"
+            onClick={onLogout}
+            style={{
+              padding: "10px 16px",
+              background: "transparent",
+              border: "1px solid rgba(239,68,68,0.25)",
+              color: "rgba(239,68,68,0.75)",
+              fontSize: "9px",
+              letterSpacing: "0.15em",
+              textTransform: "uppercase",
+              cursor: "pointer",
+              fontFamily: "var(--font-body)",
+              flexShrink: 0,
+              touchAction: "manipulation",
+            }}
+          >
+            გასვლა
+          </button>
+        </div>
+      </header>
+      <div style={{ flex: 1, padding: "20px 16px", overflow: "auto", WebkitOverflowScrolling: "touch" }}>
+        {tablesLoading && zones.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "48px 20px", color: "var(--muted)" }}>იტვირთება…</div>
+        ) : zones.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "48px 20px", color: "var(--subtle)", lineHeight: 1.6, fontSize: "14px" }}>
+            მაგიდები ან დარბაზის ველი ჯერ არ ჩანს. ადმინში დაამატეთ მაგიდები ზონით (Grand Hall, Private…).
+          </div>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            {zones.map((z) => (
+              <button
+                key={z}
+                type="button"
+                onClick={() => onChooseZone(z)}
+                style={{
+                  minHeight: 88,
+                  padding: "16px 14px",
+                  borderRadius: 14,
+                  border: "1px solid rgba(61,191,176,0.28)",
+                  background: "linear-gradient(145deg, rgba(61,191,176,0.14), rgba(8,12,12,0.96))",
+                  color: "var(--gold-pale)",
+                  fontFamily: "var(--font-display)",
+                  fontSize: "clamp(1.05rem, 3.5vw, 1.3rem)",
+                  fontStyle: "italic",
+                  cursor: "pointer",
+                  textAlign: "center",
+                  touchAction: "manipulation",
+                }}
+              >
+                {z}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* მიმტანის სამუშაო ეკრანი — გამოძახება, ანგარიში, შეკვეთა (მხოლოდ არჩეული დარბაზის მაგიდები). */
+function StaffAlertsScreen({ store, onLogout }) {
+  const { notifications, setNotifications, tables, tablesLoading } = store;
+  const zones = useMemo(() => uniqueZonesFromTables(tables), [tables]);
+  const [staffZone, setStaffZone] = useState(null);
+  const [filter, setFilter] = useState("all");
+
+  useEffect(() => {
+    if (zones.length === 0) {
+      setStaffZone(null);
+      return;
+    }
+    setStaffZone((prev) => {
+      if (prev != null && zones.includes(prev)) return prev;
+      const fromSession = readStaffZoneSession(zones);
+      return fromSession || null;
+    });
+  }, [zones]);
+
+  useEffect(() => {
+    if (staffZone == null) return;
+    if (!zones.includes(staffZone)) setStaffZone(null);
+  }, [zones, staffZone]);
+
+  const notificationsForZone = useMemo(
+    () =>
+      notifications.filter((n) => {
+        const z = resolveNotificationZone(n, tables);
+        return z != null && staffZone != null && z === staffZone;
+      }),
+    [notifications, tables, staffZone]
+  );
+
+  const goPickZone = useCallback(() => {
+    clearStaffZoneSession();
+    setStaffZone(null);
+  }, []);
+
+  const pickLogout = useCallback(() => {
+    clearStaffZoneSession();
+    onLogout();
+  }, [onLogout]);
+
+  const unread = notificationsForZone.filter((n) => !n.read).length;
+  useUnreadAlertSound(unread);
+
+  const filtered = useMemo(() => {
+    if (filter === "waiter") return notificationsForZone.filter((n) => n.type === "waiter");
+    if (filter === "bill") return notificationsForZone.filter((n) => n.type === "bill");
+    if (filter === "order") return notificationsForZone.filter((n) => n.type === "order");
+    return notificationsForZone;
+  }, [notificationsForZone, filter]);
+
+  const unreadByType = useMemo(() => {
+    const open = notificationsForZone.filter((n) => !n.read);
+    return {
+      waiter: open.filter((n) => n.type === "waiter").length,
+      bill: open.filter((n) => n.type === "bill").length,
+      order: open.filter((n) => n.type === "order").length,
+    };
+  }, [notificationsForZone]);
+
+  if (staffZone == null) {
+    return (
+      <StaffZonePicker
+        zones={zones}
+        tablesLoading={tablesLoading}
+        onChooseZone={(z) => {
+          setStaffZone(z);
+          writeStaffZoneSession(z);
+        }}
+        onLogout={pickLogout}
+      />
+    );
+  }
+
+  const chip = (id, labelKa, extra) => (
+    <button
+      type="button"
+      key={id}
+      onClick={() => setFilter(id)}
+      style={{
+        flex: 1,
+        minHeight: 48,
+        padding: "12px 10px",
+        border: filter === id ? "1px solid var(--gold)" : "1px solid rgba(255,255,255,0.08)",
+        background: filter === id ? "rgba(61,191,176,0.12)" : "rgba(255,255,255,0.03)",
+        color: filter === id ? "var(--gold-pale)" : "var(--muted)",
+        fontSize: "11px",
+        fontWeight: filter === id ? 600 : 400,
+        letterSpacing: "0.06em",
+        cursor: "pointer",
+        fontFamily: "var(--font-body)",
+        borderRadius: 999,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 4,
+        touchAction: "manipulation",
+      }}
+    >
+      <span>{labelKa}</span>
+      {extra != null && extra > 0 && (
+        <span style={{ fontSize: "10px", background: "#7f1d1d", color: "#fca5a5", padding: "2px 8px", borderRadius: 999 }}>{extra}</span>
+      )}
+    </button>
+  );
+
+  return (
+    <div className="staff-waiter-screen" style={{ minHeight: "100vh", background: "var(--obsidian)", color: "var(--cream)", position: "relative", display: "flex", flexDirection: "column" }}>
+      <div className="noise" />
+      <header
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 20,
+          padding: "16px 18px",
+          background: "linear-gradient(180deg, rgba(15,18,20,0.98), rgba(15,18,20,0.88))",
+          borderBottom: "1px solid rgba(61,191,176,0.12)",
+          backdropFilter: "blur(12px)",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: "8px", letterSpacing: "0.35em", color: "var(--gold)", textTransform: "uppercase" }}>მიმტანი</div>
+            <div style={{ fontFamily: "var(--font-display)", fontSize: "clamp(1.35rem, 4vw, 1.75rem)", fontStyle: "italic", fontWeight: 300, marginTop: 4 }}>
+              გამოძახება · ანგარიში · შეკვეთა
+            </div>
+            <div style={{ fontSize: "12px", color: "var(--gold-pale)", marginTop: 6, fontWeight: 500, letterSpacing: "0.04em" }}>{staffZone}</div>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6, flexShrink: 0 }}>
+            <button
+              type="button"
+              onClick={goPickZone}
+              style={{
+                padding: "8px 12px",
+                background: "rgba(61,191,176,0.08)",
+                border: "1px solid rgba(61,191,176,0.3)",
+                color: "var(--gold)",
+                fontSize: "8px",
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                cursor: "pointer",
+                fontFamily: "var(--font-body)",
+                touchAction: "manipulation",
+              }}
+            >
+              დარბაზი
+            </button>
+            <button
+              type="button"
+              onClick={pickLogout}
+              style={{
+                padding: "8px 12px",
+                background: "transparent",
+                border: "1px solid rgba(239,68,68,0.25)",
+                color: "rgba(239,68,68,0.75)",
+                fontSize: "8px",
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                cursor: "pointer",
+                fontFamily: "var(--font-body)",
+                touchAction: "manipulation",
+              }}
+            >
+              გასვლა
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {unread > 0 && (
+        <div
+          className="staff-alert-banner"
+          style={{
+            margin: "12px 16px 0",
+            padding: "16px 18px",
+            borderRadius: 14,
+            background: "linear-gradient(135deg, rgba(127,29,29,0.45), rgba(61,191,176,0.12))",
+            border: "1px solid rgba(248,113,113,0.35)",
+            boxShadow: "0 0 40px rgba(248,113,113,0.12)",
+            textAlign: "center",
+            animation: "staffPulse 2s ease-in-out infinite",
+          }}
+        >
+          <div style={{ fontSize: "11px", letterSpacing: "0.4em", color: "#fecaca", fontWeight: 700 }}>ALERT</div>
+          <div style={{ fontFamily: "var(--font-display)", fontSize: "clamp(1.5rem, 5vw, 2rem)", marginTop: 6, color: "#fff7ed" }}>
+            {unread} ახალი მოთხოვნა
+          </div>
+          <div style={{ fontSize: "12px", color: "var(--muted)", marginTop: 8 }}>
+            მიმტანი: {unreadByType.waiter} · ანგარიში: {unreadByType.bill} · შეკვეთა: {unreadByType.order}
+          </div>
+        </div>
+      )}
+
+      <div style={{ padding: "16px", flex: 1, overflow: "auto", WebkitOverflowScrolling: "touch" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
+          {chip("all", "ყველა", unread > 0 ? unread : null)}
+          {chip("waiter", "გამოძახება", unreadByType.waiter || null)}
+          {chip("bill", "ანგარიში", unreadByType.bill || null)}
+          {chip("order", "შეკვეთა", unreadByType.order || null)}
+        </div>
+
+        <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
+          <button
+            type="button"
+            onClick={() =>
+              setNotifications((p) =>
+                p.map((n) => (resolveNotificationZone(n, tables) === staffZone ? { ...n, read: true } : n))
+              )
+            }
+            style={{
+              padding: "12px 18px",
+              background: "rgba(61,191,176,0.1)",
+              border: "1px solid rgba(61,191,176,0.25)",
+              color: "var(--gold)",
+              fontSize: "10px",
+              letterSpacing: "0.12em",
+              cursor: "pointer",
+              fontFamily: "var(--font-body)",
+              borderRadius: 999,
+              touchAction: "manipulation",
+            }}
+          >
+            ყველა წაკითხული
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof window !== "undefined" && !window.confirm("ამ დარბაზის შეტყობინებები წაიშლება. გავაგრძელო?")) return;
+              setNotifications((p) => p.filter((n) => resolveNotificationZone(n, tables) !== staffZone));
+            }}
+            style={{
+              padding: "12px 18px",
+              background: "rgba(239,68,68,0.08)",
+              border: "1px solid rgba(239,68,68,0.2)",
+              color: "rgba(239,68,68,0.85)",
+              fontSize: "10px",
+              letterSpacing: "0.12em",
+              cursor: "pointer",
+              fontFamily: "var(--font-body)",
+              borderRadius: 999,
+              touchAction: "manipulation",
+            }}
+          >
+            სიის გასუფთავება
+          </button>
+        </div>
+
+        {filtered.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "60px 20px", fontFamily: "var(--font-display)", fontSize: "1.25rem", fontStyle: "italic", color: "var(--subtle)" }}>
+            ამ მონიშნულში მოთხოვნა არაა
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {filtered.map((n) => {
+              const vis = notificationVisual(n.type);
+              return (
+              <button
+                type="button"
+                key={n.id}
+                onClick={() => setNotifications((p) => p.map((x) => (x.id === n.id ? { ...x, read: true } : x)))}
+                style={{
+                  display: "flex",
+                  gap: 14,
+                  alignItems: "flex-start",
+                  padding: "18px 16px",
+                  textAlign: "left",
+                  width: "100%",
+                  boxSizing: "border-box",
+                  background: n.read ? "rgba(255,255,255,0.02)" : "rgba(61,191,176,0.06)",
+                  border: `1px solid ${n.read ? "rgba(255,255,255,0.06)" : "rgba(61,191,176,0.2)"}`,
+                  borderLeft: `4px solid ${vis.accent}`,
+                  borderRadius: 12,
+                  cursor: "pointer",
+                  color: "inherit",
+                  font: "inherit",
+                  touchAction: "manipulation",
+                }}
+              >
+                <div
+                  style={{
+                    width: 44,
+                    height: 44,
+                    flexShrink: 0,
+                    borderRadius: 10,
+                    background: vis.sheetBg,
+                    border: `1px solid ${vis.sheetBd}`,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "18px",
+                  }}
+                >
+                  {vis.icon}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: "1.05rem", fontFamily: "var(--font-display)", fontStyle: "italic", color: n.read ? "var(--muted)" : "var(--cream)" }}>
+                    {n.tableName || "—"}
+                  </div>
+                  <div style={{ fontSize: "11px", letterSpacing: "0.06em", color: vis.accent, marginTop: 6, fontWeight: 600 }}>
+                    {staffNotificationLabel(n.type)}
+                  </div>
+                  {n.message && n.type === "order" ? (
+                    <div style={{ fontSize: "12px", color: "var(--muted)", marginTop: 8, whiteSpace: "pre-wrap", lineHeight: 1.45, wordBreak: "break-word" }}>
+                      {n.message}
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: "12px", color: "var(--muted)", marginTop: 4 }}>
+                      {n.message && n.message !== "Waiter Request" && n.message !== "Bill Request" ? n.message : ""}
+                    </div>
+                  )}
+                </div>
+                <div style={{ textAlign: "right", flexShrink: 0 }}>
+                  <div style={{ fontSize: "13px", color: "var(--gold)", fontFamily: "var(--font-display)" }}>{n.time?.toLocaleTimeString?.() ?? ""}</div>
+                  {!n.read && <div style={{ fontSize: "9px", letterSpacing: "0.2em", color: "var(--gold)", marginTop: 6 }}>ახალი</div>}
+                </div>
+              </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {import.meta.env.VITE_DEPLOY_STAMP ? (
+        <div style={{ padding: "8px 16px 16px", fontSize: "7px", color: "var(--muted)", opacity: 0.6 }}>build {String(import.meta.env.VITE_DEPLOY_STAMP)}</div>
+      ) : null}
     </div>
   );
 }
@@ -3195,6 +3992,12 @@ function pathMatchesAdmin(pathname) {
 function pathMatchesWelcome(pathname) {
   const p = (pathname || "/").replace(/\/+$/, "") || "/";
   return p === "/welcome" || p.endsWith("/welcome");
+}
+
+/** მიმტანის პანელი — `/staff` (basename-ის შემდეგ, მაგ. `/QR/staff`). */
+function pathMatchesStaff(pathname) {
+  const p = (pathname || "/").replace(/\/+$/, "") || "/";
+  return p === "/staff" || p.endsWith("/staff");
 }
 
 function readTableIdFromUrl(search) {
@@ -3475,33 +4278,36 @@ export default function App() {
   const go = useNavigate();
 
   const isAdminRoute = useMemo(() => pathMatchesAdmin(location.pathname), [location.pathname]);
+  const isStaffRoute = useMemo(() => pathMatchesStaff(location.pathname), [location.pathname]);
   const isWelcomeRoute = useMemo(() => pathMatchesWelcome(location.pathname), [location.pathname]);
 
   const [enteredMenu, setEnteredMenu] = useState(() => {
     if (readSavedWelcomeLang() !== null) return true;
     if (typeof window === "undefined") return false;
-    return pathMatchesAdmin(window.location.pathname);
+    const p = window.location.pathname;
+    return pathMatchesAdmin(p) || pathMatchesStaff(p);
   });
   const [lang, setLang] = useState(() => readSavedWelcomeLang() ?? "ka");
   const [tableId, setTableId] = useState(() => readTableIdFromUrl() ?? 1);
   const [adminAuth, setAdminAuth] = useState(false);
+  const [staffAuth, setStaffAuth] = useState(false);
   const [showWelcomePreloader, setShowWelcomePreloader] = useState(true);
   const [fadeWelcomePreloader, setFadeWelcomePreloader] = useState(false);
   const preloaderPlayedRef = useRef(false);
 
   useLayoutEffect(() => {
-    if (isAdminRoute) setEnteredMenu(true);
-  }, [isAdminRoute]);
+    if (isAdminRoute || isStaffRoute) setEnteredMenu(true);
+  }, [isAdminRoute, isStaffRoute]);
 
   useEffect(() => {
-    if (isAdminRoute || enteredMenu || isWelcomeRoute) return;
+    if (isAdminRoute || isStaffRoute || enteredMenu || isWelcomeRoute) return;
     go({ pathname: "/welcome", search: location.search }, { replace: true });
-  }, [go, isAdminRoute, enteredMenu, isWelcomeRoute, location.search]);
+  }, [go, isAdminRoute, isStaffRoute, enteredMenu, isWelcomeRoute, location.search]);
 
-  const shouldShowWelcome = !isAdminRoute && (isWelcomeRoute || !enteredMenu);
+  const shouldShowWelcome = !isAdminRoute && !isStaffRoute && (isWelcomeRoute || !enteredMenu);
 
   useEffect(() => {
-    if (preloaderPlayedRef.current || isAdminRoute) {
+    if (preloaderPlayedRef.current || isAdminRoute || isStaffRoute) {
       setShowWelcomePreloader(false);
       setFadeWelcomePreloader(false);
       return;
@@ -3515,7 +4321,7 @@ export default function App() {
       window.clearTimeout(fadeTimer);
       window.clearTimeout(hideTimer);
     };
-  }, [isAdminRoute]);
+  }, [isAdminRoute, isStaffRoute]);
 
   const syncTableParams = useCallback(
     (id) => {
@@ -3564,7 +4370,7 @@ export default function App() {
 
   return (
     <div>
-      {!isAdminRoute && showWelcomePreloader && (
+      {!isAdminRoute && !isStaffRoute && showWelcomePreloader && (
         <>
           <WelcomePreloader fading={fadeWelcomePreloader} />
         </>
@@ -3578,12 +4384,30 @@ export default function App() {
         />
       )}
 
-      {enteredMenu && !isAdminRoute && !isWelcomeRoute && <CustomerMenu tableId={tableId} store={store} lang={lang} />}
+      {enteredMenu && !isAdminRoute && !isStaffRoute && !isWelcomeRoute && (
+        <CustomerMenu tableId={tableId} store={store} lang={lang} />
+      )}
       {enteredMenu && isAdminRoute && !adminAuth && (
         <AdminLogin onLogin={() => { setAdminAuth(true); }} />
       )}
       {enteredMenu && isAdminRoute && adminAuth && (
         <AdminPanel store={store} onLogout={() => { setAdminAuth(false); go("/"); }} />
+      )}
+      {enteredMenu && isStaffRoute && !staffAuth && (
+        <StaffLogin
+          onLogin={() => {
+            setStaffAuth(true);
+          }}
+        />
+      )}
+      {enteredMenu && isStaffRoute && staffAuth && (
+        <StaffAlertsScreen
+          store={store}
+          onLogout={() => {
+            setStaffAuth(false);
+            go("/");
+          }}
+        />
       )}
     </div>
   );

@@ -67,6 +67,10 @@ body {
 @keyframes pulse {
   0%,100% { opacity:1; } 50% { opacity:0.4; }
 }
+@keyframes staffPulse {
+  0%, 100% { box-shadow: 0 0 24px rgba(248, 113, 113, 0.15); }
+  50% { box-shadow: 0 0 44px rgba(248, 113, 113, 0.35); }
+}
 @keyframes slideIn {
   from { opacity:0; transform:translateX(30px); }
   to   { opacity:1; transform:translateX(0); }

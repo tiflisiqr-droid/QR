@@ -172,10 +172,33 @@ from (
 ) as v(name, zone, active, sort_order)
 where not exists (select 1 from public.seating limit 1);
 
+-- service_alerts — სტუმარი → პერსონალი (სრული სქემა იხ. schema.sql §1c)
+create table if not exists public.service_alerts (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  type text not null check (type in ('waiter', 'bill', 'order')),
+  table_id text not null default '',
+  table_name text not null default '',
+  table_zone text not null default '',
+  message text not null default '',
+  read boolean not null default false
+);
+create index if not exists service_alerts_created_at_idx on public.service_alerts (created_at desc);
+alter table public.service_alerts enable row level security;
+drop policy if exists "service_alerts_select_anon" on public.service_alerts;
+drop policy if exists "service_alerts_insert_anon" on public.service_alerts;
+drop policy if exists "service_alerts_update_anon" on public.service_alerts;
+drop policy if exists "service_alerts_delete_anon" on public.service_alerts;
+create policy "service_alerts_select_anon" on public.service_alerts for select to anon, authenticated using (true);
+create policy "service_alerts_insert_anon" on public.service_alerts for insert to anon, authenticated with check (true);
+create policy "service_alerts_update_anon" on public.service_alerts for update to anon, authenticated using (true) with check (true);
+create policy "service_alerts_delete_anon" on public.service_alerts for delete to anon, authenticated using (true);
+
 grant usage on schema public to anon, authenticated;
 grant select, insert, update, delete on table public.menu to anon, authenticated;
 grant select, insert, update, delete on table public.menu_categories to anon, authenticated;
 grant select, insert, update, delete on table public.seating to anon, authenticated;
+grant select, insert, update, delete on table public.service_alerts to anon, authenticated;
 
 -- ── 2) Storage bucket menu-images
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
