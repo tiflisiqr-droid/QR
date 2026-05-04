@@ -386,16 +386,47 @@ function useStore() {
     return () => window.removeEventListener("storage", onStorage);
   }, [supabaseEnabled]);
 
+  /** Supabase: პირველი ჩატვირთვა + პოლინგი + ტაბზე დაბრუნება — მობილურზე Realtime ხშირად იშლება ფონში. */
   useEffect(() => {
     if (!supabaseEnabled || !supabase) return;
     let cancelled = false;
-    fetchServiceAlerts(100)
-      .then((rows) => {
-        if (!cancelled) setNotificationsState(rows);
-      })
-      .catch((e) => console.warn("[service_alerts] load", e));
+
+    const pull = () => {
+      if (typeof document !== "undefined" && document.hidden) return;
+      fetchServiceAlerts(100)
+        .then((rows) => {
+          if (!cancelled) setNotificationsState(rows);
+        })
+        .catch((e) => console.warn("[service_alerts] poll", e));
+    };
+
+    pull();
+
+    const intervalMs = 10000;
+    const id = window.setInterval(pull, intervalMs);
+
+    const onVis = () => {
+      if (document.visibilityState === "visible") pull();
+    };
+    const onFocus = () => pull();
+    const onOnline = () => pull();
+    /** iOS Safari: ბრაუზერში უკან დაბრუნება / bfcache */
+    const onPageShow = (e) => {
+      if (e.persisted) pull();
+    };
+
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("focus", onFocus);
+    window.addEventListener("online", onOnline);
+    window.addEventListener("pageshow", onPageShow);
+
     return () => {
       cancelled = true;
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("pageshow", onPageShow);
     };
   }, [supabaseEnabled]);
 
