@@ -184,6 +184,44 @@ function clearStaffZoneSession() {
   }
 }
 
+/** Admin / staff ლოგინი — იგივე ტაბში გადატვირთვის შემდეგ არ მოიხსნას (პაროლს არ ვინახავთ). */
+const ADMIN_AUTH_STORAGE_KEY = "tiflisi_admin_auth_v1";
+const STAFF_AUTH_STORAGE_KEY = "tiflisi_staff_auth_v1";
+
+function readPersistedAdminAuth() {
+  try {
+    return sessionStorage.getItem(ADMIN_AUTH_STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function readPersistedStaffAuth() {
+  try {
+    return sessionStorage.getItem(STAFF_AUTH_STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function setPersistedAdminAuth(ok) {
+  try {
+    if (ok) sessionStorage.setItem(ADMIN_AUTH_STORAGE_KEY, "1");
+    else sessionStorage.removeItem(ADMIN_AUTH_STORAGE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+function setPersistedStaffAuth(ok) {
+  try {
+    if (ok) sessionStorage.setItem(STAFF_AUTH_STORAGE_KEY, "1");
+    else sessionStorage.removeItem(STAFF_AUTH_STORAGE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
 function uniqueZonesFromTables(tables) {
   const set = new Set();
   for (const t of tables || []) {
@@ -4347,8 +4385,8 @@ export default function App() {
   });
   const [lang, setLang] = useState(() => readSavedWelcomeLang() ?? "ka");
   const [tableId, setTableId] = useState(() => readTableIdFromUrl() ?? readSavedGuestTableId() ?? 1);
-  const [adminAuth, setAdminAuth] = useState(false);
-  const [staffAuth, setStaffAuth] = useState(false);
+  const [adminAuth, setAdminAuth] = useState(() => readPersistedAdminAuth());
+  const [staffAuth, setStaffAuth] = useState(() => readPersistedStaffAuth());
   const [showWelcomePreloader, setShowWelcomePreloader] = useState(true);
   const [fadeWelcomePreloader, setFadeWelcomePreloader] = useState(false);
   const preloaderPlayedRef = useRef(false);
@@ -4459,15 +4497,28 @@ export default function App() {
         <CustomerMenu tableId={tableId} store={store} lang={lang} />
       )}
       {enteredMenu && isAdminRoute && !adminAuth && (
-        <AdminLogin onLogin={() => { setAdminAuth(true); }} />
+        <AdminLogin
+          onLogin={() => {
+            setAdminAuth(true);
+            setPersistedAdminAuth(true);
+          }}
+        />
       )}
       {enteredMenu && isAdminRoute && adminAuth && (
-        <AdminPanel store={store} onLogout={() => { setAdminAuth(false); go("/"); }} />
+        <AdminPanel
+          store={store}
+          onLogout={() => {
+            setAdminAuth(false);
+            setPersistedAdminAuth(false);
+            go("/");
+          }}
+        />
       )}
       {enteredMenu && isStaffRoute && !staffAuth && (
         <StaffLogin
           onLogin={() => {
             setStaffAuth(true);
+            setPersistedStaffAuth(true);
           }}
         />
       )}
@@ -4476,6 +4527,7 @@ export default function App() {
           store={store}
           onLogout={() => {
             setStaffAuth(false);
+            setPersistedStaffAuth(false);
             go("/");
           }}
         />
