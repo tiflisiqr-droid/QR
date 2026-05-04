@@ -4014,6 +4014,33 @@ function AdminAnalytics({ store }) {
 ═══════════════════════════════════════════════════════════════════════════ */
 const WELCOME_STORAGE_KEY = "tiflisi_welcome_v1";
 
+/** სტუმარი: არჩეული მაგიდა გადატვირთვის შემდეგ (როცა URL-ში ?table= არ ჩანს). */
+const GUEST_TABLE_STORAGE_KEY = "tiflisi_guest_table_v1";
+
+function readSavedGuestTableId() {
+  try {
+    const raw = sessionStorage.getItem(GUEST_TABLE_STORAGE_KEY);
+    if (raw == null || raw === "") return null;
+    const trimmed = raw.trim();
+    const n = Number(trimmed);
+    if (Number.isFinite(n) && String(n) === trimmed) return n;
+    const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (uuidRe.test(trimmed)) return trimmed;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function writeSavedGuestTableId(id) {
+  if (id == null) return;
+  try {
+    sessionStorage.setItem(GUEST_TABLE_STORAGE_KEY, String(id));
+  } catch {
+    /* ignore */
+  }
+}
+
 /** `location.pathname` (React Router, after basename) or full `window.location.pathname` (e.g. …/admin on GitHub Pages). */
 function pathMatchesAdmin(pathname) {
   const p = (pathname || "/").replace(/\/+$/, "") || "/";
@@ -4319,7 +4346,7 @@ export default function App() {
     return pathMatchesAdmin(p) || pathMatchesStaff(p);
   });
   const [lang, setLang] = useState(() => readSavedWelcomeLang() ?? "ka");
-  const [tableId, setTableId] = useState(() => readTableIdFromUrl() ?? 1);
+  const [tableId, setTableId] = useState(() => readTableIdFromUrl() ?? readSavedGuestTableId() ?? 1);
   const [adminAuth, setAdminAuth] = useState(false);
   const [staffAuth, setStaffAuth] = useState(false);
   const [showWelcomePreloader, setShowWelcomePreloader] = useState(true);
@@ -4386,6 +4413,12 @@ export default function App() {
     setTableId(t);
   }, [location.search, store.tables]);
 
+  /** მაგიდის ნებისმიერი ცვლილება — session, რომ გადატვირთვაზე არ დაიკარგოს. */
+  useEffect(() => {
+    if (tableId == null) return;
+    writeSavedGuestTableId(tableId);
+  }, [tableId]);
+
   useEffect(() => {
     document.documentElement.lang = lang === "ka" ? "ka" : lang === "ru" ? "ru" : "en";
   }, [lang]);
@@ -4396,8 +4429,15 @@ export default function App() {
       sessionStorage.setItem(WELCOME_STORAGE_KEY, JSON.stringify({ lang: l }));
     } catch {}
     setEnteredMenu(true);
-    go({ pathname: "/", search: location.search }, { replace: true });
-  }, [go, location.search]);
+    try {
+      const sp = new URLSearchParams(location.search);
+      sp.set("table", String(tableId));
+      const q = sp.toString();
+      go({ pathname: "/", search: q ? `?${q}` : "" }, { replace: true });
+    } catch {
+      go({ pathname: "/", search: location.search }, { replace: true });
+    }
+  }, [go, location.search, tableId]);
 
   return (
     <div>
