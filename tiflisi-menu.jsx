@@ -342,9 +342,9 @@ const BADGE_CFG = {
 };
 
 const T = {
-  en:{menu:"Menu",callWaiter:"Summon Waiter",requestBill:"Request Bill",ingredients:"Provenance",soldOut:"Unavailable",table:"Table",waiterCalled:"Your waiter is on the way.",billRequested:"Your bill is being prepared.",search:"Search the menu…",all:"All",adminLogin:"Staff Access",login:"Enter",dashboard:"Overview",menuMgmt:"Cuisine",tables:"Seating",notifications:"Alerts",analytics:"Insights",logout:"Exit",addDish:"New Dish",save:"Save",cancel:"Cancel",available:"Available",featured:"Recommended",chefChoice:"Chef's choice",badges:"Distinctions",badgeDry:"Dry",badgeSemiDry:"Semi-Dry",badgeSemiSweet:"Semi-Sweet",chooseOptions:"Choose size",cart:"Basket",cartTotal:"Total",addToCart:"Add",cartHint:"Estimated total for your selection (reference only).",emptyCart:"Your basket is empty.",cartQty:"Qty",cartClose:"Close",submitOrder:"Submit order",confirmOrderTitle:"Send this order?",confirmOrderBody:"Staff will receive your table order in alerts (amount is indicative — confirm at the venue).",confirmOrderBtn:"Confirm & send",orderSent:"Order sent."},
-  ka:{menu:"მენიუ",callWaiter:"მიმტანის გამოძახება",requestBill:"ანგარიშის მოთხოვნა",ingredients:"წარმომავლობა",soldOut:"მიუწვდომელი",table:"მაგიდა",waiterCalled:"მიმტანი მოდის.",billRequested:"ანგარიში მზადდება.",search:"მოძებნეთ…",all:"ყველა",adminLogin:"პერსონალი",login:"შესვლა",dashboard:"მიმოხილვა",menuMgmt:"სამზარეულო",tables:"მოსასვლელი",notifications:"შეტყობინებები",analytics:"ანალიტიკა",logout:"გამოსვლა",addDish:"ახალი კერძი",save:"შენახვა",cancel:"გაუქმება",available:"ხელმისაწვდომი",featured:"რეკომენდებული",chefChoice:"შეფის არჩევანი",badges:"გამოჩენილი",badgeDry:"მშრალი",badgeSemiDry:"ნახევრადმშრალი",badgeSemiSweet:"ნახევრადტკბილი",chooseOptions:"ზომა / ფასი",cart:"კალათა",cartTotal:"ჯამი",addToCart:"დამატება",cartHint:"არჩეული კერძების სავარაუდო ჯამი (საინფორმაციოდ).",emptyCart:"კალათა ცარიელია.",cartQty:"რაოდ.",cartClose:"დახურვა",submitOrder:"შეკვეთის გაგზავნა",confirmOrderTitle:"გავაგზავნოთ შეკვეთა?",confirmOrderBody:"პერსონალი მიიღებს შეკვეთას შეტყობინებაში (ჯამი საინფორმაციოა — დაადასტურეთ ადგილზე).",confirmOrderBtn:"დადასტურება",orderSent:"შეკვეთა გაიგზავნა."},
-  ru:{menu:"Меню",callWaiter:"Позвать Официанта",requestBill:"Попросить Счёт",ingredients:"Происхождение",soldOut:"Недоступно",table:"Стол",waiterCalled:"Официант уже идёт.",billRequested:"Счёт готовится.",search:"Поиск…",all:"Все",adminLogin:"Персонал",login:"Войти",dashboard:"Обзор",menuMgmt:"Кухня",tables:"Места",notifications:"Оповещения",analytics:"Аналитика",logout:"Выйти",addDish:"Новое Блюдо",save:"Сохранить",cancel:"Отмена",available:"Доступно",featured:"Рекомендуем",chefChoice:"Выбор шефа",badges:"Отличия",badgeDry:"Сухое",badgeSemiDry:"Полусухое",badgeSemiSweet:"Полусладкое",chooseOptions:"Размер и цена",cart:"Корзина",cartTotal:"Итого",addToCart:"В корзину",cartHint:"Ориентировочная сумма выбранных блюд (справочно).",emptyCart:"Корзина пуста.",cartQty:"Кол-во",cartClose:"Закрыть",submitOrder:"Отправить заказ",confirmOrderTitle:"Отправить заказ?",confirmOrderBody:"Персонал получит заказ в оповещениях (сумма ориентировочная — уточните у официанта).",confirmOrderBtn:"Подтвердить",orderSent:"Заказ отправлен."},
+  en:{menu:"Menu",callWaiter:"Summon Waiter",requestBill:"Request Bill",ingredients:"Provenance",soldOut:"Unavailable",table:"Table",waiterCalled:"Your waiter is on the way.",billRequested:"Your bill is being prepared.",notifyFailed:"Could not save. Please try again.",staffAlertCloudFallback:"Couldn't reach the server. If staff doesn't respond, ask your waiter.",search:"Search the menu…",all:"All",adminLogin:"Staff Access",login:"Enter",dashboard:"Overview",menuMgmt:"Cuisine",tables:"Seating",notifications:"Alerts",analytics:"Insights",logout:"Exit",addDish:"New Dish",save:"Save",cancel:"Cancel",available:"Available",featured:"Recommended",chefChoice:"Chef's choice",badges:"Distinctions",badgeDry:"Dry",badgeSemiDry:"Semi-Dry",badgeSemiSweet:"Semi-Sweet",chooseOptions:"Choose size",cart:"Basket",cartTotal:"Total",addToCart:"Add",cartHint:"Estimated total for your selection (reference only).",emptyCart:"Your basket is empty.",cartQty:"Qty",cartClose:"Close",submitOrder:"Submit order",confirmOrderTitle:"Send this order?",confirmOrderBody:"Staff will receive your table order in alerts (amount is indicative — confirm at the venue).",confirmOrderBtn:"Confirm & send",orderSent:"Order sent."},
+  ka:{menu:"მენიუ",callWaiter:"მიმტანის გამოძახება",requestBill:"ანგარიშის მოთხოვნა",ingredients:"წარმომავლობა",soldOut:"მიუწვდომელი",table:"მაგიდა",waiterCalled:"მიმტანი მოდის.",billRequested:"ანგარიში მზადდება.",notifyFailed:"ვერ შენახა — სცადეთ თავიდან.",staffAlertCloudFallback:"სერვერთან კავშირი ვერ დამყარდა — დაუძახეთ მიმტანს, თუ არავინ მოდის.",search:"მოძებნეთ…",all:"ყველა",adminLogin:"პერსონალი",login:"შესვლა",dashboard:"მიმოხილვა",menuMgmt:"სამზარეულო",tables:"მოსასვლელი",notifications:"შეტყობინებები",analytics:"ანალიტიკა",logout:"გამოსვლა",addDish:"ახალი კერძი",save:"შენახვა",cancel:"გაუქმება",available:"ხელმისაწვდომი",featured:"რეკომენდებული",chefChoice:"შეფის არჩევანი",badges:"გამოჩენილი",badgeDry:"მშრალი",badgeSemiDry:"ნახევრადმშრალი",badgeSemiSweet:"ნახევრადტკბილი",chooseOptions:"ზომა / ფასი",cart:"კალათა",cartTotal:"ჯამი",addToCart:"დამატება",cartHint:"არჩეული კერძების სავარაუდო ჯამი (საინფორმაციოდ).",emptyCart:"კალათა ცარიელია.",cartQty:"რაოდ.",cartClose:"დახურვა",submitOrder:"შეკვეთის გაგზავნა",confirmOrderTitle:"გავაგზავნოთ შეკვეთა?",confirmOrderBody:"პერსონალი მიიღებს შეკვეთას შეტყობინებაში (ჯამი საინფორმაციოა — დაადასტურეთ ადგილზე).",confirmOrderBtn:"დადასტურება",orderSent:"შეკვეთა გაიგზავნა."},
+  ru:{menu:"Меню",callWaiter:"Позвать Официанта",requestBill:"Попросить Счёт",ingredients:"Происхождение",soldOut:"Недоступно",table:"Стол",waiterCalled:"Официант уже идёт.",billRequested:"Счёт готовится.",notifyFailed:"Не удалось сохранить. Попробуйте снова.",staffAlertCloudFallback:"Нет связи с сервером. Если персонал не отвечает — позовите официанта.",search:"Поиск…",all:"Все",adminLogin:"Персонал",login:"Войти",dashboard:"Обзор",menuMgmt:"Кухня",tables:"Места",notifications:"Оповещения",analytics:"Аналитика",logout:"Выйти",addDish:"Новое Блюдо",save:"Сохранить",cancel:"Отмена",available:"Доступно",featured:"Рекомендуем",chefChoice:"Выбор шефа",badges:"Отличия",badgeDry:"Сухое",badgeSemiDry:"Полусухое",badgeSemiSweet:"Полусладкое",chooseOptions:"Размер и цена",cart:"Корзина",cartTotal:"Итого",addToCart:"В корзину",cartHint:"Ориентировочная сумма выбранных блюд (справочно).",emptyCart:"Корзина пуста.",cartQty:"Кол-во",cartClose:"Закрыть",submitOrder:"Отправить заказ",confirmOrderTitle:"Отправить заказ?",confirmOrderBody:"Персонал получит заказ в оповещениях (сумма ориентировочная — уточните у официанта).",confirmOrderBtn:"Подтвердить",orderSent:"Заказ отправлен."},
 };
 
 /* ─── SHARED STATE ───────────────────────────────────────────────────────── */
@@ -381,6 +381,7 @@ function useStore() {
   }, [supabaseEnabled]);
 
   const addNotification = useCallback(
+    /** @returns {Promise<{ ok: boolean, cloudFailed: boolean }>} cloudFailed = Supabase insert failed, saved locally only */
     async (note) => {
       if (supabaseEnabled && supabase) {
         try {
@@ -389,18 +390,25 @@ function useStore() {
             if (prev.some((n) => String(n.id) === String(row.id))) return prev;
             return [row, ...prev].slice(0, 100);
           });
-          return;
+          return { ok: true, cloudFailed: false };
         } catch (e) {
           console.warn("service_alerts insert failed, using localStorage", e);
         }
       }
-      setNotificationsState((prev) => {
-        const id = `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
-        const row = { ...note, id, time: new Date(), read: false };
-        const next = [row, ...prev].slice(0, 60);
-        saveNotificationsToStorage(next);
-        return next;
-      });
+      try {
+        setNotificationsState((prev) => {
+          const id = `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+          const row = { ...note, id, time: new Date(), read: false };
+          const next = [row, ...prev].slice(0, 60);
+          saveNotificationsToStorage(next);
+          return next;
+        });
+        const cloudFailed = !!(supabaseEnabled && supabase);
+        return { ok: true, cloudFailed };
+      } catch (e) {
+        console.warn("addNotification local save failed", e);
+        return { ok: false, cloudFailed: false };
+      }
     },
     [supabaseEnabled]
   );
@@ -1055,6 +1063,7 @@ function CustomerMenu({ tableId, store, lang }) {
   const [cart, setCart] = useState({});
   const [cartOpen, setCartOpen] = useState(false);
   const [orderConfirmOpen, setOrderConfirmOpen] = useState(false);
+  const [orderSending, setOrderSending] = useState(false);
   /** Dish with `priceVariants` — open picker modal (local + future DB). */
   const [variantModalDish, setVariantModalDish] = useState(null);
   const catRefs = useRef({});
@@ -1134,27 +1143,78 @@ function CustomerMenu({ tableId, store, lang }) {
     });
   }, [dishes]);
 
-  const showToast = msg => { setToast(msg); setTimeout(() => setToast(null), 3500); };
-
-  const confirmSendOrder = useCallback(() => {
-    if (cartLines.length === 0) return;
-    const body = formatOrderNotificationBody(cartLines, lang, table.name, cartGrandTotal);
-    addNotification({ type: "order", tableId, tableName: table.name, tableZone: table.zone, message: body });
-    setCart({});
-    setOrderConfirmOpen(false);
-    setCartOpen(false);
-    setToast(t.orderSent);
+  const showToast = useCallback((msg) => {
+    setToast(msg);
     window.setTimeout(() => setToast(null), 3500);
-  }, [cartLines, lang, table.name, cartGrandTotal, tableId, addNotification, t.orderSent]);
+  }, []);
 
-  const callWaiter = () => {
-    addNotification({ type: "waiter", tableId, tableName: table.name, tableZone: table.zone, message: "Waiter Request" });
-    showToast(t.waiterCalled);
-  };
-  const requestBill = () => {
-    addNotification({ type: "bill", tableId, tableName: table.name, tableZone: table.zone, message: "Bill Request" });
-    showToast(t.billRequested);
-  };
+  const confirmSendOrder = useCallback(async () => {
+    if (cartLines.length === 0 || orderSending) return;
+    const body = formatOrderNotificationBody(cartLines, lang, table.name, cartGrandTotal);
+    setOrderSending(true);
+    try {
+      const r = await addNotification({
+        type: "order",
+        tableId,
+        tableName: table.name,
+        tableZone: table.zone,
+        message: body,
+      });
+      if (!r.ok) {
+        showToast(t.notifyFailed);
+        return;
+      }
+      setCart({});
+      setOrderConfirmOpen(false);
+      setCartOpen(false);
+      showToast(r.cloudFailed ? t.staffAlertCloudFallback : t.orderSent);
+    } finally {
+      setOrderSending(false);
+    }
+  }, [
+    cartLines,
+    lang,
+    table.name,
+    table.zone,
+    cartGrandTotal,
+    tableId,
+    orderSending,
+    addNotification,
+    showToast,
+    t.notifyFailed,
+    t.staffAlertCloudFallback,
+    t.orderSent,
+  ]);
+
+  const callWaiter = useCallback(async () => {
+    const r = await addNotification({
+      type: "waiter",
+      tableId,
+      tableName: table.name,
+      tableZone: table.zone,
+      message: "Waiter Request",
+    });
+    if (!r.ok) {
+      showToast(t.notifyFailed);
+      return;
+    }
+    showToast(r.cloudFailed ? t.staffAlertCloudFallback : t.waiterCalled);
+  }, [addNotification, tableId, table.name, table.zone, showToast, t]);
+
+  const requestBill = useCallback(async () => {
+    const r = await addNotification({
+      type: "bill",
+      tableId,
+      tableName: table.name,
+      tableZone: table.zone,
+      message: "Bill Request",
+    });
+    if (!r.ok) {
+      showToast(t.notifyFailed);
+      return;
+    }
+    showToast(r.cloudFailed ? t.staffAlertCloudFallback : t.billRequested);
+  }, [addNotification, tableId, table.name, table.zone, showToast, t]);
 
   const sortedCategories = useMemo(() => [...categories].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)), [categories]);
 
@@ -1596,8 +1656,23 @@ function CustomerMenu({ tableId, store, lang }) {
                   <button
                     type="button"
                     onClick={confirmSendOrder}
+                    disabled={orderSending}
+                    aria-busy={orderSending}
                     className="action-btn"
-                    style={{ minHeight:"48px", borderRadius:"999px", border:"1px solid var(--gold)", background:"linear-gradient(135deg, rgba(61,191,176,0.25), rgba(61,191,176,0.08))", color:"var(--gold-pale)", fontSize:"10px", fontWeight:600, letterSpacing:"0.1em", textTransform:"uppercase", cursor:"pointer", fontFamily:"var(--font-body)" }}
+                    style={{
+                      minHeight:"48px",
+                      borderRadius:"999px",
+                      border:"1px solid var(--gold)",
+                      background:"linear-gradient(135deg, rgba(61,191,176,0.25), rgba(61,191,176,0.08))",
+                      color:"var(--gold-pale)",
+                      fontSize:"10px",
+                      fontWeight:600,
+                      letterSpacing:"0.1em",
+                      textTransform:"uppercase",
+                      cursor: orderSending ? "wait" : "pointer",
+                      opacity: orderSending ? 0.65 : 1,
+                      fontFamily:"var(--font-body)",
+                    }}
                   >
                     {t.confirmOrderBtn}
                   </button>
