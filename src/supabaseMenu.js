@@ -282,6 +282,86 @@ export async function deleteMenuCategory(id) {
   if (error) throw error;
 }
 
+/* ─── Menu distinctions (badge catalog — keys match `menu.badges[]` text) ─ */
+
+export function mapMenuDistinctionRow(row) {
+  if (!row || row.id == null || row.id === "") return null;
+  return {
+    id: row.id,
+    key: String(row.key ?? "").trim(),
+    label: {
+      en: row.label_en ?? "",
+      ka: row.label_ka ?? "",
+      ru: row.label_ru ?? "",
+    },
+    bg: String(row.bg ?? "").trim() || "linear-gradient(135deg,#333,#555)",
+    color: String(row.color ?? "").trim() || "#fff",
+    order: Number(row.sort_order) || 0,
+  };
+}
+
+function distinctionToDbInsert(d) {
+  return {
+    key: String(d.key ?? "").trim(),
+    label_en: d.label?.en ?? "",
+    label_ka: d.label?.ka ?? "",
+    label_ru: d.label?.ru ?? "",
+    bg: String(d.bg ?? "").trim() || "linear-gradient(135deg,#333,#555)",
+    color: String(d.color ?? "").trim() || "#fff",
+    sort_order: Number.isFinite(Number(d.order)) ? Number(d.order) : 0,
+  };
+}
+
+export async function fetchMenuDistinctions() {
+  if (!supabase) throw new Error("Supabase is not configured");
+  return withRetry(async () => {
+    const { data, error } = await supabase
+      .from("menu_distinctions")
+      .select("*")
+      .order("sort_order", { ascending: true })
+      .order("key", { ascending: true });
+    if (error) throw error;
+    return (data ?? []).map(mapMenuDistinctionRow).filter(Boolean);
+  });
+}
+
+export async function insertMenuDistinction(d) {
+  if (!supabase) throw new Error("Supabase is not configured");
+  const { data, error } = await supabase
+    .from("menu_distinctions")
+    .insert(distinctionToDbInsert(d))
+    .select("*")
+    .single();
+  if (error) throw error;
+  return mapMenuDistinctionRow(data);
+}
+
+export async function updateMenuDistinction(id, d) {
+  if (!supabase) throw new Error("Supabase is not configured");
+  const row = distinctionToDbInsert(d);
+  const { data, error } = await supabase
+    .from("menu_distinctions")
+    .update({
+      label_en: row.label_en,
+      label_ka: row.label_ka,
+      label_ru: row.label_ru,
+      bg: row.bg,
+      color: row.color,
+      sort_order: row.sort_order,
+    })
+    .eq("id", id)
+    .select("*")
+    .single();
+  if (error) throw error;
+  return mapMenuDistinctionRow(data);
+}
+
+export async function deleteMenuDistinction(id) {
+  if (!supabase) throw new Error("Supabase is not configured");
+  const { error } = await supabase.from("menu_distinctions").delete().eq("id", id);
+  if (error) throw error;
+}
+
 /** Upload file to Storage bucket `menu-images`; returns public URL. */
 export async function uploadMenuImage(file) {
   if (!supabase) throw new Error("Supabase is not configured");

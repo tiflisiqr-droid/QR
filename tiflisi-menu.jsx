@@ -25,6 +25,10 @@ import {
   updateMenuDishSortOrders,
   deleteMenuCategory,
   normalizePriceVariantsFromRow,
+  fetchMenuDistinctions,
+  insertMenuDistinction,
+  updateMenuDistinction,
+  deleteMenuDistinction,
 } from "./src/supabaseMenu.js";
 import {
   insertServiceAlert,
@@ -247,6 +251,9 @@ const TABLES_STORAGE_KEY = "tiflisi_tables_v1";
 /** Offline / no-Supabase: persist dish list so admin edits survive refresh (not used when live Supabase menu loads). */
 const MENU_DISHES_STORAGE_KEY = "tiflisi_menu_dishes_v2";
 
+/** Offline: distinction catalog (same shape as Supabase `menu_distinctions`). */
+const MENU_DISTINCTIONS_STORAGE_KEY = "tiflisi_menu_distinctions_v1";
+
 function normalizeTableRows(arr) {
   if (!Array.isArray(arr)) return [];
   return arr
@@ -301,6 +308,18 @@ function loadDishesFromLocalStorage() {
   }
 }
 
+function loadDistinctionsFromLocalStorage() {
+  try {
+    const raw = localStorage.getItem(MENU_DISTINCTIONS_STORAGE_KEY);
+    if (!raw) return null;
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr) || arr.length === 0) return null;
+    return arr;
+  } catch (_) {
+    return null;
+  }
+}
+
 function saveNotificationsToStorage(list) {
   try {
     const serializable = list.map((n) => ({
@@ -341,6 +360,45 @@ const BADGE_CFG = {
   "Semi-Sweet":   { bg:"linear-gradient(135deg,#4a2a4a,#7c3d6b)", color:"#fdf4ff" },
 };
 
+function defaultDistinctionsFromBadgeCfg() {
+  return Object.keys(BADGE_CFG).map((key, i) => ({
+    id: `local-${String(key).replace(/[^a-zA-Z0-9_-]/g, "_")}`,
+    key,
+    label: { en: key, ka: "", ru: "" },
+    bg: BADGE_CFG[key].bg,
+    color: BADGE_CFG[key].color,
+    order: i + 1,
+  }));
+}
+
+/** DB/local rows + built-in defaults so toggles always list known keys. */
+function mergedDistinctionCatalog(rows) {
+  const defaults = defaultDistinctionsFromBadgeCfg();
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return [...defaults].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  }
+  const keys = new Set(rows.map((r) => r.key));
+  const extra = defaults.filter((d) => !keys.has(d.key));
+  return [...rows, ...extra].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+}
+
+function badgeStyleForKey(keyStr, catalog) {
+  const row = catalog.find((r) => r.key === keyStr);
+  if (row?.bg && row?.color) return { bg: row.bg, color: row.color };
+  return BADGE_CFG[keyStr] || { bg: "#333", color: "#fff" };
+}
+
+function badgeLabelForKey(b, lang, catalog, t) {
+  const row = catalog.find((r) => r.key === b);
+  const loc = row?.label?.[lang] ?? row?.label?.en;
+  if (loc != null && String(loc).trim()) return String(loc).trim();
+  if (b === "Chef's Table") return t.chefChoice;
+  if (b === "Dry") return t.badgeDry;
+  if (b === "Semi-Dry") return t.badgeSemiDry;
+  if (b === "Semi-Sweet") return t.badgeSemiSweet;
+  return b;
+}
+
 const T = {
   en:{menu:"Menu",callWaiter:"Summon Waiter",requestBill:"Request Bill",ingredients:"Provenance",soldOut:"Unavailable",table:"Table",waiterCalled:"Your waiter is on the way.",billRequested:"Your bill is being prepared.",notifyFailed:"Could not save. Please try again.",staffAlertCloudFallback:"Couldn't reach the server. If staff doesn't respond, ask your waiter.",search:"Search the menu…",all:"All",adminLogin:"Staff Access",login:"Enter",dashboard:"Overview",menuMgmt:"Cuisine",tables:"Seating",notifications:"Alerts",analytics:"Insights",logout:"Exit",addDish:"New Dish",save:"Save",cancel:"Cancel",available:"Available",featured:"Recommended",chefChoice:"Chef's choice",badges:"Distinctions",badgeDry:"Dry",badgeSemiDry:"Semi-Dry",badgeSemiSweet:"Semi-Sweet",chooseOptions:"Choose size",cart:"Basket",cartTotal:"Total",addToCart:"Add",cartHint:"Estimated total for your selection (reference only).",emptyCart:"Your basket is empty.",cartQty:"Qty",cartClose:"Close",submitOrder:"Submit order",confirmOrderTitle:"Send this order?",confirmOrderBody:"Staff will receive your table order in alerts (amount is indicative — confirm at the venue).",confirmOrderBtn:"Confirm & send",orderSent:"Order sent."},
   ka:{menu:"მენიუ",callWaiter:"მიმტანის გამოძახება",requestBill:"ანგარიშის მოთხოვნა",ingredients:"წარმომავლობა",soldOut:"მიუწვდომელი",table:"მაგიდა",waiterCalled:"მიმტანი მოდის.",billRequested:"ანგარიში მზადდება.",notifyFailed:"ვერ შენახა — სცადეთ თავიდან.",staffAlertCloudFallback:"სერვერთან კავშირი ვერ დამყარდა — დაუძახეთ მიმტანს, თუ არავინ მოდის.",search:"მოძებნეთ…",all:"ყველა",adminLogin:"პერსონალი",login:"შესვლა",dashboard:"მიმოხილვა",menuMgmt:"სამზარეულო",tables:"მოსასვლელი",notifications:"შეტყობინებები",analytics:"ანალიტიკა",logout:"გამოსვლა",addDish:"ახალი კერძი",save:"შენახვა",cancel:"გაუქმება",available:"ხელმისაწვდომი",featured:"რეკომენდებული",chefChoice:"შეფის არჩევანი",badges:"გამოჩენილი",badgeDry:"მშრალი",badgeSemiDry:"ნახევრადმშრალი",badgeSemiSweet:"ნახევრადტკბილი",chooseOptions:"ზომა / ფასი",cart:"კალათა",cartTotal:"ჯამი",addToCart:"დამატება",cartHint:"არჩეული კერძების სავარაუდო ჯამი (საინფორმაციოდ).",emptyCart:"კალათა ცარიელია.",cartQty:"რაოდ.",cartClose:"დახურვა",submitOrder:"შეკვეთის გაგზავნა",confirmOrderTitle:"გავაგზავნოთ შეკვეთა?",confirmOrderBody:"პერსონალი მიიღებს შეკვეთას შეტყობინებაში (ჯამი საინფორმაციოა — დაადასტურეთ ადგილზე).",confirmOrderBtn:"დადასტურება",orderSent:"შეკვეთა გაიგზავნა."},
@@ -351,6 +409,10 @@ const T = {
 function useStore() {
   const supabaseEnabled = isSupabaseConfigured();
   const [categories, setCategories] = useState(() => (supabaseEnabled ? [] : CATEGORIES));
+  const [distinctions, setDistinctions] = useState(() => {
+    if (supabaseEnabled) return [];
+    return loadDistinctionsFromLocalStorage() ?? defaultDistinctionsFromBadgeCfg();
+  });
   const [dishes, setDishes] = useState(() => {
     if (supabaseEnabled) return [];
     return loadDishesFromLocalStorage() ?? DISHES;
@@ -541,7 +603,11 @@ function useStore() {
       if (x != null && typeof x === "object" && "message" in x) return String(x.message);
       return x != null ? String(x) : "";
     };
-    const [dishResult, catResult] = await Promise.allSettled([fetchMenuDishes(), fetchMenuCategories()]);
+    const [dishResult, catResult, distResult] = await Promise.allSettled([
+      fetchMenuDishes(),
+      fetchMenuCategories(),
+      fetchMenuDistinctions(),
+    ]);
     let dishErr = null;
     if (dishResult.status === "fulfilled") {
       setDishes(dishResult.value);
@@ -557,6 +623,12 @@ function useStore() {
         dishErr =
           reasonText(catResult) || "Could not load menu categories (run SQL for public.menu_categories)";
       }
+    }
+    if (distResult.status === "fulfilled") {
+      setDistinctions(distResult.value);
+    } else {
+      console.warn("[menu_distinctions]", reasonText(distResult));
+      setDistinctions(defaultDistinctionsFromBadgeCfg());
     }
     setMenuError(dishErr || null);
     setMenuLoading(false);
@@ -624,6 +696,14 @@ function useStore() {
       localStorage.setItem(MENU_DISHES_STORAGE_KEY, JSON.stringify(dishes));
     } catch (_) {}
   }, [dishes, supabaseEnabled]);
+
+  /** Offline only: distinction catalog. */
+  useEffect(() => {
+    if (supabaseEnabled) return;
+    try {
+      localStorage.setItem(MENU_DISTINCTIONS_STORAGE_KEY, JSON.stringify(distinctions));
+    } catch (_) {}
+  }, [distinctions, supabaseEnabled]);
 
   /** Offline: other tabs pick up localStorage menu changes. */
   useEffect(() => {
@@ -702,6 +782,8 @@ function useStore() {
   return {
     categories,
     setCategories,
+    distinctions,
+    setDistinctions,
     dishes,
     setDishes,
     tables,
@@ -1055,6 +1137,10 @@ function DishVariantModal({ dish, lang, t, onClose, onConfirm }) {
 function CustomerMenu({ tableId, store, lang }) {
   const t = T[lang];
   const { categories, dishes, tables, addNotification, trackView, menuLoading, menuError } = store;
+  const distinctionCatalog = useMemo(
+    () => mergedDistinctionCatalog(store.distinctions ?? []),
+    [store.distinctions]
+  );
   const supabaseMenu = isSupabaseConfigured();
   const [activeCat, setActiveCat] = useState(null);
   const [search, setSearch] = useState("");
@@ -1465,7 +1551,7 @@ function CustomerMenu({ tableId, store, lang }) {
             </div>
             <div className="menu-dish-list">
               {cat.dishes.map((dish, di) => (
-                <DishRow key={dish.id} dish={dish} lang={lang} t={t}
+                <DishRow key={dish.id} dish={dish} lang={lang} t={t} distinctionCatalog={distinctionCatalog}
                   style={{ animationDelay:`${(gi*3+di)*0.06}s` }}
                   expanded={expanded===dish.id}
                   onToggle={() => { setExpanded(expanded===dish.id?null:dish.id); trackView(dish.id); }}
@@ -1767,7 +1853,7 @@ function dishBlurbText(dish, lang) {
   return "";
 }
 
-function DishRow({ dish, lang, t, expanded, onToggle, style, cartQty = 0, onAddToCart, onBumpCartQty, onOpenVariantModal }) {
+function DishRow({ dish, lang, t, distinctionCatalog, expanded, onToggle, style, cartQty = 0, onAddToCart, onBumpCartQty, onOpenVariantModal }) {
   const [addPulse, setAddPulse] = useState(false);
   const addPulseTimerRef = useRef(null);
   const nameObj = dish.name && typeof dish.name === "object" ? dish.name : {};
@@ -1779,13 +1865,7 @@ function DishRow({ dish, lang, t, expanded, onToggle, style, cartQty = 0, onAddT
   const hasVariants = dishPriceVariants(dish).length > 0;
   const mmPrice = minMaxVariantPrice(dish);
 
-  const badgeLine = (b) => {
-    if (b === "Chef's Table") return t.chefChoice;
-    if (b === "Dry") return t.badgeDry;
-    if (b === "Semi-Dry") return t.badgeSemiDry;
-    if (b === "Semi-Sweet") return t.badgeSemiSweet;
-    return b;
-  };
+  const cat = distinctionCatalog || mergedDistinctionCatalog([]);
 
   useEffect(() => {
     return () => {
@@ -1848,8 +1928,8 @@ function DishRow({ dish, lang, t, expanded, onToggle, style, cartQty = 0, onAddT
                   key={`${dish.id}-b-${bi}-${b}`}
                   className="tag"
                   style={{
-                    background: BADGE_CFG[b]?.bg || "#333",
-                    color: BADGE_CFG[b]?.color || "#fff",
+                    background: badgeStyleForKey(b, cat).bg,
+                    color: badgeStyleForKey(b, cat).color,
                     fontSize: "8px",
                     fontWeight: 700,
                     padding: "4px 10px",
@@ -1862,7 +1942,7 @@ function DishRow({ dish, lang, t, expanded, onToggle, style, cartQty = 0, onAddT
                   }}
                 >
                   {b === "Popular" && <span aria-hidden="true">🔥&nbsp;</span>}
-                  {badgeLine(b)}
+                  {badgeLabelForKey(b, lang, cat, t)}
                 </span>
               ))}
             </div>
@@ -2709,9 +2789,372 @@ function AdminDash({ store }) {
   );
 }
 
+function AdminDistinctions({ store }) {
+  const { distinctions, setDistinctions, dishes, setDishes } = store;
+  const syncDishesToSupabase = isSupabaseConfigured();
+  const [modal, setModal] = useState(null);
+  const [form, setForm] = useState(null);
+  const [distErr, setDistErr] = useState(null);
+  const [distSaving, setDistSaving] = useState(false);
+
+  const sorted = useMemo(
+    () => [...distinctions].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
+    [distinctions]
+  );
+
+  const emptyForm = useCallback(() => {
+    const maxOrder = distinctions.reduce((m, x) => Math.max(m, Number(x.order) || 0), 0);
+    return {
+      id: null,
+      key: "",
+      label: { en: "", ka: "", ru: "" },
+      bg: "linear-gradient(135deg,#3dbfb0,#1a6b62)",
+      color: "#ecfffb",
+      order: maxOrder + 1,
+    };
+  }, [distinctions]);
+
+  const openNew = () => {
+    setDistErr(null);
+    setForm(emptyForm());
+    setModal("new");
+  };
+
+  const openEdit = (row) => {
+    setDistErr(null);
+    setForm({
+      id: row.id,
+      key: row.key,
+      label: { en: row.label?.en ?? "", ka: row.label?.ka ?? "", ru: row.label?.ru ?? "" },
+      bg: row.bg,
+      color: row.color,
+      order: row.order ?? 0,
+    });
+    setModal(row.id);
+  };
+
+  const stripKeyFromDishes = async (keyStr) => {
+    const affected = dishes.filter((d) => (d.badges || []).includes(keyStr));
+    if (!affected.length) return;
+    if (syncDishesToSupabase) {
+      for (const d of affected) {
+        const next = { ...d, badges: (d.badges || []).filter((b) => b !== keyStr) };
+        await updateFullMenuDish(d.id, next);
+        setDishes((prev) => prev.map((x) => (String(x.id) === String(d.id) ? next : x)));
+      }
+    } else {
+      setDishes((prev) =>
+        prev.map((d) => ({
+          ...d,
+          badges: (d.badges || []).filter((b) => b !== keyStr),
+        }))
+      );
+    }
+  };
+
+  const save = async () => {
+    setDistErr(null);
+    const k = String(form.key ?? "").trim();
+    if (!k) {
+      setDistErr("Key is required — this exact text is stored on each dish.");
+      return;
+    }
+    if (modal === "new" && distinctions.some((x) => x.key === k)) {
+      setDistErr("That key already exists.");
+      return;
+    }
+    const payload = {
+      key: k,
+      label: form.label,
+      bg: String(form.bg ?? "").trim() || "linear-gradient(135deg,#333,#555)",
+      color: String(form.color ?? "").trim() || "#fff",
+      order: Number(form.order) || 0,
+    };
+    setDistSaving(true);
+    try {
+      if (syncDishesToSupabase) {
+        if (modal === "new") {
+          const row = await insertMenuDistinction(payload);
+          setDistinctions((p) => [...p, row].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)));
+        } else {
+          const row = await updateMenuDistinction(form.id, payload);
+          setDistinctions((p) => p.map((x) => (String(x.id) === String(form.id) ? row : x)));
+        }
+      } else {
+        if (modal === "new") {
+          const row = {
+            ...payload,
+            id: `local-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+          };
+          setDistinctions((p) => [...p, row].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)));
+        } else {
+          setDistinctions((p) =>
+            p.map((x) =>
+              String(x.id) === String(form.id) ? { ...payload, id: form.id, key: form.key } : x
+            )
+          );
+        }
+      }
+      setModal(null);
+      setForm(null);
+    } catch (e) {
+      setDistErr(e?.message || "Save failed");
+    } finally {
+      setDistSaving(false);
+    }
+  };
+
+  const del = async (row) => {
+    const ok =
+      typeof window !== "undefined"
+        ? window.confirm(
+            `Remove distinction "${row.key}" from the catalog? It will be removed from all dishes that use it.`
+          )
+        : true;
+    if (!ok) return;
+    setDistErr(null);
+    setDistSaving(true);
+    try {
+      await stripKeyFromDishes(row.key);
+      if (syncDishesToSupabase) {
+        await deleteMenuDistinction(row.id);
+      }
+      setDistinctions((p) => p.filter((x) => String(x.id) !== String(row.id)));
+    } catch (e) {
+      setDistErr(e?.message || "Delete failed");
+    } finally {
+      setDistSaving(false);
+    }
+  };
+
+  const labelStyle = { fontSize:"8px", color:"var(--gold)", letterSpacing:"3px", textTransform:"uppercase", marginBottom:"6px", display:"block" };
+  const inputStyle = { width:"100%", padding:"10px 0", background:"transparent", border:"none", borderBottom:"1px solid rgba(61,191,176,0.2)", color:"var(--cream)", fontSize:"14px", fontFamily:"var(--font-display)", outline:"none", boxSizing:"border-box", letterSpacing:"0.5px" };
+
+  return (
+    <>
+      {distErr && (
+        <div style={{ marginBottom:"16px", padding:"12px 14px", border:"1px solid rgba(239,68,68,0.35)", background:"rgba(239,68,68,0.08)", color:"#fca5a5", fontSize:"11px", letterSpacing:"0.3px" }}>{distErr}</div>
+      )}
+      {syncDishesToSupabase && (
+        <div style={{ marginBottom:"16px", padding:"10px 14px", border:"1px solid rgba(16,185,129,0.25)", background:"rgba(16,185,129,0.06)", color:"#86efac", fontSize:"10px", letterSpacing:"0.3px", lineHeight:1.5 }}>
+          Distinctions sync to <code style={{ color:"var(--gold)" }}>public.menu_distinctions</code> — run SQL from <code style={{ color:"var(--gold)" }}>supabase/schema.sql</code> if the table is missing.
+        </div>
+      )}
+      <div style={{ background:"var(--charcoal)", border:"1px solid rgba(61,191,176,0.15)", padding:"28px", marginBottom:"28px" }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:"16px", flexWrap:"wrap", marginBottom:"20px" }}>
+          <div style={{ fontSize:"8px", color:"var(--gold)", letterSpacing:"4px", textTransform:"uppercase" }}>Catalog</div>
+          <button
+            type="button"
+            onClick={openNew}
+            disabled={distSaving}
+            style={{
+              padding:"11px 24px",
+              background:"rgba(61,191,176,0.12)",
+              border:"1px solid var(--gold)",
+              color:"var(--gold)",
+              fontSize:"9px",
+              letterSpacing:"2px",
+              textTransform:"uppercase",
+              cursor: distSaving ? "wait" : "pointer",
+              fontFamily:"var(--font-body)",
+              whiteSpace:"nowrap",
+              opacity: distSaving ? 0.6 : 1,
+            }}
+          >
+            + NEW DISTINCTION
+          </button>
+        </div>
+        <div style={{ fontSize:"10px", color:"var(--muted)", marginBottom:"16px", lineHeight:1.6 }}>
+          <strong style={{ color:"var(--cream)" }}>Key</strong> is stored on each dish (same as badge text in the database). Edit labels and colors anytime; changing the key after creation is not supported for cloud sync.
+        </div>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))", gap:"12px" }}>
+          {sorted.map((row) => (
+            <div key={row.id} style={{ background:"rgba(0,0,0,0.2)", border:"1px solid rgba(255,255,255,0.06)", padding:"16px" }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:"10px", marginBottom:"12px" }}>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontFamily:"var(--font-display)", fontSize:"18px", fontStyle:"italic", color:"var(--cream)", wordBreak:"break-word" }}>{row.key}</div>
+                  <div style={{ fontSize:"10px", color:"var(--muted)", marginTop:"6px", lineHeight:1.45 }}>
+                    EN {row.label?.en || "—"} · KA {row.label?.ka || "—"} · RU {row.label?.ru || "—"}
+                  </div>
+                  <div style={{ fontSize:"9px", color:"var(--subtle)", marginTop:"8px" }}>sort {row.order ?? 0}</div>
+                </div>
+                <span
+                  style={{
+                    flexShrink:0,
+                    fontSize:"8px",
+                    fontWeight:700,
+                    letterSpacing:"0.12em",
+                    textTransform:"uppercase",
+                    padding:"6px 10px",
+                    borderRadius:"999px",
+                    background: row.bg,
+                    color: row.color,
+                    fontFamily:"var(--font-body)",
+                  }}
+                >
+                  preview
+                </span>
+              </div>
+              <div style={{ display:"flex", gap:"6px", flexWrap:"wrap" }}>
+                <button
+                  type="button"
+                  disabled={distSaving}
+                  onClick={() => openEdit(row)}
+                  style={{
+                    flex:1,
+                    minWidth:"100px",
+                    padding:"8px",
+                    background:"rgba(61,191,176,0.08)",
+                    border:"1px solid rgba(61,191,176,0.2)",
+                    color:"var(--gold)",
+                    fontSize:"9px",
+                    letterSpacing:"1.5px",
+                    cursor: distSaving ? "wait" : "pointer",
+                    fontFamily:"var(--font-body)",
+                    opacity: distSaving ? 0.6 : 1,
+                  }}
+                >
+                  EDIT
+                </button>
+                <button
+                  type="button"
+                  disabled={distSaving}
+                  onClick={() => del(row)}
+                  style={{
+                    padding:"8px 12px",
+                    background:"rgba(239,68,68,0.06)",
+                    border:"1px solid rgba(239,68,68,0.15)",
+                    color:"rgba(239,68,68,0.75)",
+                    fontSize:"11px",
+                    cursor: distSaving ? "wait" : "pointer",
+                    opacity: distSaving ? 0.6 : 1,
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {modal !== null && form && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.85)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000, backdropFilter:"blur(8px)", padding:"20px" }}>
+          <div style={{ background:"var(--charcoal)", border:"1px solid rgba(61,191,176,0.2)", padding:"36px", width:"100%", maxWidth:"520px", maxHeight:"85vh", overflowY:"auto", animation:"slideIn 0.3s ease" }}>
+            <div style={{ fontFamily:"var(--font-display)", fontSize:"28px", fontStyle:"italic", color:"var(--cream)", marginBottom:"24px" }}>
+              {modal === "new" ? "New distinction" : "Edit distinction"}
+            </div>
+            {distErr && <div style={{ marginBottom:"14px", fontSize:"11px", color:"#fca5a5" }}>{distErr}</div>}
+            <div style={{ display:"flex", flexDirection:"column", gap:"18px" }}>
+              <div>
+                <label style={labelStyle}>Key (stored on dishes)</label>
+                <input
+                  value={form.key}
+                  onChange={(e) => setForm((p) => ({ ...p, key: e.target.value }))}
+                  disabled={modal !== "new"}
+                  style={{ ...inputStyle, opacity: modal !== "new" ? 0.65 : 1 }}
+                  placeholder="e.g. Signature"
+                />
+              </div>
+              {["en", "ka", "ru"].map((l) => (
+                <div key={l}>
+                  <label style={labelStyle}>Label ({l.toUpperCase()}) — guest menu</label>
+                  <input
+                    value={form.label[l] ?? ""}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, label: { ...p.label, [l]: e.target.value } }))
+                    }
+                    style={inputStyle}
+                  />
+                </div>
+              ))}
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"16px" }}>
+                <div>
+                  <label style={labelStyle}>Background (CSS)</label>
+                  <input
+                    value={form.bg}
+                    onChange={(e) => setForm((p) => ({ ...p, bg: e.target.value }))}
+                    style={{ ...inputStyle, fontFamily:"var(--font-body)", fontSize:"12px" }}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>Text color</label>
+                  <input
+                    value={form.color}
+                    onChange={(e) => setForm((p) => ({ ...p, color: e.target.value }))}
+                    style={{ ...inputStyle, fontFamily:"var(--font-body)", fontSize:"12px" }}
+                  />
+                </div>
+              </div>
+              <div>
+                <label style={labelStyle}>Sort order</label>
+                <input
+                  type="number"
+                  value={form.order === "" || form.order === undefined ? "" : form.order}
+                  onChange={(e) =>
+                    setForm((p) => ({
+                      ...p,
+                      order: e.target.value === "" ? "" : Number(e.target.value),
+                    }))
+                  }
+                  style={{ ...inputStyle, fontFamily:"var(--font-body)", fontSize:"13px" }}
+                />
+              </div>
+            </div>
+            <div style={{ display:"flex", gap:"10px", marginTop:"24px" }}>
+              <button
+                type="button"
+                disabled={distSaving}
+                onClick={() => save()}
+                style={{
+                  flex:1,
+                  padding:"13px",
+                  background: distSaving ? "rgba(255,255,255,0.06)" : "linear-gradient(135deg,rgba(61,191,176,0.2),rgba(61,191,176,0.08))",
+                  border:"1px solid var(--gold)",
+                  color:"var(--gold-pale)",
+                  fontSize:"9px",
+                  letterSpacing:"3px",
+                  textTransform:"uppercase",
+                  cursor: distSaving ? "wait" : "pointer",
+                  fontFamily:"var(--font-body)",
+                }}
+              >
+                SAVE
+              </button>
+              <button
+                type="button"
+                disabled={distSaving}
+                onClick={() => {
+                  setModal(null);
+                  setForm(null);
+                  setDistErr(null);
+                }}
+                style={{
+                  flex:1,
+                  padding:"13px",
+                  background:"transparent",
+                  border:"1px solid rgba(255,255,255,0.1)",
+                  color:"var(--muted)",
+                  fontSize:"9px",
+                  letterSpacing:"3px",
+                  textTransform:"uppercase",
+                  cursor: distSaving ? "not-allowed" : "pointer",
+                  fontFamily:"var(--font-body)",
+                }}
+              >
+                CANCEL
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 /* ─── Menu Management ─────────────────────────────────────────────────── */
 function AdminMenu({ store }) {
-  const { categories, setCategories, dishes, setDishes, menuError, clearMenuError } = store;
+  const { categories, setCategories, dishes, setDishes, menuError, clearMenuError, distinctions } = store;
   const syncDishesToSupabase = isSupabaseConfigured();
   const [adminTab, setAdminTab] = useState("dishes");
   const [filter, setFilter] = useState(null);
@@ -2724,6 +3167,7 @@ function AdminMenu({ store }) {
   const [catSaving, setCatSaving] = useState(false);
 
   const sortedCats = useMemo(() => [...categories].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)), [categories]);
+  const distinctionCatalog = useMemo(() => mergedDistinctionCatalog(distinctions), [distinctions]);
 
   const emptyDish = useCallback(() => ({
     id: null,
@@ -3057,14 +3501,15 @@ function AdminMenu({ store }) {
         action={
           adminTab === "dishes" ? (
             <button onClick={openNew} style={{ padding:"10px 22px", background:"linear-gradient(135deg,rgba(61,191,176,0.2),rgba(61,191,176,0.08))", border:"1px solid var(--gold)", color:"var(--gold)", fontSize:"9px", letterSpacing:"3px", textTransform:"uppercase", cursor:"pointer", fontFamily:"var(--font-body)" }}>+ NEW DISH</button>
-          ) : (
+          ) : adminTab === "categories" ? (
             <button onClick={openNewCategory} style={{ padding:"10px 22px", background:"linear-gradient(135deg,rgba(61,191,176,0.2),rgba(61,191,176,0.08))", border:"1px solid var(--gold)", color:"var(--gold)", fontSize:"9px", letterSpacing:"3px", textTransform:"uppercase", cursor:"pointer", fontFamily:"var(--font-body)" }}>+ NEW CATEGORY</button>
-          )
+          ) : null
         } />
 
-      <div style={{ display:"flex", gap:"8px", marginBottom:"20px" }}>
+      <div style={{ display:"flex", gap:"8px", marginBottom:"20px", flexWrap:"wrap" }}>
         <button type="button" onClick={() => { setCategoryError(null); setAdminTab("dishes"); }} style={tabBtn(adminTab === "dishes")}>Dishes</button>
         <button type="button" onClick={() => { setCategoryError(null); setAdminTab("categories"); }} style={tabBtn(adminTab === "categories")}>Categories</button>
+        <button type="button" onClick={() => { setCategoryError(null); setAdminTab("distinctions"); }} style={tabBtn(adminTab === "distinctions")}>Distinctions</button>
       </div>
 
       {adminTab === "categories" && (
@@ -3111,6 +3556,8 @@ function AdminMenu({ store }) {
           </div>
         </>
       )}
+
+      {adminTab === "distinctions" && <AdminDistinctions store={store} />}
 
       {adminTab === "dishes" && (
       <>
@@ -3166,12 +3613,27 @@ function AdminMenu({ store }) {
                     {mmAd ? `₾${formatLari(mmAd.min)}–${formatLari(mmAd.max)}` : `₾${formatLari(dish.price)}`}
                   </div>
                 </div>
-                <div style={{ position:"absolute", top:"8px", right:"8px", display:"flex", gap:"4px", flexWrap:"wrap" }}>
-                  {dish.badges.map((b, bi) => <span key={`${dish.id}-ab-${bi}-${b}`} style={{ background:BADGE_CFG[b]?.bg||"#333", color:BADGE_CFG[b]?.color||"#fff", fontSize:"7px", padding:"2px 6px", fontWeight:"700", letterSpacing:"1px" }}>{b}</span>)}
+                <div style={{ position:"absolute", top:"8px", right:"8px", display:"flex", gap:"4px", flexWrap:"wrap", justifyContent:"flex-end", maxWidth:"70%" }}>
+                  {dish.badges.map((b, bi) => {
+                    const st = badgeStyleForKey(b, distinctionCatalog);
+                    return (
+                      <span key={`${dish.id}-ab-${bi}-${b}`} style={{ background: st.bg, color: st.color, fontSize:"7px", padding:"2px 6px", fontWeight:"700", letterSpacing:"1px" }}>{b}</span>
+                    );
+                  })}
                 </div>
               </div>
               <div style={{ padding:"14px 14px 10px" }}>
                 <div style={{ fontSize:"9px", color:"var(--muted)", letterSpacing:"1px", marginBottom:"10px" }}>{cat?.icon} {cat?.name.en}</div>
+                <div style={{ fontSize:"8px", color:"var(--subtle)", letterSpacing:"0.12em", textTransform:"uppercase", marginBottom:"6px" }}>Distinctions</div>
+                <div style={{ fontSize:"11px", color:"var(--cream)", marginBottom:"10px", lineHeight:1.45, minHeight:"1.2em" }}>
+                  {dish.badges?.length ? (
+                    <span style={{ fontFamily:"var(--font-body)", letterSpacing:"0.04em", textTransform:"none" }}>
+                      {dish.badges.join(" · ")}
+                    </span>
+                  ) : (
+                    <span style={{ color:"var(--subtle)", fontStyle:"italic" }}>—</span>
+                  )}
+                </div>
                 <div style={{ display:"flex", gap:"6px", marginBottom:"8px" }}>
                   <button type="button" aria-label="Move dish up" disabled={di <= 0 || dishSaving} onClick={() => moveDish(dish.id, -1)} style={{
                     padding:"8px 12px", background: di <= 0 || dishSaving ? "rgba(255,255,255,0.02)" : "rgba(61,191,176,0.08)", border:`1px solid ${di <= 0 || dishSaving ? "rgba(255,255,255,0.06)" : "rgba(61,191,176,0.25)"}`,
@@ -3222,7 +3684,7 @@ function AdminMenu({ store }) {
             {dishCloudErr && (
               <div style={{ marginBottom:"16px", padding:"12px", border:"1px solid rgba(239,68,68,0.35)", background:"rgba(239,68,68,0.08)", color:"#fca5a5", fontSize:"11px" }}>{dishCloudErr}</div>
             )}
-            <DishFormAdmin form={form} setForm={setForm} categories={sortedCats} />
+            <DishFormAdmin form={form} setForm={setForm} categories={sortedCats} distinctionCatalog={distinctionCatalog} />
             <div style={{ display:"flex", gap:"10px", marginTop:"24px" }}>
               <button type="button" disabled={dishSaving} onClick={() => save()} style={{ flex:1, padding:"13px", background: dishSaving ? "rgba(255,255,255,0.06)" : "linear-gradient(135deg,rgba(61,191,176,0.2),rgba(61,191,176,0.08))", border:"1px solid var(--gold)", color:"var(--gold-pale)", fontSize:"9px", letterSpacing:"3px", textTransform:"uppercase", cursor: dishSaving ? "wait" : "pointer", fontFamily:"var(--font-body)" }}>SAVE</button>
               <button type="button" disabled={dishSaving} onClick={() => setModal(null)} style={{ flex:1, padding:"13px", background:"transparent", border:"1px solid rgba(255,255,255,0.1)", color:"var(--muted)", fontSize:"9px", letterSpacing:"3px", textTransform:"uppercase", cursor: dishSaving ? "not-allowed" : "pointer", fontFamily:"var(--font-body)" }}>CANCEL</button>
@@ -3260,7 +3722,7 @@ function CategoryFormAdmin({ form, setForm }) {
   );
 }
 
-function DishFormAdmin({ form, setForm, categories }) {
+function DishFormAdmin({ form, setForm, categories, distinctionCatalog }) {
   const set = (k,v) => setForm(p=>({...p,[k]:v}));
   const setL = (f,l,v) => setForm(p=>({...p,[f]:{...p[f],[l]:v}}));
   const labelStyle = { fontSize:"8px", color:"var(--gold)", letterSpacing:"3px", textTransform:"uppercase", marginBottom:"6px", display:"block" };
@@ -3422,9 +3884,34 @@ function DishFormAdmin({ form, setForm, categories }) {
       <div>
         <label style={labelStyle}>Distinctions</label>
         <div style={{ display:"flex", flexWrap:"wrap", gap:"6px", marginTop:"6px" }}>
-          {Object.keys(BADGE_CFG).map(b=>(
-            <button key={b} onClick={()=>set("badges",form.badges.includes(b)?form.badges.filter(x=>x!==b):[...form.badges,b])} style={{ padding:"5px 12px", border:"1px solid", borderColor:form.badges.includes(b)?"var(--gold)":"rgba(61,191,176,0.15)", background:form.badges.includes(b)?"rgba(61,191,176,0.12)":"transparent", color:form.badges.includes(b)?"var(--gold)":"var(--muted)", fontSize:"9px", letterSpacing:"1px", cursor:"pointer", fontFamily:"var(--font-body)" }}>{b}</button>
-          ))}
+          {(distinctionCatalog || mergedDistinctionCatalog([])).map((def) => {
+            const b = def.key;
+            return (
+              <button
+                key={def.id || b}
+                type="button"
+                onClick={() =>
+                  set(
+                    "badges",
+                    form.badges.includes(b) ? form.badges.filter((x) => x !== b) : [...form.badges, b]
+                  )
+                }
+                style={{
+                  padding: "5px 12px",
+                  border: "1px solid",
+                  borderColor: form.badges.includes(b) ? "var(--gold)" : "rgba(61,191,176,0.15)",
+                  background: form.badges.includes(b) ? "rgba(61,191,176,0.12)" : "transparent",
+                  color: form.badges.includes(b) ? "var(--gold)" : "var(--muted)",
+                  fontSize: "9px",
+                  letterSpacing: "1px",
+                  cursor: "pointer",
+                  fontFamily: "var(--font-body)",
+                }}
+              >
+                {def.label?.en?.trim() || b}
+              </button>
+            );
+          })}
         </div>
       </div>
       <div style={{ display:"flex", gap:"20px" }}>

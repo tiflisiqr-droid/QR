@@ -1,7 +1,7 @@
 -- =============================================================================
 -- Tiflisi Digital Menu — Supabase SQL (სრული სქემა აპთან სინქში)
 -- Dashboard → SQL → New query → Paste → Run (შეიძლება განმეორებით — idempotent)
--- ემთხვევა: src/supabaseMenu.js, tiflisi-menu.jsx (menu, menu_categories, seating, Storage)
+-- ემთხვევა: src/supabaseMenu.js, tiflisi-menu.jsx (menu, menu_categories, menu_distinctions, seating, Storage)
 -- (Copy of sql-editor-setup.sql — keep both in sync.)
 -- =============================================================================
 
@@ -120,6 +120,49 @@ from (
 ) as v(id, name_en, name_ka, name_ru, icon, sort_order)
 where not exists (select 1 from public.menu_categories limit 1);
 
+-- ── 1a2) public.menu_distinctions — სტაფის კატალოგი (badges[] სტრიქონი = key)
+create table if not exists public.menu_distinctions (
+  id uuid primary key default gen_random_uuid(),
+  key text not null unique,
+  label_en text not null default '',
+  label_ka text not null default '',
+  label_ru text not null default '',
+  bg text not null default 'linear-gradient(135deg,#333,#555)',
+  color text not null default '#fff',
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists menu_distinctions_sort_idx on public.menu_distinctions (sort_order);
+
+alter table public.menu_distinctions enable row level security;
+
+drop policy if exists "menu_distinctions_select_anon" on public.menu_distinctions;
+drop policy if exists "menu_distinctions_insert_anon" on public.menu_distinctions;
+drop policy if exists "menu_distinctions_update_anon" on public.menu_distinctions;
+drop policy if exists "menu_distinctions_delete_anon" on public.menu_distinctions;
+
+create policy "menu_distinctions_select_anon"
+  on public.menu_distinctions for select
+  to anon, authenticated
+  using (true);
+
+create policy "menu_distinctions_insert_anon"
+  on public.menu_distinctions for insert
+  to anon, authenticated
+  with check (true);
+
+create policy "menu_distinctions_update_anon"
+  on public.menu_distinctions for update
+  to anon, authenticated
+  using (true)
+  with check (true);
+
+create policy "menu_distinctions_delete_anon"
+  on public.menu_distinctions for delete
+  to anon, authenticated
+  using (true);
+
 -- ── 1b) public.seating — მაგიდები / QR ?table=<uuid> (src/supabaseMenu.js)
 create table if not exists public.seating (
   id uuid primary key default gen_random_uuid(),
@@ -221,6 +264,7 @@ create policy "service_alerts_delete_anon"
 grant usage on schema public to anon, authenticated;
 grant select, insert, update, delete on table public.menu to anon, authenticated;
 grant select, insert, update, delete on table public.menu_categories to anon, authenticated;
+grant select, insert, update, delete on table public.menu_distinctions to anon, authenticated;
 grant select, insert, update, delete on table public.seating to anon, authenticated;
 grant select, insert, update, delete on table public.service_alerts to anon, authenticated;
 
