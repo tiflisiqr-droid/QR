@@ -1392,27 +1392,43 @@ function CustomerMenu({ tableId, store, lang }) {
       const run = () => {
         const el = document.getElementById(anchor);
         if (!el) return false;
+        const motionReduced =
+          typeof window !== "undefined" &&
+          window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+        /** Match sticky header — CSS scroll-margin also set on `.menu-dish-anchor`. */
         el.style.scrollMarginTop = `${stickyOffset()}px`;
-        const top = window.scrollY + el.getBoundingClientRect().top - stickyOffset();
-        window.scrollTo({
-          top: Math.max(0, top),
-          behavior:
-            typeof window !== "undefined" &&
-            window.matchMedia("(prefers-reduced-motion: reduce)").matches
-              ? "auto"
-              : "smooth",
+
+        /**
+         * Expand + highlight after smooth scroll: expanding the card mid-scroll changes layout
+         * and fights `behavior: "smooth"`, which feels like broken / stuttering scroll (esp. from featured carousel).
+         */
+        const finishAfterScroll = () => {
+          if (expandCard) setExpanded(dishId);
+          trackView(dishId);
+          applyHighlight(el);
+        };
+
+        el.scrollIntoView({
+          behavior: motionReduced ? "auto" : "smooth",
+          block: "start",
         });
+
         if (updateHash) {
           skipHashDeepLinkRef.current = true;
           window.history.replaceState(null, "", `${basePath}#${anchor}`);
           deepLinkHandledHashRef.current = anchor;
         }
-        if (expandCard) setExpanded(dishId);
-        trackView(dishId);
-        applyHighlight(el);
+
+        if (motionReduced) {
+          finishAfterScroll();
+        } else {
+          window.setTimeout(finishAfterScroll, 520);
+        }
+
         window.setTimeout(() => {
           skipScrollSpyRef.current = false;
-        }, 950);
+        }, motionReduced ? 200 : 1100);
         return true;
       };
 
