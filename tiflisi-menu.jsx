@@ -2797,13 +2797,16 @@ function AdminDistinctions({ store }) {
   const [distErr, setDistErr] = useState(null);
   const [distSaving, setDistSaving] = useState(false);
 
-  const sorted = useMemo(
-    () => [...distinctions].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
+  /** Include built-in defaults from BADGE_CFG plus DB/local rows (same merge as dish editor). */
+  const catalogRows = useMemo(
+    () =>
+      mergedDistinctionCatalog(distinctions).sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
     [distinctions]
   );
 
   const emptyForm = useCallback(() => {
-    const maxOrder = distinctions.reduce((m, x) => Math.max(m, Number(x.order) || 0), 0);
+    const merged = mergedDistinctionCatalog(distinctions);
+    const maxOrder = merged.reduce((m, x) => Math.max(m, Number(x.order) || 0), 0);
     return {
       id: null,
       key: "",
@@ -2859,7 +2862,7 @@ function AdminDistinctions({ store }) {
       setDistErr("Key is required — this exact text is stored on each dish.");
       return;
     }
-    if (modal === "new" && distinctions.some((x) => x.key === k)) {
+    if (modal === "new" && mergedDistinctionCatalog(distinctions).some((x) => x.key === k)) {
       setDistErr("That key already exists.");
       return;
     }
@@ -2870,10 +2873,15 @@ function AdminDistinctions({ store }) {
       color: String(form.color ?? "").trim() || "#fff",
       order: Number(form.order) || 0,
     };
+    /** Built-in rows use ids like `local-Signature` — not in Supabase until first Save. */
+    const isBuiltInCatalogRow = form.id != null && String(form.id).startsWith("local-");
     setDistSaving(true);
     try {
       if (syncDishesToSupabase) {
         if (modal === "new") {
+          const row = await insertMenuDistinction(payload);
+          setDistinctions((p) => [...p, row].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)));
+        } else if (isBuiltInCatalogRow) {
           const row = await insertMenuDistinction(payload);
           setDistinctions((p) => [...p, row].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)));
         } else {
@@ -2905,6 +2913,12 @@ function AdminDistinctions({ store }) {
   };
 
   const del = async (row) => {
+    if (row.id != null && String(row.id).startsWith("local-")) {
+      setDistErr(
+        "Built-in distinctions cannot be deleted. Edit one and Save to store it in the cloud; delete only removes custom rows from public.menu_distinctions."
+      );
+      return;
+    }
     const ok =
       typeof window !== "undefined"
         ? window.confirm(
@@ -2965,14 +2979,22 @@ function AdminDistinctions({ store }) {
           </button>
         </div>
         <div style={{ fontSize:"10px", color:"var(--muted)", marginBottom:"16px", lineHeight:1.6 }}>
-          <strong style={{ color:"var(--cream)" }}>Key</strong> is stored on each dish (same as badge text in the database). Edit labels and colors anytime; changing the key after creation is not supported for cloud sync.
+          <strong style={{ color:"var(--cream)" }}>Built-in</strong> rows (app defaults) always appear here. Saving edits for a built-in creates or updates a row in{" "}
+          <code style={{ color:"var(--gold)" }}>menu_distinctions</code>. <strong style={{ color:"var(--cream)" }}>Key</strong> matches dish badges; cloud rows cannot change key after creation.
         </div>
         <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))", gap:"12px" }}>
-          {sorted.map((row) => (
+          {catalogRows.map((row) => (
             <div key={row.id} style={{ background:"rgba(0,0,0,0.2)", border:"1px solid rgba(255,255,255,0.06)", padding:"16px" }}>
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:"10px", marginBottom:"12px" }}>
                 <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ fontFamily:"var(--font-display)", fontSize:"18px", fontStyle:"italic", color:"var(--cream)", wordBreak:"break-word" }}>{row.key}</div>
+                  <div style={{ display:"flex", alignItems:"center", gap:"8px", flexWrap:"wrap" }}>
+                    <div style={{ fontFamily:"var(--font-display)", fontSize:"18px", fontStyle:"italic", color:"var(--cream)", wordBreak:"break-word" }}>{row.key}</div>
+                    {String(row.id).startsWith("local-") ? (
+                      <span style={{ fontSize:"7px", letterSpacing:"0.14em", textTransform:"uppercase", padding:"3px 8px", borderRadius:"999px", border:"1px solid rgba(61,191,176,0.35)", color:"var(--muted)" }}>
+                        Built-in
+                      </span>
+                    ) : null}
+                  </div>
                   <div style={{ fontSize:"10px", color:"var(--muted)", marginTop:"6px", lineHeight:1.45 }}>
                     EN {row.label?.en || "—"} · KA {row.label?.ka || "—"} · RU {row.label?.ru || "—"}
                   </div>
@@ -3018,7 +3040,12 @@ function AdminDistinctions({ store }) {
                 </button>
                 <button
                   type="button"
-                  disabled={distSaving}
+                  disabled={distSaving || String(row.id).startsWith("local-")}
+                  title={
+                    String(row.id).startsWith("local-")
+                      ? "Built-in defaults cannot be deleted"
+                      : "Remove from catalog and dishes"
+                  }
                   onClick={() => del(row)}
                   style={{
                     padding:"8px 12px",
@@ -3026,8 +3053,9 @@ function AdminDistinctions({ store }) {
                     border:"1px solid rgba(239,68,68,0.15)",
                     color:"rgba(239,68,68,0.75)",
                     fontSize:"11px",
-                    cursor: distSaving ? "wait" : "pointer",
-                    opacity: distSaving ? 0.6 : 1,
+                    cursor:
+                      distSaving || String(row.id).startsWith("local-") ? "not-allowed" : "pointer",
+                    opacity: distSaving || String(row.id).startsWith("local-") ? 0.35 : 1,
                   }}
                 >
                   ✕
