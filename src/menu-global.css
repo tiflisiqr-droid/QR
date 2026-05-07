@@ -1405,23 +1405,9 @@ body {
 }
 
 /* ── Featured carousel + dish deep links (#dish-…) ─────────────────────── */
-/* Sticky under category nav so the horizontal “Chef’s choice” row stays visible while browsing. */
 .menu-featured-strip {
-  position: sticky;
-  z-index: 90;
-  top: min(132px, 34vw);
   margin: 28px 16px 8px;
-  padding: 4px 0 12px;
-  background: linear-gradient(180deg, rgba(4, 10, 9, 0.98) 0%, rgba(4, 10, 9, 0.92) 75%, rgba(4, 10, 9, 0) 100%);
-  border-bottom: 1px solid rgba(201, 169, 98, 0.1);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(16px) saturate(1.05);
-  -webkit-backdrop-filter: blur(16px) saturate(1.05);
-}
-@media (min-width: 521px) {
-  .menu-featured-strip {
-    top: 108px;
-  }
+  padding-bottom: 8px;
 }
 .menu-featured-strip-head {
   display: flex;
