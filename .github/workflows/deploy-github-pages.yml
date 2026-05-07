@@ -1,7 +1,12 @@
 name: Deploy to GitHub Pages
 
-# Builds Vite dist (base /QR/) and pushes it to branch `gh-pages`.
-# In repo Settings → Pages: choose "Deploy from a branch" → Branch gh-pages, folder / (root).
+# Builds Vite dist (base /REPO_NAME/, e.g. /QR/) and pushes it to branch `gh-pages`.
+# Settings → Pages: "Deploy from a branch" → gh-pages, / (root).
+#
+# სტუმრის სწორი მისამართი (project site): https://<owner>.github.io/<repo>/
+# მაგალითი: https://tiflisiqr-droid.github.io/QR/?table=…
+# არ გამოიყენოთ მხოლოდ https://<owner>.github.io/ — იქ ეს აპი არ იტვირთება.
+# დომენში owner არის ხაზგასმული (tiflisiqr-droid), წერტილი არა (tiflisiqr.droid არ არსებობს).
 #
 # Supabase (სავალდებულო სხვა მოწყობილობებზე იგივე მენიუსთვის):
 # Repo → Settings → Secrets and variables → Actions → New repository secret:
