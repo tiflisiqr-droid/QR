@@ -1166,6 +1166,8 @@ function CustomerMenu({ tableId, store, lang }) {
   const chipCenterRequestedRef = useRef(false);
   /** Skip hash-on-load effect when we just set `#dish-…` from scrollToDish (avoids double scroll). */
   const skipHashDeepLinkRef = useRef(false);
+  /** Same fragment as `location.hash` without `#` — prevents re-scrolling when `dishes` reference churns with same hash. */
+  const deepLinkHandledHashRef = useRef(null);
   const table = tables.find((tb) => String(tb.id) === String(tableId)) || { name: `Table ${tableId}`, zone: "Hall" };
 
   const cartLines = useMemo(() => {
@@ -1403,6 +1405,7 @@ function CustomerMenu({ tableId, store, lang }) {
         if (updateHash) {
           skipHashDeepLinkRef.current = true;
           window.history.replaceState(null, "", `${basePath}#${anchor}`);
+          deepLinkHandledHashRef.current = anchor;
         }
         if (expandCard) setExpanded(dishId);
         trackView(dishId);
@@ -1432,10 +1435,19 @@ function CustomerMenu({ tableId, store, lang }) {
     }
     if (menuLoading) return;
     const hash = (location.hash || "").replace(/^#/, "");
-    if (!hash.startsWith("dish-")) return;
+    if (!hash.startsWith("dish-")) {
+      deepLinkHandledHashRef.current = null;
+      return;
+    }
+    if (deepLinkHandledHashRef.current === hash) {
+      return;
+    }
     const rawId = hash.slice("dish-".length);
     const dish = dishes.find((d) => String(d.id) === rawId);
-    if (!dish) return;
+    if (!dish) {
+      return;
+    }
+    deepLinkHandledHashRef.current = hash;
     const tmr = window.setTimeout(() => {
       scrollToDish(dish.id, { updateHash: false, expandCard: true });
     }, 80);
