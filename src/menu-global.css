@@ -89,9 +89,10 @@ body {
 @keyframes borderRotate {
   from { transform: rotate(0deg); } to { transform: rotate(360deg); }
 }
+/* No opacity: `both` + stagger delay left cards invisible until their animation started. */
 @keyframes menuCardIn {
-  from { opacity: 0; transform: translateY(18px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { transform: translateY(18px); }
+  to   { transform: translateY(0); }
 }
 @keyframes menuAddPulse {
   0%   { box-shadow: 0 0 0 0 rgba(61,191,176,0.45); }
