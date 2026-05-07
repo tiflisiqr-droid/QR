@@ -1397,7 +1397,8 @@ function CustomerMenu({ tableId, store, lang }) {
           window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
         /** Match sticky header — CSS scroll-margin also set on `.menu-dish-anchor`. */
-        el.style.scrollMarginTop = `${stickyOffset()}px`;
+        const offset = stickyOffset();
+        el.style.scrollMarginTop = `${offset}px`;
 
         /**
          * Expand + highlight after smooth scroll: expanding the card mid-scroll changes layout
@@ -1409,9 +1410,12 @@ function CustomerMenu({ tableId, store, lang }) {
           applyHighlight(el);
         };
 
-        el.scrollIntoView({
+        /** Scroll the window only — `scrollIntoView` can scroll a nested overflow ancestor and leave a blank viewport on mobile. */
+        const rect = el.getBoundingClientRect();
+        const top = Math.max(0, window.scrollY + rect.top - offset);
+        window.scrollTo({
+          top,
           behavior: motionReduced ? "auto" : "smooth",
-          block: "start",
         });
 
         if (updateHash) {
