@@ -43,6 +43,11 @@ function sameCategoryId(a, b) {
   return String(a) === String(b);
 }
 
+/** Guest menu deep links: `#dish-<id>` → scroll to dish card (UUID-safe). */
+function dishAnchorId(dishId) {
+  return `dish-${String(dishId)}`;
+}
+
 /* ─── DATA ───────────────────────────────────────────────────────────────── */
 const CATEGORIES = [
   { id: 1, name: { en: "Khinkali", ka: "ხინკალი", ru: "Хинкали" }, icon: "◈", order: 1 },
@@ -1136,6 +1141,7 @@ function DishVariantModal({ dish, lang, t, onClose, onConfirm }) {
 ═══════════════════════════════════════════════════════════════════════════ */
 function CustomerMenu({ tableId, store, lang }) {
   const t = T[lang];
+  const location = useLocation();
   const { categories, dishes, tables, addNotification, trackView, menuLoading, menuError } = store;
   const distinctionCatalog = useMemo(
     () => mergedDistinctionCatalog(store.distinctions ?? []),
@@ -1158,6 +1164,8 @@ function CustomerMenu({ tableId, store, lang }) {
   const menuTopRef = useRef(null);
   const skipScrollSpyRef = useRef(false);
   const chipCenterRequestedRef = useRef(false);
+  /** Skip hash-on-load effect when we just set `#dish-…` from scrollToDish (avoids double scroll). */
+  const skipHashDeepLinkRef = useRef(false);
   const table = tables.find((tb) => String(tb.id) === String(tableId)) || { name: `Table ${tableId}`, zone: "Hall" };
 
   const cartLines = useMemo(() => {
@@ -1321,6 +1329,12 @@ function CustomerMenu({ tableId, store, lang }) {
     });
   }, [dishes, searchQuery, lang]);
 
+  /** Featured picks for carousel — respects search filter. */
+  const featuredCarouselDishes = useMemo(
+    () => filtered.filter((d) => d.featured),
+    [filtered]
+  );
+
   const grouped = useMemo(() => {
     const byOrder = (a, b) => ((a.order ?? 0) - (b.order ?? 0)) || String(a.id).localeCompare(String(b.id));
     const base = sortedCategories
@@ -1351,6 +1365,82 @@ function CustomerMenu({ tableId, store, lang }) {
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   const stickyOffset = () => (headerRef.current?.offsetHeight ?? 120) + 12;
+
+  const scrollToDish = useCallback(
+    (dishId, options = {}) => {
+      const { updateHash = true, expandCard = true } = options;
+      const anchor = dishAnchorId(dishId);
+      const basePath = `${location.pathname}${location.search}`;
+      skipScrollSpyRef.current = true;
+
+      const applyHighlight = (el) => {
+        const reduced =
+          typeof window !== "undefined" &&
+          window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        el.classList.remove("menu-dish-card--highlight");
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            el.classList.add("menu-dish-card--highlight");
+            const ms = reduced ? 450 : 2000;
+            window.setTimeout(() => el.classList.remove("menu-dish-card--highlight"), ms);
+          });
+        });
+      };
+
+      const run = () => {
+        const el = document.getElementById(anchor);
+        if (!el) return false;
+        el.style.scrollMarginTop = `${stickyOffset()}px`;
+        const top = window.scrollY + el.getBoundingClientRect().top - stickyOffset();
+        window.scrollTo({
+          top: Math.max(0, top),
+          behavior:
+            typeof window !== "undefined" &&
+            window.matchMedia("(prefers-reduced-motion: reduce)").matches
+              ? "auto"
+              : "smooth",
+        });
+        if (updateHash) {
+          skipHashDeepLinkRef.current = true;
+          window.history.replaceState(null, "", `${basePath}#${anchor}`);
+        }
+        if (expandCard) setExpanded(dishId);
+        trackView(dishId);
+        applyHighlight(el);
+        window.setTimeout(() => {
+          skipScrollSpyRef.current = false;
+        }, 950);
+        return true;
+      };
+
+      let tries = 0;
+      const tryScroll = () => {
+        if (run()) return;
+        tries += 1;
+        if (tries < 24) requestAnimationFrame(tryScroll);
+      };
+      tryScroll();
+    },
+    [location.pathname, location.search, trackView]
+  );
+
+  /** Open / refresh with `#dish-…` — scroll after menu mounts (skip if hash came from scrollToDish). */
+  useEffect(() => {
+    if (skipHashDeepLinkRef.current) {
+      skipHashDeepLinkRef.current = false;
+      return;
+    }
+    if (menuLoading) return;
+    const hash = (location.hash || "").replace(/^#/, "");
+    if (!hash.startsWith("dish-")) return;
+    const rawId = hash.slice("dish-".length);
+    const dish = dishes.find((d) => String(d.id) === rawId);
+    if (!dish) return;
+    const tmr = window.setTimeout(() => {
+      scrollToDish(dish.id, { updateHash: false, expandCard: true });
+    }, 80);
+    return () => window.clearTimeout(tmr);
+  }, [menuLoading, dishes, location.hash, scrollToDish]);
 
   const scrollToSection = useCallback((sectionId) => {
     if (typeof document === "undefined") return false;
@@ -1530,6 +1620,53 @@ function CustomerMenu({ tableId, store, lang }) {
             {supabaseMenu
               ? "მენიუ იტვირთება Supabase-იდან — ცარიელია ან ჩატვირთვა ვერ მოხერხდა. შეამოწმე SQL/RLS ან დაამატე კერძები Admin → Cuisine / Cloud-იდან."
               : <>No dishes to show. Add dishes in <strong style={{ color:"var(--cream)" }}>Admin → Cuisine</strong> (stored in this browser) or enable Supabase.</>}
+          </div>
+        )}
+        {!menuLoading && dishes.length > 0 && featuredCarouselDishes.length > 0 && (
+          <div className="menu-featured-strip">
+            <div className="menu-featured-strip-head">
+              <span className="menu-featured-strip-icon" aria-hidden="true">
+                ◈
+              </span>
+              <div>
+                <div className="menu-featured-strip-kicker">{t.chefChoice}</div>
+                <div className="menu-featured-strip-title">{t.featured}</div>
+              </div>
+            </div>
+            <div className="menu-featured-carousel" role="list">
+              {featuredCarouselDishes.map((fd) => {
+                const nm = fd.name && typeof fd.name === "object" ? fd.name : {};
+                const ft = String(nm[lang] || nm.en || "").trim() || "—";
+                const mmF = minMaxVariantPrice(fd);
+                const priceStr = mmF
+                  ? `₾${formatLari(mmF.min)}–${formatLari(mmF.max)}`
+                  : `₾${formatLari(fd.price)}`;
+                return (
+                  <button
+                    key={fd.id}
+                    type="button"
+                    role="listitem"
+                    className="menu-featured-tile"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      scrollToDish(fd.id);
+                    }}
+                  >
+                    <div className="menu-featured-tile-media">
+                      {fd.image ? (
+                        <img src={fd.image} alt="" loading="lazy" decoding="async" />
+                      ) : (
+                        <div className="menu-featured-tile-ph">◇</div>
+                      )}
+                    </div>
+                    <div className="menu-featured-tile-body">
+                      <div className="menu-featured-tile-name">{ft}</div>
+                      <div className="menu-featured-tile-price">{priceStr}</div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         )}
         {grouped.map((cat, gi) => (
@@ -1884,7 +2021,8 @@ function DishRow({ dish, lang, t, distinctionCatalog, expanded, onToggle, style,
 
   return (
     <div
-      className={`dish-card menu-dish-card${expanded ? " menu-dish-card--expanded" : ""}`}
+      id={dishAnchorId(dish.id)}
+      className={`dish-card menu-dish-card menu-dish-anchor${expanded ? " menu-dish-card--expanded" : ""}`}
       onClick={onToggle}
       style={{
         cursor: "pointer",
