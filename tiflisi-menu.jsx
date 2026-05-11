@@ -59,14 +59,14 @@ const CATEGORIES = [
 ];
 
 const DISHES = [
-  { id:1, categoryId:1, name:{en:"Lamb Khinkali",ka:"კრავის ხინკალი",ru:"Хинкали с Ягнёнком"}, description:{en:"Hand-pleated parcels of slow-spiced mountain lamb in golden broth",ka:"ხელნაკეთი ხინკალი მთის კრავით",ru:"Лепные хинкали из горного ягнёнка"}, price:18, image:"https://images.unsplash.com/photo-1563245372-f21724e3856d?w=600&q=90", ingredients:["Mountain Lamb","Wild Herbs","Black Pepper","Onion","Saffron Broth"], badges:["Signature","Popular"], available:true, featured:true },
-  { id:2, categoryId:1, name:{en:"Truffle & Porcini",ka:"ტრიუფელის ხინკალი",ru:"Трюфель и Белый Гриб"}, description:{en:"Black truffle infused wild mushroom filling, aged parmesan crust",ka:"შავი ტრიუფელი, ველური სოკო",ru:"Чёрный трюфель с белыми грибами"}, price:32, image:"https://images.unsplash.com/photo-1551218808-94e220e084d2?w=600&q=90", ingredients:["Black Truffle","Porcini","Aged Parmesan","Thyme"], badges:["Chef's Table"], available:true, featured:true },
-  { id:3, categoryId:2, name:{en:"Adjarian Royal",ka:"აჭარული",ru:"Аджарская"}, description:{en:"Sulguni three-cheese blend, farm egg yolk, brown butter, sea salt",ka:"სამი ყველი, სოფლის კვერცხი",ru:"Три сыра, желток, масло"}, price:22, image:"https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=600&q=90", ingredients:["Sulguni","Gouda","Parmesan","Farm Egg","Brown Butter","Fleur de Sel"], badges:["Signature","Popular"], available:true, featured:true },
-  { id:4, categoryId:2, name:{en:"Imeruli Khachapuri",ka:"იმერული ხაჭაპური",ru:"Имерская Хачапури"}, description:{en:"Classic round bread, house-churned butter, fresh Imeruli cheese",ka:"იმერული ყველი, კარაქი",ru:"Классическая с имерским сыром"}, price:16, image:"https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=600&q=90", ingredients:["Imeruli Cheese","House Butter","Eggs"], badges:[], available:true, featured:false },
-  { id:5, categoryId:3, name:{en:"Wagyu Mtsvadi",ka:"ვაგიუ მწვადი",ru:"Вагю Мцвади"}, description:{en:"A5 Wagyu skewer, pomegranate reduction, smoked salt, tkemali jus",ka:"A5 ვაგიუ, ბროწეული",ru:"А5 Вагю с гранатовым жю"}, price:68, image:"https://images.unsplash.com/photo-1558030006-450675393462?w=600&q=90", ingredients:["A5 Wagyu","Pomegranate","Smoked Salt","Tkemali","Rosemary"], badges:["Chef's Table","New"], available:true, featured:true },
-  { id:6, categoryId:3, name:{en:"Lamb Short Ribs",ka:"კრავის ნეკნები",ru:"Короткие Рёбра"}, description:{en:"72-hour braised lamb ribs, walnut-herb gremolata, charcoal finish",ka:"72-საათიანი კრავი",ru:"72-часовая баранина"}, price:44, image:"https://images.unsplash.com/photo-1544025162-d76694265947?w=600&q=90", ingredients:["Lamb Ribs","Walnuts","Gremolata","Charcoal Ash"], badges:["Popular"], available:true, featured:false },
-  { id:7, categoryId:4, name:{en:"Heritage Tomato",ka:"ძველი ჯიშის პომიდვრები",ru:"Помидоры Хэритедж"}, description:{en:"Seven-variety tomatoes, walnut-tarragon vinaigrette, pressed herb oil",ka:"შვიდი ჯიშის პომიდვრები",ru:"Семь сортов томатов с эстрагоном"}, price:19, image:"https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=600&q=90", ingredients:["Heritage Tomatoes","Walnuts","Tarragon","Red Onion","Herb Oil"], badges:["Seasonal"], available:true, featured:false },
-  { id:8, categoryId:5, name:{en:"Churchkhela Parfait",ka:"ჩურჩხელა პარფე",ru:"Чурчхела Парфе"}, description:{en:"Deconstructed churchkhela, Kakhetian grape gelée, walnut praline",ka:"დეკონსტრუქცია ჩურჩხელა",ru:"Деконструированная чурчхела"}, price:18, image:"https://images.unsplash.com/photo-1587314168485-3236d6710814?w=600&q=90", ingredients:["Grape Must","Walnuts","Almond Praline","Vanilla"], badges:["New"], available:true, featured:false },
+  { id:1, categoryId:1, name:{en:"Lamb Khinkali",ka:"კრავის ხინკალი",ru:"Хинкали с Ягнёнком"}, description:{en:"Hand-pleated parcels of slow-spiced mountain lamb in golden broth",ka:"ხელნაკეთი ხინკალი მთის კრავით",ru:"Лепные хинкали из горного ягнёнка"}, price:18, portionGrams:85, image:"https://images.unsplash.com/photo-1563245372-f21724e3856d?w=600&q=90", ingredients:["Mountain Lamb","Wild Herbs","Black Pepper","Onion","Saffron Broth"], badges:["Signature","Popular"], available:true, featured:true },
+  { id:2, categoryId:1, name:{en:"Truffle & Porcini",ka:"ტრიუფელის ხინკალი",ru:"Трюфель и Белый Гриб"}, description:{en:"Black truffle infused wild mushroom filling, aged parmesan crust",ka:"შავი ტრიუფელი, ველური სოკო",ru:"Чёрный трюфель с белыми грибами"}, price:32, portionGrams:78, image:"https://images.unsplash.com/photo-1551218808-94e220e084d2?w=600&q=90", ingredients:["Black Truffle","Porcini","Aged Parmesan","Thyme"], badges:["Chef's Table"], available:true, featured:true },
+  { id:3, categoryId:2, name:{en:"Adjarian Royal",ka:"აჭარული",ru:"Аджарская"}, description:{en:"Sulguni three-cheese blend, farm egg yolk, brown butter, sea salt",ka:"სამი ყველი, სოფლის კვერცხი",ru:"Три сыра, желток, масло"}, price:22, portionGrams:520, image:"https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=600&q=90", ingredients:["Sulguni","Gouda","Parmesan","Farm Egg","Brown Butter","Fleur de Sel"], badges:["Signature","Popular"], available:true, featured:true },
+  { id:4, categoryId:2, name:{en:"Imeruli Khachapuri",ka:"იმერული ხაჭაპური",ru:"Имерская Хачапури"}, description:{en:"Classic round bread, house-churned butter, fresh Imeruli cheese",ka:"იმერული ყველი, კარაქი",ru:"Классическая с имерским сыром"}, price:16, portionGrams:340, image:"https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=600&q=90", ingredients:["Imeruli Cheese","House Butter","Eggs"], badges:[], available:true, featured:false },
+  { id:5, categoryId:3, name:{en:"Wagyu Mtsvadi",ka:"ვაგიუ მწვადი",ru:"Вагю Мцвади"}, description:{en:"A5 Wagyu skewer, pomegranate reduction, smoked salt, tkemali jus",ka:"A5 ვაგიუ, ბროწეული",ru:"А5 Вагю с гранатовым жю"}, price:68, portionGrams:240, image:"https://images.unsplash.com/photo-1558030006-450675393462?w=600&q=90", ingredients:["A5 Wagyu","Pomegranate","Smoked Salt","Tkemali","Rosemary"], badges:["Chef's Table","New"], available:true, featured:true },
+  { id:6, categoryId:3, name:{en:"Lamb Short Ribs",ka:"კრავის ნეკნები",ru:"Короткие Рёбра"}, description:{en:"72-hour braised lamb ribs, walnut-herb gremolata, charcoal finish",ka:"72-საათიანი კრავი",ru:"72-часовая баранина"}, price:44, portionGrams:380, image:"https://images.unsplash.com/photo-1544025162-d76694265947?w=600&q=90", ingredients:["Lamb Ribs","Walnuts","Gremolata","Charcoal Ash"], badges:["Popular"], available:true, featured:false },
+  { id:7, categoryId:4, name:{en:"Heritage Tomato",ka:"ძველი ჯიშის პომიდვრები",ru:"Помидоры Хэритедж"}, description:{en:"Seven-variety tomatoes, walnut-tarragon vinaigrette, pressed herb oil",ka:"შვიდი ჯიშის პომიდვრები",ru:"Семь сортов томатов с эстрагоном"}, price:19, portionGrams:280, image:"https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=600&q=90", ingredients:["Heritage Tomatoes","Walnuts","Tarragon","Red Onion","Herb Oil"], badges:["Seasonal"], available:true, featured:false },
+  { id:8, categoryId:5, name:{en:"Churchkhela Parfait",ka:"ჩურჩხელა პარფე",ru:"Чурчхела Парфе"}, description:{en:"Deconstructed churchkhela, Kakhetian grape gelée, walnut praline",ka:"დეკონსტრუქცია ჩურჩხელა",ru:"Деконструированная чурчхела"}, price:18, portionGrams:110, image:"https://images.unsplash.com/photo-1587314168485-3236d6710814?w=600&q=90", ingredients:["Grape Must","Walnuts","Almond Praline","Vanilla"], badges:["New"], available:true, featured:false },
   { id:9, categoryId:6, name:{en:"Saperavi Reserve",ka:"საფერავი რეზერვი",ru:"Саперави Резерв"}, description:{en:"Single vineyard Kakheti, 2018 vintage, 48-month oak aged",ka:"ერთი ვენახი, 2018",ru:"Односортовой Саперави 2018"}, price:28, priceVariants:[{id:"bottle",label:{en:"1 bottle · 0.75 L",ka:"1 ბოთლი · 0,75 ლ",ru:"1 бутылка · 0,75 л"},price:55},{id:"glass",label:{en:"1 glass · 0.25 L",ka:"1 ჭიქა · 0,25 ლ",ru:"1 бокал · 0,25 л"},price:18}], image:"https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=600&q=90", ingredients:["Saperavi","Kakheti","2018 Vintage","48-month Oak"], badges:["Popular","Signature"], available:true, featured:true },
   { id:10, categoryId:6, name:{en:"Rkatsiteli Natural",ka:"რქაწითელი",ru:"Ркацители Натурал"}, description:{en:"Amphora-aged skin-contact white, golden amber hue, stone fruit",ka:"ქვევრში მომწიფებული",ru:"Вино в амфоре"}, price:22, priceVariants:[{id:"bottle",label:{en:"1 bottle · 0.75 L",ka:"1 ბოთლი · 0,75 ლ",ru:"1 бутылка · 0,75 л"},price:42},{id:"glass",label:{en:"1 glass · 0.25 L",ka:"1 ჭიქა · 0,25 ლ",ru:"1 бокал · 0,25 л"},price:14}], image:"https://images.unsplash.com/photo-1506377247377-2a5b3b417ebb?w=600&q=90", ingredients:["Rkatsiteli","Amphora","Kakheti","Skin-Contact"], badges:["Rare"], available:true, featured:false },
 ];
@@ -120,6 +120,119 @@ function minMaxVariantPrice(dish) {
   if (vars.length === 0) return null;
   const prices = vars.map((x) => Number(x.price) || 0);
   return { min: Math.min(...prices), max: Math.max(...prices) };
+}
+
+/** Visual scale for portion-weight bars (grams). */
+const GRAM_BAR_CAP = 650;
+
+function isGramUnit(unit) {
+  if (unit == null) return false;
+  const u = String(unit).trim().toLowerCase();
+  return /^(g|gr|gram|grams|г|гр|გ|გრ)$/.test(u);
+}
+
+/**
+ * Segments for the guest gram bar: optional dish.portionGrams, else price variants with amount + gram unit.
+ */
+function dishGramSegments(dish, lang) {
+  const direct = Number(dish?.portionGrams);
+  if (Number.isFinite(direct) && direct > 0) {
+    return [{ grams: direct, id: "portion", label: "" }];
+  }
+  const vars = dishPriceVariants(dish);
+  const out = [];
+  for (const v of vars) {
+    const amt = Number(v?.amount);
+    if (!Number.isFinite(amt) || amt <= 0) continue;
+    if (!isGramUnit(v?.unit)) continue;
+    const label = String(variantOptionLabel(v, lang) || "").trim();
+    out.push({ grams: amt, id: String(v.id ?? amt), label });
+  }
+  out.sort((a, b) => b.grams - a.grams);
+  return out;
+}
+
+function DishGramBar({ segments, t }) {
+  if (!Array.isArray(segments) || segments.length === 0) return null;
+  return (
+    <div
+      className="dish-gram-bar"
+      role="group"
+      aria-label={`${t.portionGramsTitle} · ${segments.map((s) => `${Math.round(s.grams)} ${t.gramsAbbr}`).join(", ")}`}
+      style={{ marginTop: "12px", marginBottom: "2px" }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div
+        style={{
+          fontSize: "8px",
+          letterSpacing: "0.22em",
+          textTransform: "uppercase",
+          color: "rgba(201,169,98,0.75)",
+          fontFamily: "var(--font-body)",
+          fontWeight: 600,
+          marginBottom: "8px",
+        }}
+      >
+        {t.portionGramsTitle}
+      </div>
+      {segments.map((s, idx) => {
+        const pct = Math.min(100, (s.grams / GRAM_BAR_CAP) * 100);
+        const showCaption = segments.length > 1 || Boolean(s.label);
+        return (
+          <div key={`${s.id}-${idx}`} style={{ marginBottom: idx < segments.length - 1 ? "10px" : 0 }}>
+            {showCaption ? (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "baseline",
+                  gap: "10px",
+                  marginBottom: "5px",
+                  fontSize: "10px",
+                  color: "rgba(212,247,242,0.72)",
+                  fontFamily: "var(--font-body)",
+                  lineHeight: 1.3,
+                }}
+              >
+                <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", opacity: s.label ? 1 : 0.35 }}>
+                  {s.label || "—"}
+                </span>
+                <span style={{ flexShrink: 0, color: "rgba(201,169,98,0.95)", fontWeight: 600, letterSpacing: "0.04em" }}>
+                  {Math.round(s.grams)} {t.gramsAbbr}
+                </span>
+              </div>
+            ) : (
+              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "5px" }}>
+                <span style={{ fontSize: "11px", color: "rgba(201,169,98,0.95)", fontWeight: 600, letterSpacing: "0.06em", fontFamily: "var(--font-body)" }}>
+                  {Math.round(s.grams)} {t.gramsAbbr}
+                </span>
+              </div>
+            )}
+            <div
+              style={{
+                height: "7px",
+                borderRadius: "999px",
+                background: "rgba(61,191,176,0.12)",
+                border: "1px solid rgba(61,191,176,0.2)",
+                overflow: "hidden",
+                boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
+              }}
+            >
+              <div
+                style={{
+                  width: `${pct}%`,
+                  height: "100%",
+                  borderRadius: "inherit",
+                  background: "linear-gradient(90deg, rgba(61,191,176,0.55), rgba(201,169,98,0.45))",
+                  transition: "width 0.35s ease",
+                }}
+              />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 /** Multiline text for `type: "order"` staff notification (guest language for dish names). */
@@ -405,9 +518,9 @@ function badgeLabelForKey(b, lang, catalog, t) {
 }
 
 const T = {
-  en:{menu:"Menu",callWaiter:"Summon Waiter",requestBill:"Request Bill",ingredients:"Provenance",soldOut:"Unavailable",table:"Table",waiterCalled:"Your waiter is on the way.",billRequested:"Your bill is being prepared.",notifyFailed:"Could not save. Please try again.",staffAlertCloudFallback:"Couldn't reach the server. If staff doesn't respond, ask your waiter.",search:"Search the menu…",all:"All",adminLogin:"Staff Access",login:"Enter",dashboard:"Overview",menuMgmt:"Cuisine",tables:"Seating",notifications:"Alerts",analytics:"Insights",logout:"Exit",addDish:"New Dish",save:"Save",cancel:"Cancel",available:"Available",featured:"Recommended",chefChoice:"Chef's choice",badges:"Distinctions",badgeDry:"Dry",badgeSemiDry:"Semi-Dry",badgeSemiSweet:"Semi-Sweet",chooseOptions:"Choose size",cart:"Basket",cartTotal:"Total",addToCart:"Add",cartHint:"Estimated total for your selection (reference only).",emptyCart:"Your basket is empty.",cartQty:"Qty",cartClose:"Close",submitOrder:"Submit order",confirmOrderTitle:"Send this order?",confirmOrderBody:"Staff will receive your table order in alerts (amount is indicative — confirm at the venue).",confirmOrderBtn:"Confirm & send",orderSent:"Order sent."},
-  ka:{menu:"მენიუ",callWaiter:"მიმტანის გამოძახება",requestBill:"ანგარიშის მოთხოვნა",ingredients:"წარმომავლობა",soldOut:"მიუწვდომელი",table:"მაგიდა",waiterCalled:"მიმტანი მოდის.",billRequested:"ანგარიში მზადდება.",notifyFailed:"ვერ შენახა — სცადეთ თავიდან.",staffAlertCloudFallback:"სერვერთან კავშირი ვერ დამყარდა — დაუძახეთ მიმტანს, თუ არავინ მოდის.",search:"მოძებნეთ…",all:"ყველა",adminLogin:"პერსონალი",login:"შესვლა",dashboard:"მიმოხილვა",menuMgmt:"სამზარეულო",tables:"მოსასვლელი",notifications:"შეტყობინებები",analytics:"ანალიტიკა",logout:"გამოსვლა",addDish:"ახალი კერძი",save:"შენახვა",cancel:"გაუქმება",available:"ხელმისაწვდომი",featured:"რეკომენდებული",chefChoice:"შეფის არჩევანი",badges:"გამოჩენილი",badgeDry:"მშრალი",badgeSemiDry:"ნახევრადმშრალი",badgeSemiSweet:"ნახევრადტკბილი",chooseOptions:"ზომა / ფასი",cart:"კალათა",cartTotal:"ჯამი",addToCart:"დამატება",cartHint:"არჩეული კერძების სავარაუდო ჯამი (საინფორმაციოდ).",emptyCart:"კალათა ცარიელია.",cartQty:"რაოდ.",cartClose:"დახურვა",submitOrder:"შეკვეთის გაგზავნა",confirmOrderTitle:"გავაგზავნოთ შეკვეთა?",confirmOrderBody:"პერსონალი მიიღებს შეკვეთას შეტყობინებაში (ჯამი საინფორმაციოა — დაადასტურეთ ადგილზე).",confirmOrderBtn:"დადასტურება",orderSent:"შეკვეთა გაიგზავნა."},
-  ru:{menu:"Меню",callWaiter:"Позвать Официанта",requestBill:"Попросить Счёт",ingredients:"Происхождение",soldOut:"Недоступно",table:"Стол",waiterCalled:"Официант уже идёт.",billRequested:"Счёт готовится.",notifyFailed:"Не удалось сохранить. Попробуйте снова.",staffAlertCloudFallback:"Нет связи с сервером. Если персонал не отвечает — позовите официанта.",search:"Поиск…",all:"Все",adminLogin:"Персонал",login:"Войти",dashboard:"Обзор",menuMgmt:"Кухня",tables:"Места",notifications:"Оповещения",analytics:"Аналитика",logout:"Выйти",addDish:"Новое Блюдо",save:"Сохранить",cancel:"Отмена",available:"Доступно",featured:"Рекомендуем",chefChoice:"Выбор шефа",badges:"Отличия",badgeDry:"Сухое",badgeSemiDry:"Полусухое",badgeSemiSweet:"Полусладкое",chooseOptions:"Размер и цена",cart:"Корзина",cartTotal:"Итого",addToCart:"В корзину",cartHint:"Ориентировочная сумма выбранных блюд (справочно).",emptyCart:"Корзина пуста.",cartQty:"Кол-во",cartClose:"Закрыть",submitOrder:"Отправить заказ",confirmOrderTitle:"Отправить заказ?",confirmOrderBody:"Персонал получит заказ в оповещениях (сумма ориентировочная — уточните у официанта).",confirmOrderBtn:"Подтвердить",orderSent:"Заказ отправлен."},
+  en:{menu:"Menu",callWaiter:"Summon Waiter",requestBill:"Request Bill",ingredients:"Provenance",soldOut:"Unavailable",table:"Table",waiterCalled:"Your waiter is on the way.",billRequested:"Your bill is being prepared.",notifyFailed:"Could not save. Please try again.",staffAlertCloudFallback:"Couldn't reach the server. If staff doesn't respond, ask your waiter.",search:"Search the menu…",all:"All",adminLogin:"Staff Access",login:"Enter",dashboard:"Overview",menuMgmt:"Cuisine",tables:"Seating",notifications:"Alerts",analytics:"Insights",logout:"Exit",addDish:"New Dish",save:"Save",cancel:"Cancel",available:"Available",featured:"Recommended",chefChoice:"Chef's choice",badges:"Distinctions",badgeDry:"Dry",badgeSemiDry:"Semi-Dry",badgeSemiSweet:"Semi-Sweet",chooseOptions:"Choose size",cart:"Basket",cartTotal:"Total",addToCart:"Add",cartHint:"Estimated total for your selection (reference only).",emptyCart:"Your basket is empty.",cartQty:"Qty",cartClose:"Close",submitOrder:"Submit order",confirmOrderTitle:"Send this order?",confirmOrderBody:"Staff will receive your table order in alerts (amount is indicative — confirm at the venue).",confirmOrderBtn:"Confirm & send",orderSent:"Order sent.",portionGramsTitle:"Portion",gramsAbbr:"g",adminPortionGrams:"Net portion (g)",adminPortionGramsHint:"Optional. Shown on the guest menu. Or set Amount + g on each size row below.",variantAmount:"Amount",variantUnit:"Unit"},
+  ka:{menu:"მენიუ",callWaiter:"მიმტანის გამოძახება",requestBill:"ანგარიშის მოთხოვნა",ingredients:"წარმომავლობა",soldOut:"მიუწვდომელი",table:"მაგიდა",waiterCalled:"მიმტანი მოდის.",billRequested:"ანგარიში მზადდება.",notifyFailed:"ვერ შენახა — სცადეთ თავიდან.",staffAlertCloudFallback:"სერვერთან კავშირი ვერ დამყარდა — დაუძახეთ მიმტანს, თუ არავინ მოდის.",search:"მოძებნეთ…",all:"ყველა",adminLogin:"პერსონალი",login:"შესვლა",dashboard:"მიმოხილვა",menuMgmt:"სამზარეულო",tables:"მოსასვლელი",notifications:"შეტყობინებები",analytics:"ანალიტიკა",logout:"გამოსვლა",addDish:"ახალი კერძი",save:"შენახვა",cancel:"გაუქმება",available:"ხელმისაწვდომი",featured:"რეკომენდებული",chefChoice:"შეფის არჩევანი",badges:"გამოჩენილი",badgeDry:"მშრალი",badgeSemiDry:"ნახევრადმშრალი",badgeSemiSweet:"ნახევრადტკბილი",chooseOptions:"ზომა / ფასი",cart:"კალათა",cartTotal:"ჯამი",addToCart:"დამატება",cartHint:"არჩეული კერძების სავარაუდო ჯამი (საინფორმაციოდ).",emptyCart:"კალათა ცარიელია.",cartQty:"რაოდ.",cartClose:"დახურვა",submitOrder:"შეკვეთის გაგზავნა",confirmOrderTitle:"გავაგზავნოთ შეკვეთა?",confirmOrderBody:"პერსონალი მიიღებს შეკვეთას შეტყობინებაში (ჯამი საინფორმაციოა — დაადასტურეთ ადგილზე).",confirmOrderBtn:"დადასტურება",orderSent:"შეკვეთა გაიგზავნა.",portionGramsTitle:"პორცია",gramsAbbr:"გ",adminPortionGrams:"წონა (გ)",adminPortionGramsHint:"არჩევითი — სტუმრის მენიუზე ჩანს. ან ქვედა ხაზებზე: რაოდენობა + g.",variantAmount:"რაოდენობა",variantUnit:"ერთეული"},
+  ru:{menu:"Меню",callWaiter:"Позвать Официанта",requestBill:"Попросить Счёт",ingredients:"Происхождение",soldOut:"Недоступно",table:"Стол",waiterCalled:"Официант уже идёт.",billRequested:"Счёт готовится.",notifyFailed:"Не удалось сохранить. Попробуйте снова.",staffAlertCloudFallback:"Нет связи с сервером. Если персонал не отвечает — позовите официанта.",search:"Поиск…",all:"Все",adminLogin:"Персонал",login:"Войти",dashboard:"Обзор",menuMgmt:"Кухня",tables:"Места",notifications:"Оповещения",analytics:"Аналитика",logout:"Выйти",addDish:"Новое Блюдо",save:"Сохранить",cancel:"Отмена",available:"Доступно",featured:"Рекомендуем",chefChoice:"Выбор шефа",badges:"Отличия",badgeDry:"Сухое",badgeSemiDry:"Полусухое",badgeSemiSweet:"Полусладкое",chooseOptions:"Размер и цена",cart:"Корзина",cartTotal:"Итого",addToCart:"В корзину",cartHint:"Ориентировочная сумма выбранных блюд (справочно).",emptyCart:"Корзина пуста.",cartQty:"Кол-во",cartClose:"Закрыть",submitOrder:"Отправить заказ",confirmOrderTitle:"Отправить заказ?",confirmOrderBody:"Персонал получит заказ в оповещениях (сумма ориентировочная — уточните у официанта).",confirmOrderBtn:"Подтвердить",orderSent:"Заказ отправлен.",portionGramsTitle:"Порция",gramsAbbr:"г",adminPortionGrams:"Вес порции (г)",adminPortionGramsHint:"Необязательно — полоска в меню. Или укажите количество + г в строках размеров.",variantAmount:"Кол-во",variantUnit:"Ед."},
 };
 
 /* ─── SHARED STATE ───────────────────────────────────────────────────────── */
@@ -2140,6 +2253,7 @@ function DishRow({ dish, lang, t, distinctionCatalog, expanded, onToggle, style,
               </div>
             ) : null}
           </div>
+          <DishGramBar segments={dishGramSegments(dish, lang)} t={t} />
           <div className="menu-dish-price-row" style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginTop:"12px", gap:"10px" }}>
             <div className="menu-dish-price">
               {mmPrice ? `₾${formatLari(mmPrice.min)} – ₾${formatLari(mmPrice.max)}` : `₾${formatLari(dish.price)}`}
@@ -3374,6 +3488,7 @@ function AdminMenu({ store }) {
     description: { en: "", ka: "", ru: "" },
     price: "",
     image: "",
+    portionGrams: "",
     ingredients: [],
     badges: [],
     priceVariants: [],
@@ -3388,6 +3503,7 @@ function AdminMenu({ store }) {
     description: { en: "", ka: "", ru: "" },
     price: "",
     image: "",
+    portionGrams: "",
     ingredients: [],
     badges: [],
     priceVariants: [],
@@ -3407,6 +3523,8 @@ function AdminMenu({ store }) {
       ? d.priceVariants.map((v) => ({
           id: String(v?.id ?? ""),
           price: v?.price ?? "",
+          amount: v?.amount ?? "",
+          unit: v?.unit ?? "",
           label: {
             en: String(v?.label?.en ?? ""),
             ka: String(v?.label?.ka ?? ""),
@@ -3921,6 +4039,7 @@ function CategoryFormAdmin({ form, setForm }) {
 }
 
 function DishFormAdmin({ form, setForm, categories, distinctionCatalog }) {
+  const te = T.en;
   const set = (k,v) => setForm(p=>({...p,[k]:v}));
   const setL = (f,l,v) => setForm(p=>({...p,[f]:{...p[f],[l]:v}}));
   const labelStyle = { fontSize:"8px", color:"var(--gold)", letterSpacing:"3px", textTransform:"uppercase", marginBottom:"6px", display:"block" };
@@ -3971,6 +4090,20 @@ function DishFormAdmin({ form, setForm, categories, distinctionCatalog }) {
         <div><label style={labelStyle}>Image URL</label><input value={form.image} onChange={e=>set("image",e.target.value)} style={inputStyle} /></div>
       </div>
       <div>
+        <label style={labelStyle}>{te.adminPortionGrams}</label>
+        <input
+          type="number"
+          min={0}
+          step={1}
+          inputMode="numeric"
+          placeholder="250"
+          value={form.portionGrams === "" || form.portionGrams == null ? "" : form.portionGrams}
+          onChange={(e) => set("portionGrams", e.target.value === "" ? "" : e.target.value)}
+          style={{ ...inputStyle, fontFamily: "var(--font-body)", fontSize: "12px" }}
+        />
+        <div style={{ fontSize: "10px", color: "var(--muted)", marginTop: "8px", lineHeight: 1.5 }}>{te.adminPortionGramsHint}</div>
+      </div>
+      <div>
         <label style={labelStyle}>Sizes / prices (optional)</label>
         <div style={{ fontSize:"10px", color:"var(--muted)", marginBottom:"10px", lineHeight:1.5 }}>
           Leave empty for a single price only. For wine: add rows (e.g. <strong style={{ color:"var(--cream)" }}>bottle</strong> / <strong style={{ color:"var(--cream)" }}>glass</strong>) with ID, ₾, and labels — guest menu opens the picker modal.
@@ -4013,6 +4146,38 @@ function DishFormAdmin({ form, setForm, categories, distinctionCatalog }) {
                     nv[i] = { ...nv[i], price: e.target.value };
                     setForm((p) => ({ ...p, priceVariants: nv }));
                   }}
+                  style={{ ...inputStyle, fontFamily: "var(--font-body)", fontSize: "12px" }}
+                />
+              </div>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "10px" }}>
+              <div>
+                <label style={{ ...labelStyle, fontSize: "7px" }}>{te.variantAmount}</label>
+                <input
+                  type="number"
+                  min={0}
+                  step="any"
+                  inputMode="decimal"
+                  value={v.amount === "" || v.amount == null ? "" : v.amount}
+                  onChange={(e) => {
+                    const nv = [...(form.priceVariants || [])];
+                    nv[i] = { ...nv[i], amount: e.target.value === "" ? "" : e.target.value };
+                    setForm((p) => ({ ...p, priceVariants: nv }));
+                  }}
+                  placeholder="250"
+                  style={{ ...inputStyle, fontFamily: "var(--font-body)", fontSize: "12px" }}
+                />
+              </div>
+              <div>
+                <label style={{ ...labelStyle, fontSize: "7px" }}>{te.variantUnit}</label>
+                <input
+                  value={v.unit ?? ""}
+                  onChange={(e) => {
+                    const nv = [...(form.priceVariants || [])];
+                    nv[i] = { ...nv[i], unit: e.target.value };
+                    setForm((p) => ({ ...p, priceVariants: nv }));
+                  }}
+                  placeholder="g"
                   style={{ ...inputStyle, fontFamily: "var(--font-body)", fontSize: "12px" }}
                 />
               </div>
@@ -4061,7 +4226,7 @@ function DishFormAdmin({ form, setForm, categories, distinctionCatalog }) {
           onClick={() =>
             setForm((p) => ({
               ...p,
-              priceVariants: [...(p.priceVariants || []), { id: `v${Date.now()}`, price: "", label: { en: "", ka: "", ru: "" } }],
+              priceVariants: [...(p.priceVariants || []), { id: `v${Date.now()}`, price: "", amount: "", unit: "", label: { en: "", ka: "", ru: "" } }],
             }))
           }
           style={{

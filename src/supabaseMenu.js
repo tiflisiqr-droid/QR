@@ -103,7 +103,17 @@ export function dishToDbInsert(dish) {
     featured: !!dish.featured,
     sort_order: Number.isFinite(Number(dish.order)) ? Number(dish.order) : 0,
     price_variants: priceVariantsForDb(dish),
+    portion_grams: portionGramsForDb(dish),
   };
+}
+
+function portionGramsForDb(dish) {
+  if (dish == null) return null;
+  const raw = dish.portionGrams;
+  if (raw === "" || raw == null) return null;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return Math.min(50000, Math.round(n));
 }
 
 /** JSONB / text from DB may arrive as array or JSON string — normalize for UI. */
@@ -166,6 +176,10 @@ export function mapMenuRowToDish(row) {
     featured: !!row.featured,
     order: Number(row.sort_order) || 0,
     priceVariants: normalizePriceVariantsFromRow(row.price_variants),
+    portionGrams: (() => {
+      const n = Number(row.portion_grams);
+      return Number.isFinite(n) && n > 0 ? n : null;
+    })(),
   };
 }
 

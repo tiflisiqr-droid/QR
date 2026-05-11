@@ -29,8 +29,13 @@ alter table public.menu add column if not exists sort_order integer not null def
 
 alter table public.menu add column if not exists price_variants jsonb not null default '[]'::jsonb;
 
+alter table public.menu add column if not exists portion_grams integer;
+
 comment on column public.menu.price_variants is
   'Array of { id, label: {en,ka,ru}, price, amount?, unit? }. Empty [] = guest uses menu.price only.';
+
+comment on column public.menu.portion_grams is
+  'Optional net portion weight in grams; guest menu shows a bar. Use amount+unit (g) on variants for per-size rows.';
 
 create index if not exists menu_category_id_idx on public.menu (category_id);
 create index if not exists menu_created_at_idx on public.menu (created_at);
