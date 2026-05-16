@@ -2406,7 +2406,6 @@ function AdminLogin({ onLogin }) {
             </div>
           ))}
           {err && <div style={{ color:"#ef4444", fontSize:"10px", letterSpacing:"1px", marginBottom:"16px" }}>INVALID CREDENTIALS</div>}
-          <div style={{ fontSize:"9px", color:"var(--muted)", marginBottom:"20px", letterSpacing:"1px" }}>admin / tiflisi2024</div>
           <button onClick={submit} style={{ width:"100%", padding:"14px", background:"linear-gradient(135deg, rgba(61,191,176,0.2), rgba(61,191,176,0.08))", border:"1px solid var(--gold)", color:"var(--gold-pale)", fontSize:"10px", fontWeight:"600", letterSpacing:"4px", textTransform:"uppercase", cursor:"pointer", fontFamily:"var(--font-body)", transition:"all 0.3s" }}>
             ENTER
           </button>
