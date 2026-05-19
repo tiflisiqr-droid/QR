@@ -309,6 +309,8 @@ function clearStaffZoneSession() {
 /** Admin / staff ლოგინი — იგივე ტაბში გადატვირთვის შემდეგ არ მოიხსნას (პაროლს არ ვინახავთ). */
 const ADMIN_AUTH_STORAGE_KEY = "tiflisi_admin_auth_v1";
 const STAFF_AUTH_STORAGE_KEY = "tiflisi_staff_auth_v1";
+/** Staff: სიის გასუფთავება (იგივე პაროლი, რაც მიმტანის შესვლაზე). */
+const STAFF_CLEAR_LIST_PASSWORD = "tiflisi2024";
 
 function readPersistedAdminAuth() {
   try {
@@ -4589,6 +4591,9 @@ function StaffAlertsScreen({ store, onLogout }) {
   const zones = useMemo(() => uniqueZonesFromTables(tables), [tables]);
   const [staffZone, setStaffZone] = useState(null);
   const [filter, setFilter] = useState("all");
+  const [clearListPromptOpen, setClearListPromptOpen] = useState(false);
+  const [clearListPassword, setClearListPassword] = useState("");
+  const [clearListPasswordErr, setClearListPasswordErr] = useState(false);
 
   useEffect(() => {
     if (zones.length === 0) {
@@ -4625,6 +4630,21 @@ function StaffAlertsScreen({ store, onLogout }) {
     clearStaffZoneSession();
     onLogout();
   }, [onLogout]);
+
+  const closeClearListPrompt = useCallback(() => {
+    setClearListPromptOpen(false);
+    setClearListPassword("");
+    setClearListPasswordErr(false);
+  }, []);
+
+  const confirmClearList = useCallback(() => {
+    if (clearListPassword !== STAFF_CLEAR_LIST_PASSWORD) {
+      setClearListPasswordErr(true);
+      return;
+    }
+    setNotifications((p) => p.filter((n) => resolveNotificationZone(n, tables) !== staffZone));
+    closeClearListPrompt();
+  }, [clearListPassword, setNotifications, tables, staffZone, closeClearListPrompt]);
 
   const unread = notificationsForZone.filter((n) => !n.read).length;
   useUnreadAlertSound(unread);
@@ -4812,8 +4832,9 @@ function StaffAlertsScreen({ store, onLogout }) {
           <button
             type="button"
             onClick={() => {
-              if (typeof window !== "undefined" && !window.confirm("ამ დარბაზის შეტყობინებები წაიშლება. გავაგრძელო?")) return;
-              setNotifications((p) => p.filter((n) => resolveNotificationZone(n, tables) !== staffZone));
+              setClearListPassword("");
+              setClearListPasswordErr(false);
+              setClearListPromptOpen(true);
             }}
             style={{
               padding: "12px 18px",
@@ -4906,6 +4927,111 @@ function StaffAlertsScreen({ store, onLogout }) {
           </div>
         )}
       </div>
+
+      {clearListPromptOpen ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="staff-clear-list-title"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 100,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 20,
+            background: "rgba(0,0,0,0.72)",
+            backdropFilter: "blur(6px)",
+          }}
+          onClick={closeClearListPrompt}
+        >
+          <div
+            style={{
+              width: "min(360px, 100%)",
+              background: "rgba(26,22,32,0.95)",
+              border: "1px solid rgba(239,68,68,0.25)",
+              padding: "28px 24px",
+              borderRadius: 12,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div id="staff-clear-list-title" style={{ fontFamily: "var(--font-display)", fontSize: "1.25rem", fontStyle: "italic", color: "var(--cream)", marginBottom: 8 }}>
+              სიის გასუფთავება
+            </div>
+            <p style={{ fontSize: "12px", color: "var(--muted)", lineHeight: 1.5, margin: "0 0 20px" }}>
+              ამ დარბაზის შეტყობინებები წაიშლება. გასაგრძელებლად შეიყვანეთ პაროლი.
+            </p>
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: "8px", color: "var(--gold)", letterSpacing: "3px", textTransform: "uppercase", marginBottom: 8 }}>პაროლი</div>
+              <input
+                type="password"
+                value={clearListPassword}
+                onChange={(e) => {
+                  setClearListPassword(e.target.value);
+                  setClearListPasswordErr(false);
+                }}
+                onKeyDown={(e) => e.key === "Enter" && confirmClearList()}
+                autoFocus
+                style={{
+                  width: "100%",
+                  padding: "12px 0",
+                  background: "transparent",
+                  border: "none",
+                  borderBottom: `1px solid ${clearListPasswordErr ? "#ef4444" : "rgba(61,191,176,0.25)"}`,
+                  color: "var(--cream)",
+                  fontSize: "14px",
+                  fontFamily: "var(--font-display)",
+                  outline: "none",
+                  letterSpacing: "1px",
+                  boxSizing: "border-box",
+                }}
+              />
+            </div>
+            {clearListPasswordErr ? (
+              <div style={{ color: "#ef4444", fontSize: "10px", letterSpacing: "1px", marginBottom: 16 }}>არასწორი პაროლი</div>
+            ) : null}
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                type="button"
+                onClick={closeClearListPrompt}
+                style={{
+                  flex: 1,
+                  padding: "12px",
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  color: "var(--muted)",
+                  fontSize: "10px",
+                  letterSpacing: "0.12em",
+                  cursor: "pointer",
+                  fontFamily: "var(--font-body)",
+                  borderRadius: 999,
+                }}
+              >
+                გაუქმება
+              </button>
+              <button
+                type="button"
+                onClick={confirmClearList}
+                style={{
+                  flex: 1,
+                  padding: "12px",
+                  background: "rgba(239,68,68,0.12)",
+                  border: "1px solid rgba(239,68,68,0.35)",
+                  color: "rgba(239,68,68,0.9)",
+                  fontSize: "10px",
+                  letterSpacing: "0.12em",
+                  cursor: "pointer",
+                  fontFamily: "var(--font-body)",
+                  borderRadius: 999,
+                }}
+              >
+                წაშლა
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {import.meta.env.VITE_DEPLOY_STAMP ? (
         <div style={{ padding: "8px 16px 16px", fontSize: "7px", color: "var(--muted)", opacity: 0.6 }}>build {String(import.meta.env.VITE_DEPLOY_STAMP)}</div>
