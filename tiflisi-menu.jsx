@@ -85,16 +85,6 @@ function dishShareUrl(dishId) {
   }
 }
 
-function dishShareDisplayHost() {
-  try {
-    const base = import.meta.env.BASE_URL || "/";
-    const path = base === "/" ? "" : base.replace(/\/$/, "");
-    return `${window.location.host}${path}`;
-  } catch {
-    return "tiflisiqr-droid.github.io/QR";
-  }
-}
-
 function formatDishShareCaption({ title, blurb, url, priceLabel, lang }) {
   const brand =
     lang === "ka"
@@ -111,31 +101,6 @@ function formatDishShareCaption({ title, blurb, url, priceLabel, lang }) {
   return lines.filter((x) => x != null).join("\n");
 }
 
-function wrapCanvasText(ctx, text, maxWidth, maxLines) {
-  const words = String(text || "").trim().split(/\s+/).filter(Boolean);
-  if (words.length === 0) return [];
-  const lines = [];
-  let line = "";
-  for (const word of words) {
-    const test = line ? `${line} ${word}` : word;
-    if (ctx.measureText(test).width <= maxWidth) {
-      line = test;
-      continue;
-    }
-    if (line) lines.push(line);
-    line = word;
-    if (lines.length >= maxLines) break;
-  }
-  if (lines.length < maxLines && line) lines.push(line);
-  if (lines.length >= maxLines && words.length > 0) {
-    const clipped = lines.slice(0, maxLines);
-    const last = clipped[maxLines - 1] || "";
-    if (ctx.measureText(`${last}…`).width <= maxWidth) clipped[maxLines - 1] = `${last}…`;
-    return clipped;
-  }
-  return lines;
-}
-
 function loadImageForShare(src) {
   return new Promise((resolve, reject) => {
     if (!src) {
@@ -150,19 +115,8 @@ function loadImageForShare(src) {
   });
 }
 
-function roundRectPath(ctx, x, y, w, h, r) {
-  const radius = Math.min(r, w / 2, h / 2);
-  ctx.beginPath();
-  ctx.moveTo(x + radius, y);
-  ctx.arcTo(x + w, y, x + w, y + h, radius);
-  ctx.arcTo(x + w, y + h, x, y + h, radius);
-  ctx.arcTo(x, y + h, x, y, radius);
-  ctx.arcTo(x, y, x + w, y, radius);
-  ctx.closePath();
-}
-
-/** Luxury 4:5 share card — photo + brand; no raw query string on the artwork. */
-async function buildDishShareCardFile({ imageUrl, title, blurb, priceLabel, displayHost }) {
+/** Clean dish photo only — no overlays; caption/link go in share text. */
+async function buildDishShareCardFile({ imageUrl }) {
   if (typeof document === "undefined") return null;
   const W = 1080;
   const H = 1350;
@@ -175,9 +129,8 @@ async function buildDishShareCardFile({ imageUrl, title, blurb, priceLabel, disp
   ctx.fillStyle = "#060908";
   ctx.fillRect(0, 0, W, H);
 
-  const photoH = 780;
+  let bitmap = null;
   try {
-    let bitmap = null;
     try {
       const res = await fetch(imageUrl, { mode: "cors", credentials: "omit", cache: "force-cache" });
       if (res.ok) {
@@ -187,100 +140,21 @@ async function buildDishShareCardFile({ imageUrl, title, blurb, priceLabel, disp
     } catch {
       /* Image() fallback */
     }
-    if (!bitmap) {
-      const img = await loadImageForShare(imageUrl);
-      bitmap = img;
-    }
+    if (!bitmap) bitmap = await loadImageForShare(imageUrl);
     const iw = bitmap.width || bitmap.naturalWidth || 1;
     const ih = bitmap.height || bitmap.naturalHeight || 1;
-    const scale = Math.max(W / iw, photoH / ih);
+    const scale = Math.max(W / iw, H / ih);
     const dw = iw * scale;
     const dh = ih * scale;
-    ctx.drawImage(bitmap, (W - dw) / 2, (photoH - dh) / 2, dw, dh);
+    ctx.drawImage(bitmap, (W - dw) / 2, (H - dh) / 2, dw, dh);
     if (typeof bitmap.close === "function") bitmap.close();
   } catch {
-    ctx.fillStyle = "#15201c";
-    ctx.fillRect(0, 0, W, photoH);
+    return null;
   }
-
-  /** Top brand strip on photo */
-  const topGrad = ctx.createLinearGradient(0, 0, 0, 160);
-  topGrad.addColorStop(0, "rgba(4,8,10,0.72)");
-  topGrad.addColorStop(1, "rgba(4,8,10,0)");
-  ctx.fillStyle = topGrad;
-  ctx.fillRect(0, 0, W, 160);
-
-  ctx.fillStyle = "rgba(201,169,98,0.95)";
-  ctx.font = "600 20px Montserrat, Helvetica, sans-serif";
-  ctx.textAlign = "center";
-  ctx.fillText("TIFLISI  ·  GEORGIAN RESTAURANT", W / 2, 56);
-
-  /** Soft fade into lower panel */
-  const fade = ctx.createLinearGradient(0, photoH - 120, 0, photoH);
-  fade.addColorStop(0, "rgba(6,9,8,0)");
-  fade.addColorStop(1, "#060908");
-  ctx.fillStyle = fade;
-  ctx.fillRect(0, photoH - 120, W, 120);
-
-  ctx.fillStyle = "#060908";
-  ctx.fillRect(0, photoH, W, H - photoH);
-
-  /** Gold rule */
-  ctx.strokeStyle = "rgba(201,169,98,0.45)";
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(W * 0.5 - 40, photoH + 36);
-  ctx.lineTo(W * 0.5 + 40, photoH + 36);
-  ctx.stroke();
-
-  let y = photoH + 96;
-  ctx.textAlign = "center";
-  ctx.fillStyle = "#f4f1ea";
-  ctx.font = "italic 56px 'Cormorant Garamond', Georgia, serif";
-  for (const line of wrapCanvasText(ctx, title, W - 120, 2)) {
-    ctx.fillText(line, W / 2, y);
-    y += 64;
-  }
-
-  if (priceLabel) {
-    y += 8;
-    ctx.fillStyle = "#c9a962";
-    ctx.font = "300 42px 'Cormorant Garamond', Georgia, serif";
-    ctx.fillText(priceLabel, W / 2, y);
-    y += 48;
-  }
-
-  if (blurb) {
-    y += 6;
-    ctx.fillStyle = "rgba(212,247,242,0.72)";
-    ctx.font = "26px Montserrat, Helvetica, sans-serif";
-    for (const line of wrapCanvasText(ctx, blurb, W - 160, 3)) {
-      ctx.fillText(line, W / 2, y);
-      y += 36;
-    }
-  }
-
-  /** CTA pill */
-  const ctaY = H - 118;
-  const ctaLabel = "OPEN DIGITAL MENU";
-  ctx.font = "600 22px Montserrat, Helvetica, sans-serif";
-  const ctaW = Math.max(320, ctx.measureText(ctaLabel).width + 72);
-  const ctaX = (W - ctaW) / 2;
-  roundRectPath(ctx, ctaX, ctaY, ctaW, 56, 28);
-  ctx.strokeStyle = "rgba(201,169,98,0.65)";
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-  ctx.fillStyle = "#e8d5a8";
-  ctx.textAlign = "center";
-  ctx.fillText(ctaLabel, W / 2, ctaY + 36);
-
-  ctx.fillStyle = "rgba(109,143,137,0.85)";
-  ctx.font = "500 20px Montserrat, Helvetica, sans-serif";
-  ctx.fillText(String(displayHost || dishShareDisplayHost()), W / 2, H - 36);
 
   const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.92));
   if (!blob) return null;
-  return new File([blob], "tiflisi-menu-share.jpg", { type: "image/jpeg" });
+  return new File([blob], "tiflisi-dish.jpg", { type: "image/jpeg" });
 }
 
 /* ─── DATA ───────────────────────────────────────────────────────────────── */
@@ -1562,20 +1436,13 @@ function DishDetailSheet({
       : `₾${formatLari(dish.price)}`;
     const shareTitle = `Tiflisi · ${title}`;
     const text = formatDishShareCaption({ title, blurb, url, priceLabel, lang });
-    const displayHost = dishShareDisplayHost();
     setSharing(true);
     try {
       if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
         let card = null;
         if (dish.image) {
           try {
-            card = await buildDishShareCardFile({
-              imageUrl: dish.image,
-              title,
-              blurb,
-              priceLabel,
-              displayHost,
-            });
+            card = await buildDishShareCardFile({ imageUrl: dish.image });
           } catch {
             card = null;
           }
