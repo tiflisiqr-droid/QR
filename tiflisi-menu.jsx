@@ -87,11 +87,10 @@ function dishShareUrl(dishId) {
 }
 
 /**
- * Messenger drops captions when a File is attached; WhatsApp keeps them.
- * Share text+url only, with the dish photo as an https URL so apps unfurl
- * image + keep the clickable menu link (same content shape in both apps).
+ * WhatsApp-style caption under the photo:
+ * brand → name → description → price → link (link always last).
  */
-function formatDishShareCaption({ title, blurb, url, priceLabel, lang, imageUrl, includeUrl = true }) {
+function formatDishShareCaption({ title, blurb, url, priceLabel, lang, ingredientsText, includeUrl = true }) {
   const brand =
     lang === "ka"
       ? "Tiflisi · ქართული რესტორანი"
@@ -105,12 +104,56 @@ function formatDishShareCaption({ title, blurb, url, priceLabel, lang, imageUrl,
   if (name) lines.push("", name);
   const desc = String(blurb || "").trim();
   if (desc) lines.push(desc);
+  const ingredients = String(ingredientsText || "").trim();
+  if (ingredients) lines.push(ingredients);
   const price = String(priceLabel || "").trim();
   if (price) lines.push(price);
-  const photo = String(imageUrl || "").trim();
-  if (photo) lines.push("", photo);
   if (includeUrl && url) lines.push("", `${cta}:`, url);
   return lines.join("\n");
+}
+
+function shareImageFileName(mime) {
+  const t = String(mime || "").toLowerCase();
+  if (t.includes("png")) return "tiflisi-dish.png";
+  if (t.includes("webp")) return "tiflisi-dish.webp";
+  if (t.includes("gif")) return "tiflisi-dish.gif";
+  return "tiflisi-dish.jpg";
+}
+
+/** Clean dish photo file for share (no text on the image). */
+async function buildDishSharePhotoFile(imageUrl) {
+  if (!imageUrl || typeof fetch !== "function") return null;
+  try {
+    const res = await fetch(imageUrl, { mode: "cors", credentials: "omit", cache: "force-cache" });
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    if (!blob || blob.size < 32) return null;
+    const type = blob.type && blob.type.startsWith("image/") ? blob.type : "image/jpeg";
+    return new File([blob], shareImageFileName(type), { type });
+  } catch {
+    return null;
+  }
+}
+
+function canShareFiles(file) {
+  if (typeof navigator === "undefined" || typeof navigator.share !== "function") return false;
+  if (!file) return false;
+  if (typeof navigator.canShare !== "function") return true;
+  try {
+    return navigator.canShare({ files: [file] });
+  } catch {
+    return false;
+  }
+}
+
+function formatDishIngredientsLine(ingredients, lang) {
+  const list = (Array.isArray(ingredients) ? ingredients : [])
+    .map((x) => String(x || "").trim())
+    .filter(Boolean);
+  if (list.length === 0) return "";
+  const label =
+    lang === "ka" ? "შემადგენლობა" : lang === "ru" ? "Состав" : "Ingredients";
+  return `${label}: ${list.join(", ")}`;
 }
 
 /* ─── DATA ───────────────────────────────────────────────────────────────── */
@@ -1395,32 +1438,59 @@ function DishDetailSheet({
       ? `₾${formatLari(mmPrice.min)} – ₾${formatLari(mmPrice.max)}`
       : `₾${formatLari(dish.price)}`;
     const shareTitle = title ? `Tiflisi · ${title}` : "Tiflisi";
-    const imageUrl = String(dish.image || "").trim();
-    /**
-     * Never attach File — Messenger keeps only the image and drops caption/link.
-     * Text share with photo URL + menu URL unfurls in Messenger and WhatsApp alike.
-     */
+    const descLower = String(blurb || "").toLowerCase();
+    const ingredientsText =
+      descLower.includes("შემადგენლობა") ||
+      descLower.includes("ingredients") ||
+      descLower.includes("состав")
+        ? ""
+        : formatDishIngredientsLine(ingredients, lang);
+    /** Image attached separately; caption = name → description → price → link. */
     const textWithUrl = formatDishShareCaption({
       title,
       blurb,
       url,
       priceLabel,
       lang,
-      imageUrl,
+      ingredientsText,
       includeUrl: true,
-    });
-    const textNoUrl = formatDishShareCaption({
-      title,
-      blurb,
-      url,
-      priceLabel,
-      lang,
-      imageUrl,
-      includeUrl: false,
     });
     setSharing(true);
     try {
       if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+        let photo = null;
+        if (dish.image) {
+          try {
+            photo = await buildDishSharePhotoFile(dish.image);
+          } catch {
+            photo = null;
+          }
+        }
+
+        if (photo && canShareFiles(photo)) {
+          try {
+            await navigator.share({ title: shareTitle, text: textWithUrl, files: [photo] });
+            return;
+          } catch (shareErr) {
+            if (shareErr && shareErr.name === "AbortError") return;
+            try {
+              await navigator.share({ files: [photo], text: textWithUrl });
+              return;
+            } catch (shareErr2) {
+              if (shareErr2 && shareErr2.name === "AbortError") return;
+            }
+          }
+        }
+
+        const textNoUrl = formatDishShareCaption({
+          title,
+          blurb,
+          url,
+          priceLabel,
+          lang,
+          ingredientsText,
+          includeUrl: false,
+        });
         try {
           await navigator.share({ title: shareTitle, text: textNoUrl, url });
           return;
