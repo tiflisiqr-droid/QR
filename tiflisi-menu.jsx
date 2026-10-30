@@ -90,7 +90,16 @@ function dishShareUrl(dishId) {
  * WhatsApp-style caption under the photo:
  * brand → name → description → price → link (link always last).
  */
-function formatDishShareCaption({ title, blurb, url, priceLabel, lang, ingredientsText, includeUrl = true }) {
+function formatDishShareCaption({
+  title,
+  blurb,
+  url,
+  priceLabel,
+  lang,
+  ingredientsText,
+  imageUrl,
+  includeUrl = true,
+}) {
   const brand =
     lang === "ka"
       ? "Tiflisi · ქართული რესტორანი"
@@ -108,6 +117,8 @@ function formatDishShareCaption({ title, blurb, url, priceLabel, lang, ingredien
   if (ingredients) lines.push(ingredients);
   const price = String(priceLabel || "").trim();
   if (price) lines.push(price);
+  const photo = String(imageUrl || "").trim();
+  if (photo) lines.push("", photo);
   if (includeUrl && url) lines.push("", `${cta}:`, url);
   return lines.join("\n");
 }
@@ -156,29 +167,51 @@ function formatDishIngredientsLine(ingredients, lang) {
   return `${label}: ${list.join(", ")}`;
 }
 
-function wrapShareCanvasText(ctx, text, maxWidth, maxLines) {
+function wrapShareCanvasText(ctx, text, maxWidth, maxLines, { ellipsis = true } = {}) {
   const words = String(text || "").trim().split(/\s+/).filter(Boolean);
   if (!words.length) return [];
   const lines = [];
   let line = "";
+
+  const flushLongToken = (token) => {
+    let rest = token;
+    while (rest && lines.length < maxLines) {
+      let cut = rest.length;
+      while (cut > 1 && ctx.measureText(rest.slice(0, cut)).width > maxWidth) cut -= 1;
+      const chunk = rest.slice(0, cut);
+      lines.push(chunk);
+      rest = rest.slice(cut);
+      if (lines.length >= maxLines && rest) {
+        if (ellipsis) {
+          const last = lines[maxLines - 1] || "";
+          lines[maxLines - 1] = `${last.replace(/…$/, "")}…`;
+        }
+        return;
+      }
+    }
+  };
+
   for (const word of words) {
+    if (lines.length >= maxLines) break;
     const test = line ? `${line} ${word}` : word;
     if (ctx.measureText(test).width <= maxWidth) {
       line = test;
       continue;
     }
-    if (line) lines.push(line);
-    line = word;
-    if (lines.length >= maxLines) break;
+    if (line) {
+      lines.push(line);
+      line = "";
+      if (lines.length >= maxLines) break;
+    }
+    if (ctx.measureText(word).width <= maxWidth) {
+      line = word;
+      continue;
+    }
+    flushLongToken(word);
+    line = "";
   }
   if (lines.length < maxLines && line) lines.push(line);
-  if (lines.length >= maxLines && words.length) {
-    const out = lines.slice(0, maxLines);
-    const last = out[maxLines - 1] || "";
-    out[maxLines - 1] = `${last.replace(/…$/, "")}…`;
-    return out;
-  }
-  return lines;
+  return lines.slice(0, maxLines);
 }
 
 /**
@@ -219,8 +252,8 @@ async function buildMessengerDishCardFile({
 
   mctx.font = "28px Montserrat, Helvetica, sans-serif";
   const bodyLines = wrapShareCanvasText(mctx, body, W - pad * 2, 12);
-  mctx.font = "22px Montserrat, Helvetica, sans-serif";
-  const urlLines = wrapShareCanvasText(mctx, String(url || ""), W - pad * 2, 3);
+  mctx.font = "20px Montserrat, Helvetica, sans-serif";
+  const urlLines = wrapShareCanvasText(mctx, String(url || ""), W - pad * 2, 8, { ellipsis: false });
 
   const textBlockH =
     48 + // brand
@@ -795,9 +828,9 @@ function badgeLabelForKey(b, lang, catalog, t) {
 }
 
 const T = {
-  en:{menu:"Menu",callWaiter:"Summon Waiter",requestBill:"Request Bill",ingredients:"Provenance",soldOut:"Unavailable",table:"Table",waiterCalled:"Your waiter is on the way.",billRequested:"Your bill is being prepared.",notifyFailed:"Could not save. Please try again.",staffAlertCloudFallback:"Couldn't reach the server. If staff doesn't respond, ask your waiter.",search:"Search the menu…",all:"All",adminLogin:"Staff Access",login:"Enter",dashboard:"Overview",menuMgmt:"Cuisine",tables:"Seating",notifications:"Alerts",analytics:"Insights",logout:"Exit",addDish:"New Dish",save:"Save",cancel:"Cancel",available:"Available",featured:"Recommended",chefChoice:"Chef's choice",badges:"Distinctions",badgeDry:"Dry",badgeSemiDry:"Semi-Dry",badgeSemiSweet:"Semi-Sweet",chooseOptions:"Choose size",cart:"Basket",cartTotal:"Total",addToCart:"Add",cartHint:"Estimated total for your selection (reference only).",emptyCart:"Your basket is empty.",cartQty:"Qty",cartClose:"Close",submitOrder:"Submit order",confirmOrderTitle:"Send this order?",confirmOrderBody:"Staff will receive your table order in alerts (amount is indicative — confirm at the venue).",confirmOrderBtn:"Confirm & send",orderSent:"Order sent.",portionGramsTitle:"Portion",gramsAbbr:"g",adminPortionGrams:"Net portion (g)",adminPortionGramsHint:"Optional. Shown on the guest menu. Or set Amount + g on each size row below.",variantAmount:"Amount",variantUnit:"Unit",share:"Share",shareCopied:"Link copied",shareFailed:"Could not share",shareWhatsApp:"WhatsApp",shareMessenger:"Messenger",sharePickHint:"Messenger drops photo captions — use Messenger card"},
-  ka:{menu:"მენიუ",callWaiter:"მიმტანის გამოძახება",requestBill:"ანგარიშის მოთხოვნა",ingredients:"წარმომავლობა",soldOut:"მიუწვდომელი",table:"მაგიდა",waiterCalled:"მიმტანი მოდის.",billRequested:"ანგარიში მზადდება.",notifyFailed:"ვერ შენახა — სცადეთ თავიდან.",staffAlertCloudFallback:"სერვერთან კავშირი ვერ დამყარდა — დაუძახეთ მიმტანს, თუ არავინ მოდის.",search:"მოძებნეთ…",all:"ყველა",adminLogin:"პერსონალი",login:"შესვლა",dashboard:"მიმოხილვა",menuMgmt:"სამზარეულო",tables:"მოსასვლელი",notifications:"შეტყობინებები",analytics:"ანალიტიკა",logout:"გამოსვლა",addDish:"ახალი კერძი",save:"შენახვა",cancel:"გაუქმება",available:"ხელმისაწვდომი",featured:"რეკომენდებული",chefChoice:"შეფის არჩევანი",badges:"გამოჩენილი",badgeDry:"მშრალი",badgeSemiDry:"ნახევრადმშრალი",badgeSemiSweet:"ნახევრადტკბილი",chooseOptions:"ზომა / ფასი",cart:"კალათა",cartTotal:"ჯამი",addToCart:"დამატება",cartHint:"არჩეული კერძების სავარაუდო ჯამი (საინფორმაციოდ).",emptyCart:"კალათა ცარიელია.",cartQty:"რაოდ.",cartClose:"დახურვა",submitOrder:"შეკვეთის გაგზავნა",confirmOrderTitle:"გავაგზავნოთ შეკვეთა?",confirmOrderBody:"პერსონალი მიიღებს შეკვეთას შეტყობინებაში (ჯამი საინფორმაციოა — დაადასტურეთ ადგილზე).",confirmOrderBtn:"დადასტურება",orderSent:"შეკვეთა გაიგზავნა.",portionGramsTitle:"პორცია",gramsAbbr:"გ",adminPortionGrams:"წონა (გ)",adminPortionGramsHint:"არჩევითი — სტუმრის მენიუზე ჩანს. ან ქვედა ხაზებზე: რაოდენობა + g.",variantAmount:"რაოდენობა",variantUnit:"ერთეული",share:"გაზიარება",shareCopied:"ბმული დაკოპირდა",shareFailed:"გაზიარება ვერ მოხერხდა",shareWhatsApp:"WhatsApp",shareMessenger:"Messenger",sharePickHint:"Messenger ფოტოზე ტექსტს ყრის — აირჩიე Messenger ბარათი"},
-  ru:{menu:"Меню",callWaiter:"Позвать Официанта",requestBill:"Попросить Счёт",ingredients:"Происхождение",soldOut:"Недоступно",table:"Стол",waiterCalled:"Официант уже идёт.",billRequested:"Счёт готовится.",notifyFailed:"Не удалось сохранить. Попробуйте снова.",staffAlertCloudFallback:"Нет связи с сервером. Если персонал не отвечает — позовите официанта.",search:"Поиск…",all:"Все",adminLogin:"Персонал",login:"Войти",dashboard:"Обзор",menuMgmt:"Кухня",tables:"Места",notifications:"Оповещения",analytics:"Аналитика",logout:"Выйти",addDish:"Новое Блюдо",save:"Сохранить",cancel:"Отмена",available:"Доступно",featured:"Рекомендуем",chefChoice:"Выбор шефа",badges:"Отличия",badgeDry:"Сухое",badgeSemiDry:"Полусухое",badgeSemiSweet:"Полусладкое",chooseOptions:"Размер и цена",cart:"Корзина",cartTotal:"Итого",addToCart:"В корзину",cartHint:"Ориентировочная сумма выбранных блюд (справочно).",emptyCart:"Корзина пуста.",cartQty:"Кол-во",cartClose:"Закрыть",submitOrder:"Отправить заказ",confirmOrderTitle:"Отправить заказ?",confirmOrderBody:"Персонал получит заказ в оповещениях (сумма ориентировочная — уточните у официанта).",confirmOrderBtn:"Подтвердить",orderSent:"Заказ отправлен.",portionGramsTitle:"Порция",gramsAbbr:"г",adminPortionGrams:"Вес порции (г)",adminPortionGramsHint:"Необязательно — полоска в меню. Или укажите количество + г в строках размеров.",variantAmount:"Кол-во",variantUnit:"Ед.",share:"Поделиться",shareCopied:"Ссылка скопирована",shareFailed:"Не удалось поделиться",shareWhatsApp:"WhatsApp",shareMessenger:"Messenger",sharePickHint:"Messenger убирает подпись к фото — выберите карточку Messenger"},
+  en:{menu:"Menu",callWaiter:"Summon Waiter",requestBill:"Request Bill",ingredients:"Provenance",soldOut:"Unavailable",table:"Table",waiterCalled:"Your waiter is on the way.",billRequested:"Your bill is being prepared.",notifyFailed:"Could not save. Please try again.",staffAlertCloudFallback:"Couldn't reach the server. If staff doesn't respond, ask your waiter.",search:"Search the menu…",all:"All",adminLogin:"Staff Access",login:"Enter",dashboard:"Overview",menuMgmt:"Cuisine",tables:"Seating",notifications:"Alerts",analytics:"Insights",logout:"Exit",addDish:"New Dish",save:"Save",cancel:"Cancel",available:"Available",featured:"Recommended",chefChoice:"Chef's choice",badges:"Distinctions",badgeDry:"Dry",badgeSemiDry:"Semi-Dry",badgeSemiSweet:"Semi-Sweet",chooseOptions:"Choose size",cart:"Basket",cartTotal:"Total",addToCart:"Add",cartHint:"Estimated total for your selection (reference only).",emptyCart:"Your basket is empty.",cartQty:"Qty",cartClose:"Close",submitOrder:"Submit order",confirmOrderTitle:"Send this order?",confirmOrderBody:"Staff will receive your table order in alerts (amount is indicative — confirm at the venue).",confirmOrderBtn:"Confirm & send",orderSent:"Order sent.",portionGramsTitle:"Portion",gramsAbbr:"g",adminPortionGrams:"Net portion (g)",adminPortionGramsHint:"Optional. Shown on the guest menu. Or set Amount + g on each size row below.",variantAmount:"Amount",variantUnit:"Unit",share:"Share",shareCopied:"Link copied",shareFailed:"Could not share",shareWhatsApp:"WhatsApp",shareMessenger:"Messenger",sharePickHint:"Messenger: full clickable link (no photo file). WhatsApp: photo + caption."},
+  ka:{menu:"მენიუ",callWaiter:"მიმტანის გამოძახება",requestBill:"ანგარიშის მოთხოვნა",ingredients:"წარმომავლობა",soldOut:"მიუწვდომელი",table:"მაგიდა",waiterCalled:"მიმტანი მოდის.",billRequested:"ანგარიში მზადდება.",notifyFailed:"ვერ შენახა — სცადეთ თავიდან.",staffAlertCloudFallback:"სერვერთან კავშირი ვერ დამყარდა — დაუძახეთ მიმტანს, თუ არავინ მოდის.",search:"მოძებნეთ…",all:"ყველა",adminLogin:"პერსონალი",login:"შესვლა",dashboard:"მიმოხილვა",menuMgmt:"სამზარეულო",tables:"მოსასვლელი",notifications:"შეტყობინებები",analytics:"ანალიტიკა",logout:"გამოსვლა",addDish:"ახალი კერძი",save:"შენახვა",cancel:"გაუქმება",available:"ხელმისაწვდომი",featured:"რეკომენდებული",chefChoice:"შეფის არჩევანი",badges:"გამოჩენილი",badgeDry:"მშრალი",badgeSemiDry:"ნახევრადმშრალი",badgeSemiSweet:"ნახევრადტკბილი",chooseOptions:"ზომა / ფასი",cart:"კალათა",cartTotal:"ჯამი",addToCart:"დამატება",cartHint:"არჩეული კერძების სავარაუდო ჯამი (საინფორმაციოდ).",emptyCart:"კალათა ცარიელია.",cartQty:"რაოდ.",cartClose:"დახურვა",submitOrder:"შეკვეთის გაგზავნა",confirmOrderTitle:"გავაგზავნოთ შეკვეთა?",confirmOrderBody:"პერსონალი მიიღებს შეკვეთას შეტყობინებაში (ჯამი საინფორმაციოა — დაადასტურეთ ადგილზე).",confirmOrderBtn:"დადასტურება",orderSent:"შეკვეთა გაიგზავნა.",portionGramsTitle:"პორცია",gramsAbbr:"გ",adminPortionGrams:"წონა (გ)",adminPortionGramsHint:"არჩევითი — სტუმრის მენიუზე ჩანს. ან ქვედა ხაზებზე: რაოდენობა + g.",variantAmount:"რაოდენობა",variantUnit:"ერთეული",share:"გაზიარება",shareCopied:"ბმული დაკოპირდა",shareFailed:"გაზიარება ვერ მოხერხდა",shareWhatsApp:"WhatsApp",shareMessenger:"Messenger",sharePickHint:"Messenger: სრული კლიკებადი ბმული. WhatsApp: ფოტო + ტექსტი."},
+  ru:{menu:"Меню",callWaiter:"Позвать Официанта",requestBill:"Попросить Счёт",ingredients:"Происхождение",soldOut:"Недоступно",table:"Стол",waiterCalled:"Официант уже идёт.",billRequested:"Счёт готовится.",notifyFailed:"Не удалось сохранить. Попробуйте снова.",staffAlertCloudFallback:"Нет связи с сервером. Если персонал не отвечает — позовите официанта.",search:"Поиск…",all:"Все",adminLogin:"Персонал",login:"Войти",dashboard:"Обзор",menuMgmt:"Кухня",tables:"Места",notifications:"Оповещения",analytics:"Аналитика",logout:"Выйти",addDish:"Новое Блюдо",save:"Сохранить",cancel:"Отмена",available:"Доступно",featured:"Рекомендуем",chefChoice:"Выбор шефа",badges:"Отличия",badgeDry:"Сухое",badgeSemiDry:"Полусухое",badgeSemiSweet:"Полусладкое",chooseOptions:"Размер и цена",cart:"Корзина",cartTotal:"Итого",addToCart:"В корзину",cartHint:"Ориентировочная сумма выбранных блюд (справочно).",emptyCart:"Корзина пуста.",cartQty:"Кол-во",cartClose:"Закрыть",submitOrder:"Отправить заказ",confirmOrderTitle:"Отправить заказ?",confirmOrderBody:"Персонал получит заказ в оповещениях (сумма ориентировочная — уточните у официанта).",confirmOrderBtn:"Подтвердить",orderSent:"Заказ отправлен.",portionGramsTitle:"Порция",gramsAbbr:"г",adminPortionGrams:"Вес порции (г)",adminPortionGramsHint:"Необязательно — полоска в меню. Или укажите количество + г в строках размеров.",variantAmount:"Кол-во",variantUnit:"Ед.",share:"Поделиться",shareCopied:"Ссылка скопирована",shareFailed:"Не удалось поделиться",shareWhatsApp:"WhatsApp",shareMessenger:"Messenger",sharePickHint:"Messenger: полная кликабельная ссылка. WhatsApp: фото + текст."},
 };
 
 /* ─── SHARED STATE ───────────────────────────────────────────────────────── */
@@ -1595,7 +1628,8 @@ function DishDetailSheet({
   const [sharing, setSharing] = useState(false);
   const [sharePickOpen, setSharePickOpen] = useState(false);
 
-  const buildSharePayload = () => {
+  const buildSharePayload = (opts = {}) => {
+    const { forMessenger = false } = opts;
     const url = dishShareUrl(dish.id);
     const priceLabel = mmPrice
       ? `₾${formatLari(mmPrice.min)} – ₾${formatLari(mmPrice.max)}`
@@ -1608,6 +1642,7 @@ function DishDetailSheet({
       descLower.includes("состав")
         ? ""
         : formatDishIngredientsLine(ingredients, lang);
+    const imageUrl = forMessenger ? String(dish.image || "").trim() : "";
     const textWithUrl = formatDishShareCaption({
       title,
       blurb,
@@ -1615,14 +1650,27 @@ function DishDetailSheet({
       priceLabel,
       lang,
       ingredientsText,
+      imageUrl,
       includeUrl: true,
     });
-    return { url, priceLabel, shareTitle, ingredientsText, textWithUrl };
+    const textNoUrl = formatDishShareCaption({
+      title,
+      blurb,
+      url,
+      priceLabel,
+      lang,
+      ingredientsText,
+      imageUrl,
+      includeUrl: false,
+    });
+    return { url, priceLabel, shareTitle, ingredientsText, textWithUrl, textNoUrl, imageUrl };
   };
 
   const handleShareMode = async (mode) => {
     if (sharing) return;
-    const { url, priceLabel, shareTitle, ingredientsText, textWithUrl } = buildSharePayload();
+    const forMessenger = mode === "messenger";
+    const { url, priceLabel, shareTitle, ingredientsText, textWithUrl, textNoUrl } =
+      buildSharePayload({ forMessenger });
     if (!url) {
       onToast?.(t.shareFailed);
       return;
@@ -1632,7 +1680,31 @@ function DishDetailSheet({
     try {
       if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
         if (mode === "messenger") {
-          /** Messenger keeps File only — caption must be inside the image. */
+          /**
+           * Facebook/Messenger drops text when a File is attached.
+           * Send text + full menu URL (no file) so the link stays complete & clickable.
+           * Dish photo URL in caption can still unfurl as a preview.
+           */
+          try {
+            await navigator.clipboard?.writeText?.(url);
+          } catch {
+            /* optional backup */
+          }
+          try {
+            await navigator.share({ title: shareTitle, text: textNoUrl, url });
+            onToast?.(t.shareCopied);
+            return;
+          } catch (shareErr) {
+            if (shareErr && shareErr.name === "AbortError") return;
+            try {
+              await navigator.share({ title: shareTitle, text: textWithUrl });
+              onToast?.(t.shareCopied);
+              return;
+            } catch (shareErr2) {
+              if (shareErr2 && shareErr2.name === "AbortError") return;
+            }
+          }
+          /** Last resort: card image with full URL drawn (not clickable). */
           let card = null;
           if (dish.image) {
             try {
@@ -1651,29 +1723,12 @@ function DishDetailSheet({
           }
           if (card && canShareFiles(card)) {
             try {
-              await navigator.clipboard?.writeText?.(url);
-            } catch {
-              /* optional */
-            }
-            try {
-              await navigator.share({ title: shareTitle, files: [card], text: textWithUrl });
+              await navigator.share({ files: [card], text: textWithUrl });
+              onToast?.(t.shareCopied);
               return;
             } catch (shareErr) {
               if (shareErr && shareErr.name === "AbortError") return;
-              try {
-                await navigator.share({ files: [card] });
-                return;
-              } catch (shareErr2) {
-                if (shareErr2 && shareErr2.name === "AbortError") return;
-              }
             }
-          }
-          /** Fallback: text+url (clickable link; no attached photo). */
-          try {
-            await navigator.share({ title: shareTitle, text: textWithUrl, url });
-            return;
-          } catch (shareErr) {
-            if (shareErr && shareErr.name === "AbortError") return;
           }
         } else {
           /** WhatsApp-style: clean photo + caption text. */
