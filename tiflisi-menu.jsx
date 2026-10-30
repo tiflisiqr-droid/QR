@@ -345,10 +345,10 @@ async function buildMessengerDishCardFile({
   ctx.fillText(cta, pad, y);
   y += 36;
   ctx.fillStyle = "#7eb8ae";
-  ctx.font = "22px Montserrat, Helvetica, sans-serif";
+  ctx.font = "20px Montserrat, Helvetica, sans-serif";
   for (const line of urlLines) {
     ctx.fillText(line, pad, y);
-    y += 30;
+    y += 28;
   }
 
   const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.92));
