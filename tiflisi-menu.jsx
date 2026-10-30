@@ -520,9 +520,9 @@ function badgeLabelForKey(b, lang, catalog, t) {
 }
 
 const T = {
-  en:{menu:"Menu",callWaiter:"Summon Waiter",requestBill:"Request Bill",ingredients:"Provenance",soldOut:"Unavailable",table:"Table",waiterCalled:"Your waiter is on the way.",billRequested:"Your bill is being prepared.",notifyFailed:"Could not save. Please try again.",staffAlertCloudFallback:"Couldn't reach the server. If staff doesn't respond, ask your waiter.",search:"Search the menu…",all:"All",adminLogin:"Staff Access",login:"Enter",dashboard:"Overview",menuMgmt:"Cuisine",tables:"Seating",notifications:"Alerts",analytics:"Insights",logout:"Exit",addDish:"New Dish",save:"Save",cancel:"Cancel",available:"Available",featured:"Recommended",chefChoice:"Chef's choice",badges:"Distinctions",badgeDry:"Dry",badgeSemiDry:"Semi-Dry",badgeSemiSweet:"Semi-Sweet",chooseOptions:"Choose size",cart:"Basket",cartTotal:"Total",addToCart:"Add",cartHint:"Estimated total for your selection (reference only).",emptyCart:"Your basket is empty.",cartQty:"Qty",cartClose:"Close",submitOrder:"Submit order",confirmOrderTitle:"Send this order?",confirmOrderBody:"Staff will receive your table order in alerts (amount is indicative — confirm at the venue).",confirmOrderBtn:"Confirm & send",orderSent:"Order sent.",portionGramsTitle:"Portion",gramsAbbr:"g",adminPortionGrams:"Net portion (g)",adminPortionGramsHint:"Optional. Shown on the guest menu. Or set Amount + g on each size row below.",variantAmount:"Amount",variantUnit:"Unit"},
-  ka:{menu:"მენიუ",callWaiter:"მიმტანის გამოძახება",requestBill:"ანგარიშის მოთხოვნა",ingredients:"წარმომავლობა",soldOut:"მიუწვდომელი",table:"მაგიდა",waiterCalled:"მიმტანი მოდის.",billRequested:"ანგარიში მზადდება.",notifyFailed:"ვერ შენახა — სცადეთ თავიდან.",staffAlertCloudFallback:"სერვერთან კავშირი ვერ დამყარდა — დაუძახეთ მიმტანს, თუ არავინ მოდის.",search:"მოძებნეთ…",all:"ყველა",adminLogin:"პერსონალი",login:"შესვლა",dashboard:"მიმოხილვა",menuMgmt:"სამზარეულო",tables:"მოსასვლელი",notifications:"შეტყობინებები",analytics:"ანალიტიკა",logout:"გამოსვლა",addDish:"ახალი კერძი",save:"შენახვა",cancel:"გაუქმება",available:"ხელმისაწვდომი",featured:"რეკომენდებული",chefChoice:"შეფის არჩევანი",badges:"გამოჩენილი",badgeDry:"მშრალი",badgeSemiDry:"ნახევრადმშრალი",badgeSemiSweet:"ნახევრადტკბილი",chooseOptions:"ზომა / ფასი",cart:"კალათა",cartTotal:"ჯამი",addToCart:"დამატება",cartHint:"არჩეული კერძების სავარაუდო ჯამი (საინფორმაციოდ).",emptyCart:"კალათა ცარიელია.",cartQty:"რაოდ.",cartClose:"დახურვა",submitOrder:"შეკვეთის გაგზავნა",confirmOrderTitle:"გავაგზავნოთ შეკვეთა?",confirmOrderBody:"პერსონალი მიიღებს შეკვეთას შეტყობინებაში (ჯამი საინფორმაციოა — დაადასტურეთ ადგილზე).",confirmOrderBtn:"დადასტურება",orderSent:"შეკვეთა გაიგზავნა.",portionGramsTitle:"პორცია",gramsAbbr:"გ",adminPortionGrams:"წონა (გ)",adminPortionGramsHint:"არჩევითი — სტუმრის მენიუზე ჩანს. ან ქვედა ხაზებზე: რაოდენობა + g.",variantAmount:"რაოდენობა",variantUnit:"ერთეული"},
-  ru:{menu:"Меню",callWaiter:"Позвать Официанта",requestBill:"Попросить Счёт",ingredients:"Происхождение",soldOut:"Недоступно",table:"Стол",waiterCalled:"Официант уже идёт.",billRequested:"Счёт готовится.",notifyFailed:"Не удалось сохранить. Попробуйте снова.",staffAlertCloudFallback:"Нет связи с сервером. Если персонал не отвечает — позовите официанта.",search:"Поиск…",all:"Все",adminLogin:"Персонал",login:"Войти",dashboard:"Обзор",menuMgmt:"Кухня",tables:"Места",notifications:"Оповещения",analytics:"Аналитика",logout:"Выйти",addDish:"Новое Блюдо",save:"Сохранить",cancel:"Отмена",available:"Доступно",featured:"Рекомендуем",chefChoice:"Выбор шефа",badges:"Отличия",badgeDry:"Сухое",badgeSemiDry:"Полусухое",badgeSemiSweet:"Полусладкое",chooseOptions:"Размер и цена",cart:"Корзина",cartTotal:"Итого",addToCart:"В корзину",cartHint:"Ориентировочная сумма выбранных блюд (справочно).",emptyCart:"Корзина пуста.",cartQty:"Кол-во",cartClose:"Закрыть",submitOrder:"Отправить заказ",confirmOrderTitle:"Отправить заказ?",confirmOrderBody:"Персонал получит заказ в оповещениях (сумма ориентировочная — уточните у официанта).",confirmOrderBtn:"Подтвердить",orderSent:"Заказ отправлен.",portionGramsTitle:"Порция",gramsAbbr:"г",adminPortionGrams:"Вес порции (г)",adminPortionGramsHint:"Необязательно — полоска в меню. Или укажите количество + г в строках размеров.",variantAmount:"Кол-во",variantUnit:"Ед."},
+  en:{menu:"Menu",callWaiter:"Summon Waiter",requestBill:"Request Bill",ingredients:"Provenance",soldOut:"Unavailable",table:"Table",waiterCalled:"Your waiter is on the way.",billRequested:"Your bill is being prepared.",notifyFailed:"Could not save. Please try again.",staffAlertCloudFallback:"Couldn't reach the server. If staff doesn't respond, ask your waiter.",search:"Search the menu…",all:"All",adminLogin:"Staff Access",login:"Enter",dashboard:"Overview",menuMgmt:"Cuisine",tables:"Seating",notifications:"Alerts",analytics:"Insights",logout:"Exit",addDish:"New Dish",save:"Save",cancel:"Cancel",available:"Available",featured:"Recommended",chefChoice:"Chef's choice",badges:"Distinctions",badgeDry:"Dry",badgeSemiDry:"Semi-Dry",badgeSemiSweet:"Semi-Sweet",chooseOptions:"Choose size",cart:"Basket",cartTotal:"Total",addToCart:"Add",cartHint:"Estimated total for your selection (reference only).",emptyCart:"Your basket is empty.",cartQty:"Qty",cartClose:"Close",submitOrder:"Submit order",confirmOrderTitle:"Send this order?",confirmOrderBody:"Staff will receive your table order in alerts (amount is indicative — confirm at the venue).",confirmOrderBtn:"Confirm & send",orderSent:"Order sent.",portionGramsTitle:"Portion",gramsAbbr:"g",adminPortionGrams:"Net portion (g)",adminPortionGramsHint:"Optional. Shown on the guest menu. Or set Amount + g on each size row below.",variantAmount:"Amount",variantUnit:"Unit",share:"Share",shareCopied:"Link copied",shareFailed:"Could not share"},
+  ka:{menu:"მენიუ",callWaiter:"მიმტანის გამოძახება",requestBill:"ანგარიშის მოთხოვნა",ingredients:"წარმომავლობა",soldOut:"მიუწვდომელი",table:"მაგიდა",waiterCalled:"მიმტანი მოდის.",billRequested:"ანგარიში მზადდება.",notifyFailed:"ვერ შენახა — სცადეთ თავიდან.",staffAlertCloudFallback:"სერვერთან კავშირი ვერ დამყარდა — დაუძახეთ მიმტანს, თუ არავინ მოდის.",search:"მოძებნეთ…",all:"ყველა",adminLogin:"პერსონალი",login:"შესვლა",dashboard:"მიმოხილვა",menuMgmt:"სამზარეულო",tables:"მოსასვლელი",notifications:"შეტყობინებები",analytics:"ანალიტიკა",logout:"გამოსვლა",addDish:"ახალი კერძი",save:"შენახვა",cancel:"გაუქმება",available:"ხელმისაწვდომი",featured:"რეკომენდებული",chefChoice:"შეფის არჩევანი",badges:"გამოჩენილი",badgeDry:"მშრალი",badgeSemiDry:"ნახევრადმშრალი",badgeSemiSweet:"ნახევრადტკბილი",chooseOptions:"ზომა / ფასი",cart:"კალათა",cartTotal:"ჯამი",addToCart:"დამატება",cartHint:"არჩეული კერძების სავარაუდო ჯამი (საინფორმაციოდ).",emptyCart:"კალათა ცარიელია.",cartQty:"რაოდ.",cartClose:"დახურვა",submitOrder:"შეკვეთის გაგზავნა",confirmOrderTitle:"გავაგზავნოთ შეკვეთა?",confirmOrderBody:"პერსონალი მიიღებს შეკვეთას შეტყობინებაში (ჯამი საინფორმაციოა — დაადასტურეთ ადგილზე).",confirmOrderBtn:"დადასტურება",orderSent:"შეკვეთა გაიგზავნა.",portionGramsTitle:"პორცია",gramsAbbr:"გ",adminPortionGrams:"წონა (გ)",adminPortionGramsHint:"არჩევითი — სტუმრის მენიუზე ჩანს. ან ქვედა ხაზებზე: რაოდენობა + g.",variantAmount:"რაოდენობა",variantUnit:"ერთეული",share:"გაზიარება",shareCopied:"ბმული დაკოპირდა",shareFailed:"გაზიარება ვერ მოხერხდა"},
+  ru:{menu:"Меню",callWaiter:"Позвать Официанта",requestBill:"Попросить Счёт",ingredients:"Происхождение",soldOut:"Недоступно",table:"Стол",waiterCalled:"Официант уже идёт.",billRequested:"Счёт готовится.",notifyFailed:"Не удалось сохранить. Попробуйте снова.",staffAlertCloudFallback:"Нет связи с сервером. Если персонал не отвечает — позовите официанта.",search:"Поиск…",all:"Все",adminLogin:"Персонал",login:"Войти",dashboard:"Обзор",menuMgmt:"Кухня",tables:"Места",notifications:"Оповещения",analytics:"Аналитика",logout:"Выйти",addDish:"Новое Блюдо",save:"Сохранить",cancel:"Отмена",available:"Доступно",featured:"Рекомендуем",chefChoice:"Выбор шефа",badges:"Отличия",badgeDry:"Сухое",badgeSemiDry:"Полусухое",badgeSemiSweet:"Полусладкое",chooseOptions:"Размер и цена",cart:"Корзина",cartTotal:"Итого",addToCart:"В корзину",cartHint:"Ориентировочная сумма выбранных блюд (справочно).",emptyCart:"Корзина пуста.",cartQty:"Кол-во",cartClose:"Закрыть",submitOrder:"Отправить заказ",confirmOrderTitle:"Отправить заказ?",confirmOrderBody:"Персонал получит заказ в оповещениях (сумма ориентировочная — уточните у официанта).",confirmOrderBtn:"Подтвердить",orderSent:"Заказ отправлен.",portionGramsTitle:"Порция",gramsAbbr:"г",adminPortionGrams:"Вес порции (г)",adminPortionGramsHint:"Необязательно — полоска в меню. Или укажите количество + г в строках размеров.",variantAmount:"Кол-во",variantUnit:"Ед.",share:"Поделиться",shareCopied:"Ссылка скопирована",shareFailed:"Не удалось поделиться"},
 };
 
 /* ─── SHARED STATE ───────────────────────────────────────────────────────── */
@@ -1251,6 +1251,257 @@ function DishVariantModal({ dish, lang, t, onClose, onConfirm }) {
   );
 }
 
+function dishShareUrl(dishId) {
+  if (typeof window === "undefined") return "";
+  const anchor = dishAnchorId(dishId);
+  return `${window.location.origin}${window.location.pathname}${window.location.search}#${anchor}`;
+}
+
+function DishDetailSheet({
+  dish,
+  lang,
+  t,
+  distinctionCatalog,
+  cartQty = 0,
+  onClose,
+  onAddToCart,
+  onBumpCartQty,
+  onOpenVariantModal,
+  onToast,
+}) {
+  const [addPulse, setAddPulse] = useState(false);
+  const addPulseTimerRef = useRef(null);
+  const nameObj = dish?.name && typeof dish.name === "object" ? dish.name : {};
+  const title = String(nameObj[lang] || nameObj.en || nameObj.ka || "—").trim() || "—";
+  const blurb = dishBlurbText(dish, lang);
+  const badges = Array.isArray(dish?.badges) ? dish.badges : [];
+  const displayBadges = dish?.featured ? badges.filter((b) => b !== "Chef's Table") : badges;
+  const ingredients = Array.isArray(dish?.ingredients) ? dish.ingredients : [];
+  const hasVariants = dishPriceVariants(dish).length > 0;
+  const mmPrice = minMaxVariantPrice(dish);
+  const cat = distinctionCatalog || mergedDistinctionCatalog([]);
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  useEffect(() => {
+    return () => {
+      if (addPulseTimerRef.current) clearTimeout(addPulseTimerRef.current);
+    };
+  }, []);
+
+  const triggerAddPulse = () => {
+    if (addPulseTimerRef.current) clearTimeout(addPulseTimerRef.current);
+    setAddPulse(true);
+    addPulseTimerRef.current = setTimeout(() => {
+      setAddPulse(false);
+      addPulseTimerRef.current = null;
+    }, 520);
+  };
+
+  const handleShare = async () => {
+    const url = dishShareUrl(dish.id);
+    const payload = { title, text: blurb || title, url };
+    try {
+      if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+        await navigator.share(payload);
+        return;
+      }
+      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+        onToast?.(t.shareCopied);
+        return;
+      }
+      onToast?.(t.shareFailed);
+    } catch (err) {
+      /** User dismissed the system share sheet — not an error. */
+      if (err && err.name === "AbortError") return;
+      onToast?.(t.shareFailed);
+    }
+  };
+
+  if (!dish) return null;
+
+  return (
+    <>
+      <button
+        type="button"
+        aria-label={t.cartClose}
+        onClick={onClose}
+        style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 10120,
+          border: "none",
+          padding: 0,
+          margin: 0,
+          background: "rgba(0,0,0,0.72)",
+          cursor: "pointer",
+          WebkitTapHighlightColor: "transparent",
+        }}
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="dish-detail-sheet-title"
+        className="menu-cart-sheet menu-dish-sheet"
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          position: "fixed",
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 10130,
+          maxHeight: "88vh",
+          borderRadius: "20px 20px 0 0",
+          display: "flex",
+          flexDirection: "column",
+          animation: "menuSheetUp 0.36s cubic-bezier(0.22, 1, 0.36, 1)",
+        }}
+      >
+        <div className="menu-dish-sheet-handle" aria-hidden="true" />
+        <div className="menu-dish-sheet-top">
+          <button type="button" className="menu-dish-sheet-share" onClick={handleShare} aria-label={t.share}>
+            <span aria-hidden="true">↗</span>
+            {t.share}
+          </button>
+          <button type="button" onClick={onClose} className="action-btn menu-cart-sheet-close">
+            {t.cartClose}
+          </button>
+        </div>
+
+        <div className="menu-dish-sheet-scroll">
+          <div className="menu-dish-sheet-media">
+            {dish.image ? (
+              <img src={dish.image} alt={title} loading="lazy" decoding="async" />
+            ) : (
+              <div className="menu-dish-sheet-media-ph">◇</div>
+            )}
+            {!dish.available && (
+              <div className="menu-dish-sheet-soldout">
+                <span>{t.soldOut}</span>
+              </div>
+            )}
+            {dish.featured && (
+              <div className="menu-dish-sheet-featured">
+                <span className="menu-feature-pill">✦ {t.chefChoice}</span>
+              </div>
+            )}
+          </div>
+
+          <div className="menu-dish-sheet-body">
+            {displayBadges.length > 0 && (
+              <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "10px" }}>
+                {displayBadges.map((b, bi) => (
+                  <span
+                    key={`${dish.id}-sheet-b-${bi}-${b}`}
+                    className="tag"
+                    style={{
+                      background: badgeStyleForKey(b, cat).bg,
+                      color: badgeStyleForKey(b, cat).color,
+                      fontSize: "8px",
+                      fontWeight: 700,
+                      padding: "4px 10px",
+                      borderRadius: "999px",
+                      letterSpacing: "0.14em",
+                      textTransform: "uppercase",
+                      fontFamily: "var(--font-body)",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                    }}
+                  >
+                    {b === "Popular" && <span aria-hidden="true">🔥&nbsp;</span>}
+                    {badgeLabelForKey(b, lang, cat, t)}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <h2 id="dish-detail-sheet-title" className="menu-dish-sheet-title">
+              {title}
+            </h2>
+
+            <div className="menu-dish-sheet-price">
+              {mmPrice ? `₾${formatLari(mmPrice.min)} – ₾${formatLari(mmPrice.max)}` : `₾${formatLari(dish.price)}`}
+            </div>
+
+            <DishGramBar segments={dishGramSegments(dish, lang)} t={t} />
+
+            {blurb ? <p className="menu-dish-sheet-blurb">{blurb}</p> : null}
+
+            {ingredients.length > 0 && (
+              <div className="menu-dish-sheet-ingredients">
+                <div className="menu-dish-sheet-ingredients-label">✦ {t.ingredients}</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                  {ingredients.map((ing, ii) => (
+                    <span key={`${dish.id}-sheet-ing-${ii}-${ing}`} className="menu-dish-sheet-ing">
+                      {ing}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="menu-dish-sheet-footer" onClick={(e) => e.stopPropagation()}>
+          {hasVariants ? (
+            <button
+              type="button"
+              className={`menu-add-btn menu-dish-sheet-cta${addPulse ? " menu-add-btn--pulse" : ""}`}
+              disabled={!dish.available}
+              onClick={() => {
+                if (!dish.available) return;
+                onOpenVariantModal?.(dish);
+                triggerAddPulse();
+              }}
+            >
+              {cartQty > 0 ? `${t.addToCart} · ×${cartQty}` : t.chooseOptions}
+            </button>
+          ) : cartQty > 0 ? (
+            <div className="menu-dish-sheet-qty-row">
+              <button type="button" className="menu-cart-sheet-qty-btn" aria-label={t.cartQty + " −"} onClick={() => onBumpCartQty(String(dish.id), -1)}>
+                −
+              </button>
+              <span className="menu-dish-sheet-qty-val">{cartQty}</span>
+              <button
+                type="button"
+                className="menu-cart-sheet-qty-btn menu-cart-sheet-qty-btn--plus"
+                aria-label={t.cartQty + " +"}
+                disabled={!dish.available}
+                onClick={() => {
+                  if (!dish.available) return;
+                  onBumpCartQty(String(dish.id), 1);
+                  triggerAddPulse();
+                }}
+              >
+                +
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className={`menu-add-btn menu-dish-sheet-cta${addPulse ? " menu-add-btn--pulse" : ""}`}
+              disabled={!dish.available}
+              onClick={() => {
+                if (!dish.available) return;
+                onAddToCart(dish, null);
+                triggerAddPulse();
+              }}
+            >
+              {t.addToCart}
+            </button>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
    CUSTOMER MENU
 ═══════════════════════════════════════════════════════════════════════════ */
@@ -1266,7 +1517,7 @@ function CustomerMenu({ tableId, store, lang }) {
   const [activeCat, setActiveCat] = useState(null);
   const [search, setSearch] = useState("");
   const [toast, setToast] = useState(null);
-  const [expanded, setExpanded] = useState(null);
+  const [detailDishId, setDetailDishId] = useState(null);
   const [cart, setCart] = useState({});
   const [cartOpen, setCartOpen] = useState(false);
   const [orderConfirmOpen, setOrderConfirmOpen] = useState(false);
@@ -1483,9 +1734,29 @@ function CustomerMenu({ tableId, store, lang }) {
 
   const stickyOffset = () => (headerRef.current?.offsetHeight ?? 120) + 12;
 
+  const detailDish = useMemo(
+    () => (detailDishId == null ? null : dishes.find((d) => String(d.id) === String(detailDishId)) ?? null),
+    [detailDishId, dishes]
+  );
+
+  const openDishDetail = useCallback(
+    (dishOrId) => {
+      const id = dishOrId && typeof dishOrId === "object" ? dishOrId.id : dishOrId;
+      if (id == null) return;
+      setDetailDishId(id);
+      trackView(id);
+      const anchor = dishAnchorId(id);
+      const basePath = `${location.pathname}${location.search}`;
+      skipHashDeepLinkRef.current = true;
+      window.history.replaceState(null, "", `${basePath}#${anchor}`);
+      deepLinkHandledHashRef.current = anchor;
+    },
+    [trackView, location.pathname, location.search]
+  );
+
   const scrollToDish = useCallback(
     (dishId, options = {}) => {
-      const { updateHash = true, expandCard = true } = options;
+      const { updateHash = true, openSheet = true } = options;
       const anchor = dishAnchorId(dishId);
       const basePath = `${location.pathname}${location.search}`;
       skipScrollSpyRef.current = true;
@@ -1516,11 +1787,10 @@ function CustomerMenu({ tableId, store, lang }) {
         el.style.scrollMarginTop = `${offset}px`;
 
         /**
-         * Expand + highlight after smooth scroll: expanding the card mid-scroll changes layout
-         * and fights `behavior: "smooth"`, which feels like broken / stuttering scroll (esp. from featured carousel).
+         * Open detail sheet + highlight after smooth scroll so layout does not fight scroll mid-way.
          */
         const finishAfterScroll = () => {
-          if (expandCard) setExpanded(dishId);
+          if (openSheet) setDetailDishId(dishId);
           trackView(dishId);
           applyHighlight(el);
         };
@@ -1583,11 +1853,14 @@ function CustomerMenu({ tableId, store, lang }) {
       return;
     }
     deepLinkHandledHashRef.current = hash;
+    /** Open sheet immediately; scroll can finish independently (avoids race where scroll runs but sheet never mounts). */
+    setDetailDishId(dish.id);
+    trackView(dish.id);
     const tmr = window.setTimeout(() => {
-      scrollToDish(dish.id, { updateHash: false, expandCard: true });
+      scrollToDish(dish.id, { updateHash: false, openSheet: false });
     }, 80);
     return () => window.clearTimeout(tmr);
-  }, [menuLoading, dishes, location.hash, scrollToDish]);
+  }, [menuLoading, dishes, location.hash, scrollToDish, trackView]);
 
   const scrollToSection = useCallback((sectionId) => {
     if (typeof document === "undefined") return false;
@@ -1837,8 +2110,7 @@ function CustomerMenu({ tableId, store, lang }) {
               {cat.dishes.map((dish, di) => (
                 <DishRow key={dish.id} dish={dish} lang={lang} t={t} distinctionCatalog={distinctionCatalog}
                   style={{ animationDelay:`${(gi*3+di)*0.06}s` }}
-                  expanded={expanded===dish.id}
-                  onToggle={() => { setExpanded(expanded===dish.id?null:dish.id); trackView(dish.id); }}
+                  onOpenDetail={() => openDishDetail(dish)}
                   cartQty={sumCartQtyForDish(cart, dish.id)}
                   onAddToCart={addToCart}
                   onBumpCartQty={bumpCartQty}
@@ -2082,6 +2354,33 @@ function CustomerMenu({ tableId, store, lang }) {
         </div>
       </div>
 
+      {detailDish && (
+        <DishDetailSheet
+          dish={detailDish}
+          lang={lang}
+          t={t}
+          distinctionCatalog={distinctionCatalog}
+          cartQty={sumCartQtyForDish(cart, detailDish.id)}
+          onClose={() => {
+            setDetailDishId(null);
+            const basePath = `${location.pathname}${location.search}`;
+            const hash = (window.location.hash || "").replace(/^#/, "");
+            if (hash.startsWith("dish-")) {
+              skipHashDeepLinkRef.current = true;
+              window.history.replaceState(null, "", basePath);
+              deepLinkHandledHashRef.current = null;
+            }
+          }}
+          onAddToCart={addToCart}
+          onBumpCartQty={bumpCartQty}
+          onOpenVariantModal={(d) => setVariantModalDish(d)}
+          onToast={(msg) => {
+            setToast(msg);
+            window.setTimeout(() => setToast(null), 2200);
+          }}
+        />
+      )}
+
       {variantModalDish && dishPriceVariants(variantModalDish).length > 0 && (
         <DishVariantModal
           dish={variantModalDish}
@@ -2137,7 +2436,7 @@ function dishBlurbText(dish, lang) {
   return "";
 }
 
-function DishRow({ dish, lang, t, distinctionCatalog, expanded, onToggle, style, cartQty = 0, onAddToCart, onBumpCartQty, onOpenVariantModal }) {
+function DishRow({ dish, lang, t, distinctionCatalog, onOpenDetail, style, cartQty = 0, onAddToCart, onBumpCartQty, onOpenVariantModal }) {
   const [addPulse, setAddPulse] = useState(false);
   const addPulseTimerRef = useRef(null);
   const nameObj = dish.name && typeof dish.name === "object" ? dish.name : {};
@@ -2145,7 +2444,6 @@ function DishRow({ dish, lang, t, distinctionCatalog, expanded, onToggle, style,
   const blurb = dishBlurbText(dish, lang);
   const badges = Array.isArray(dish.badges) ? dish.badges : [];
   const displayBadges = dish.featured ? badges.filter((b) => b !== "Chef's Table") : badges;
-  const ingredients = Array.isArray(dish.ingredients) ? dish.ingredients : [];
   const hasVariants = dishPriceVariants(dish).length > 0;
   const mmPrice = minMaxVariantPrice(dish);
 
@@ -2169,8 +2467,16 @@ function DishRow({ dish, lang, t, distinctionCatalog, expanded, onToggle, style,
   return (
     <div
       id={dishAnchorId(dish.id)}
-      className={`dish-card menu-dish-card menu-dish-anchor${expanded ? " menu-dish-card--expanded" : ""}`}
-      onClick={onToggle}
+      className="dish-card menu-dish-card menu-dish-anchor"
+      onClick={onOpenDetail}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onOpenDetail?.();
+        }
+      }}
       style={{
         cursor: "pointer",
         opacity: dish.available ? 1 : 0.48,
@@ -2238,17 +2544,13 @@ function DishRow({ dish, lang, t, distinctionCatalog, expanded, onToggle, style,
                 style={{
                   wordBreak: "break-word",
                   overflowWrap: "anywhere",
-                  whiteSpace: expanded ? "pre-wrap" : "normal",
-                  ...(expanded
-                    ? { overflow: "visible", maxHeight: "none", display: "block" }
-                    : {
-                        overflow: "hidden",
-                        display: "-webkit-box",
-                        WebkitLineClamp: 3,
-                        WebkitBoxOrient: "vertical",
-                        lineClamp: 3,
-                        maxHeight: "4.8em",
-                      }),
+                  whiteSpace: "normal",
+                  overflow: "hidden",
+                  display: "-webkit-box",
+                  WebkitLineClamp: 3,
+                  WebkitBoxOrient: "vertical",
+                  lineClamp: 3,
+                  maxHeight: "4.8em",
                 }}
               >
                 {blurb}
@@ -2337,40 +2639,11 @@ function DishRow({ dish, lang, t, distinctionCatalog, expanded, onToggle, style,
                   </>
                 )}
               </div>
-              <div className="menu-expand-chevron" style={{ transform: expanded ? "rotate(180deg)" : "rotate(0deg)" }} aria-hidden="true">▾</div>
+              <div className="menu-expand-chevron" aria-hidden="true">▴</div>
             </div>
           </div>
         </div>
       </div>
-
-      {expanded && (
-        <div className="menu-dish-expanded" onClick={(e) => e.stopPropagation()}>
-          <div style={{ fontSize:"8px", color:"#c9a962", letterSpacing:"0.28em", textTransform:"uppercase", marginBottom:"12px", fontFamily:"var(--font-body)", fontWeight:600 }}>
-            ✦ {t.ingredients}
-          </div>
-          <div style={{ display:"flex", flexWrap:"wrap", gap:"8px" }}>
-            {ingredients.map((ing, ii) => (
-              <span
-                key={`${dish.id}-ing-${ii}-${ing}`}
-                style={{
-                  padding: "6px 14px",
-                  borderRadius: "999px",
-                  border: "1px solid rgba(61,191,176,0.22)",
-                  fontSize: "10px",
-                  color: "rgba(212,247,242,0.9)",
-                  letterSpacing: "0.06em",
-                  fontFamily: "var(--font-body)",
-                  fontWeight: 400,
-                  background: "rgba(6,12,12,0.45)",
-                  backdropFilter: "blur(8px)",
-                }}
-              >
-                {ing}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
