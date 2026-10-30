@@ -156,6 +156,173 @@ function formatDishIngredientsLine(ingredients, lang) {
   return `${label}: ${list.join(", ")}`;
 }
 
+function wrapShareCanvasText(ctx, text, maxWidth, maxLines) {
+  const words = String(text || "").trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return [];
+  const lines = [];
+  let line = "";
+  for (const word of words) {
+    const test = line ? `${line} ${word}` : word;
+    if (ctx.measureText(test).width <= maxWidth) {
+      line = test;
+      continue;
+    }
+    if (line) lines.push(line);
+    line = word;
+    if (lines.length >= maxLines) break;
+  }
+  if (lines.length < maxLines && line) lines.push(line);
+  if (lines.length >= maxLines && words.length) {
+    const out = lines.slice(0, maxLines);
+    const last = out[maxLines - 1] || "";
+    out[maxLines - 1] = `${last.replace(/…$/, "")}…`;
+    return out;
+  }
+  return lines;
+}
+
+/**
+ * Messenger audit fix: FB Messenger accepts the image File but discards `text`/`url`
+ * when files are present (target-app limit, not a Web Share bug). Bake the WhatsApp
+ * caption layout into one JPEG so Messenger still shows name, description, price, link.
+ */
+async function buildMessengerDishCardFile({
+  imageUrl,
+  title,
+  blurb,
+  ingredientsText,
+  priceLabel,
+  url,
+  lang,
+}) {
+  if (typeof document === "undefined") return null;
+  const W = 1080;
+  const photoH = 720;
+  const pad = 56;
+  const brand =
+    lang === "ka"
+      ? "Tiflisi · ქართული რესტორანი"
+      : lang === "ru"
+        ? "Tiflisi · Грузинский ресторан"
+        : "Tiflisi · Georgian Restaurant";
+  const cta =
+    lang === "ka" ? "მენიუში ნახვა:" : lang === "ru" ? "Открыть в меню:" : "View on the menu:";
+
+  const measureCanvas = document.createElement("canvas");
+  const mctx = measureCanvas.getContext("2d");
+  if (!mctx) return null;
+
+  const bodyParts = [];
+  if (blurb) bodyParts.push(String(blurb).trim());
+  if (ingredientsText) bodyParts.push(String(ingredientsText).trim());
+  const body = bodyParts.join("\n");
+
+  mctx.font = "28px Montserrat, Helvetica, sans-serif";
+  const bodyLines = wrapShareCanvasText(mctx, body, W - pad * 2, 12);
+  mctx.font = "22px Montserrat, Helvetica, sans-serif";
+  const urlLines = wrapShareCanvasText(mctx, String(url || ""), W - pad * 2, 3);
+
+  const textBlockH =
+    48 + // brand
+    28 +
+    56 + // title
+    24 +
+    bodyLines.length * 40 +
+    28 +
+    48 + // price
+    36 +
+    32 + // cta
+    urlLines.length * 30 +
+    64;
+  const H = photoH + Math.max(420, textBlockH);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+
+  ctx.fillStyle = "#111b14";
+  ctx.fillRect(0, 0, W, H);
+
+  try {
+    let bitmap = null;
+    try {
+      const res = await fetch(imageUrl, { mode: "cors", credentials: "omit", cache: "force-cache" });
+      if (res.ok) bitmap = await createImageBitmap(await res.blob());
+    } catch {
+      /* Image fallback */
+    }
+    if (!bitmap) {
+      bitmap = await new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error("img"));
+        img.src = imageUrl;
+      });
+    }
+    const iw = bitmap.width || bitmap.naturalWidth || 1;
+    const ih = bitmap.height || bitmap.naturalHeight || 1;
+    const scale = Math.max(W / iw, photoH / ih);
+    const dw = iw * scale;
+    const dh = ih * scale;
+    ctx.drawImage(bitmap, (W - dw) / 2, (photoH - dh) / 2, dw, dh);
+    if (typeof bitmap.close === "function") bitmap.close();
+  } catch {
+    ctx.fillStyle = "#1a2820";
+    ctx.fillRect(0, 0, W, photoH);
+  }
+
+  ctx.fillStyle = "#0c1410";
+  ctx.fillRect(0, photoH, W, H - photoH);
+
+  let y = photoH + 52;
+  ctx.textAlign = "left";
+  ctx.fillStyle = "#c9a962";
+  ctx.font = "600 26px Montserrat, Helvetica, sans-serif";
+  ctx.fillText(brand, pad, y);
+  y += 52;
+
+  ctx.fillStyle = "#f4f1ea";
+  ctx.font = "600 44px 'Cormorant Garamond', Georgia, serif";
+  for (const line of wrapShareCanvasText(ctx, title, W - pad * 2, 2)) {
+    ctx.fillText(line, pad, y);
+    y += 52;
+  }
+  y += 8;
+
+  ctx.fillStyle = "rgba(212,247,242,0.88)";
+  ctx.font = "28px Montserrat, Helvetica, sans-serif";
+  for (const line of bodyLines) {
+    ctx.fillText(line, pad, y);
+    y += 40;
+  }
+
+  if (priceLabel) {
+    y += 16;
+    ctx.fillStyle = "#e8d5a8";
+    ctx.font = "600 40px 'Cormorant Garamond', Georgia, serif";
+    ctx.fillText(String(priceLabel), pad, y);
+    y += 56;
+  }
+
+  ctx.fillStyle = "rgba(201,169,98,0.95)";
+  ctx.font = "600 24px Montserrat, Helvetica, sans-serif";
+  ctx.fillText(cta, pad, y);
+  y += 36;
+  ctx.fillStyle = "#7eb8ae";
+  ctx.font = "22px Montserrat, Helvetica, sans-serif";
+  for (const line of urlLines) {
+    ctx.fillText(line, pad, y);
+    y += 30;
+  }
+
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.92));
+  if (!blob) return null;
+  return new File([blob], "tiflisi-messenger-share.jpg", { type: "image/jpeg" });
+}
+
 /* ─── DATA ───────────────────────────────────────────────────────────────── */
 const CATEGORIES = [
   { id: 1, name: { en: "Khinkali", ka: "ხინკალი", ru: "Хинкали" }, icon: "◈", order: 1 },
@@ -628,9 +795,9 @@ function badgeLabelForKey(b, lang, catalog, t) {
 }
 
 const T = {
-  en:{menu:"Menu",callWaiter:"Summon Waiter",requestBill:"Request Bill",ingredients:"Provenance",soldOut:"Unavailable",table:"Table",waiterCalled:"Your waiter is on the way.",billRequested:"Your bill is being prepared.",notifyFailed:"Could not save. Please try again.",staffAlertCloudFallback:"Couldn't reach the server. If staff doesn't respond, ask your waiter.",search:"Search the menu…",all:"All",adminLogin:"Staff Access",login:"Enter",dashboard:"Overview",menuMgmt:"Cuisine",tables:"Seating",notifications:"Alerts",analytics:"Insights",logout:"Exit",addDish:"New Dish",save:"Save",cancel:"Cancel",available:"Available",featured:"Recommended",chefChoice:"Chef's choice",badges:"Distinctions",badgeDry:"Dry",badgeSemiDry:"Semi-Dry",badgeSemiSweet:"Semi-Sweet",chooseOptions:"Choose size",cart:"Basket",cartTotal:"Total",addToCart:"Add",cartHint:"Estimated total for your selection (reference only).",emptyCart:"Your basket is empty.",cartQty:"Qty",cartClose:"Close",submitOrder:"Submit order",confirmOrderTitle:"Send this order?",confirmOrderBody:"Staff will receive your table order in alerts (amount is indicative — confirm at the venue).",confirmOrderBtn:"Confirm & send",orderSent:"Order sent.",portionGramsTitle:"Portion",gramsAbbr:"g",adminPortionGrams:"Net portion (g)",adminPortionGramsHint:"Optional. Shown on the guest menu. Or set Amount + g on each size row below.",variantAmount:"Amount",variantUnit:"Unit",share:"Share",shareCopied:"Link copied",shareFailed:"Could not share"},
-  ka:{menu:"მენიუ",callWaiter:"მიმტანის გამოძახება",requestBill:"ანგარიშის მოთხოვნა",ingredients:"წარმომავლობა",soldOut:"მიუწვდომელი",table:"მაგიდა",waiterCalled:"მიმტანი მოდის.",billRequested:"ანგარიში მზადდება.",notifyFailed:"ვერ შენახა — სცადეთ თავიდან.",staffAlertCloudFallback:"სერვერთან კავშირი ვერ დამყარდა — დაუძახეთ მიმტანს, თუ არავინ მოდის.",search:"მოძებნეთ…",all:"ყველა",adminLogin:"პერსონალი",login:"შესვლა",dashboard:"მიმოხილვა",menuMgmt:"სამზარეულო",tables:"მოსასვლელი",notifications:"შეტყობინებები",analytics:"ანალიტიკა",logout:"გამოსვლა",addDish:"ახალი კერძი",save:"შენახვა",cancel:"გაუქმება",available:"ხელმისაწვდომი",featured:"რეკომენდებული",chefChoice:"შეფის არჩევანი",badges:"გამოჩენილი",badgeDry:"მშრალი",badgeSemiDry:"ნახევრადმშრალი",badgeSemiSweet:"ნახევრადტკბილი",chooseOptions:"ზომა / ფასი",cart:"კალათა",cartTotal:"ჯამი",addToCart:"დამატება",cartHint:"არჩეული კერძების სავარაუდო ჯამი (საინფორმაციოდ).",emptyCart:"კალათა ცარიელია.",cartQty:"რაოდ.",cartClose:"დახურვა",submitOrder:"შეკვეთის გაგზავნა",confirmOrderTitle:"გავაგზავნოთ შეკვეთა?",confirmOrderBody:"პერსონალი მიიღებს შეკვეთას შეტყობინებაში (ჯამი საინფორმაციოა — დაადასტურეთ ადგილზე).",confirmOrderBtn:"დადასტურება",orderSent:"შეკვეთა გაიგზავნა.",portionGramsTitle:"პორცია",gramsAbbr:"გ",adminPortionGrams:"წონა (გ)",adminPortionGramsHint:"არჩევითი — სტუმრის მენიუზე ჩანს. ან ქვედა ხაზებზე: რაოდენობა + g.",variantAmount:"რაოდენობა",variantUnit:"ერთეული",share:"გაზიარება",shareCopied:"ბმული დაკოპირდა",shareFailed:"გაზიარება ვერ მოხერხდა"},
-  ru:{menu:"Меню",callWaiter:"Позвать Официанта",requestBill:"Попросить Счёт",ingredients:"Происхождение",soldOut:"Недоступно",table:"Стол",waiterCalled:"Официант уже идёт.",billRequested:"Счёт готовится.",notifyFailed:"Не удалось сохранить. Попробуйте снова.",staffAlertCloudFallback:"Нет связи с сервером. Если персонал не отвечает — позовите официанта.",search:"Поиск…",all:"Все",adminLogin:"Персонал",login:"Войти",dashboard:"Обзор",menuMgmt:"Кухня",tables:"Места",notifications:"Оповещения",analytics:"Аналитика",logout:"Выйти",addDish:"Новое Блюдо",save:"Сохранить",cancel:"Отмена",available:"Доступно",featured:"Рекомендуем",chefChoice:"Выбор шефа",badges:"Отличия",badgeDry:"Сухое",badgeSemiDry:"Полусухое",badgeSemiSweet:"Полусладкое",chooseOptions:"Размер и цена",cart:"Корзина",cartTotal:"Итого",addToCart:"В корзину",cartHint:"Ориентировочная сумма выбранных блюд (справочно).",emptyCart:"Корзина пуста.",cartQty:"Кол-во",cartClose:"Закрыть",submitOrder:"Отправить заказ",confirmOrderTitle:"Отправить заказ?",confirmOrderBody:"Персонал получит заказ в оповещениях (сумма ориентировочная — уточните у официанта).",confirmOrderBtn:"Подтвердить",orderSent:"Заказ отправлен.",portionGramsTitle:"Порция",gramsAbbr:"г",adminPortionGrams:"Вес порции (г)",adminPortionGramsHint:"Необязательно — полоска в меню. Или укажите количество + г в строках размеров.",variantAmount:"Кол-во",variantUnit:"Ед.",share:"Поделиться",shareCopied:"Ссылка скопирована",shareFailed:"Не удалось поделиться"},
+  en:{menu:"Menu",callWaiter:"Summon Waiter",requestBill:"Request Bill",ingredients:"Provenance",soldOut:"Unavailable",table:"Table",waiterCalled:"Your waiter is on the way.",billRequested:"Your bill is being prepared.",notifyFailed:"Could not save. Please try again.",staffAlertCloudFallback:"Couldn't reach the server. If staff doesn't respond, ask your waiter.",search:"Search the menu…",all:"All",adminLogin:"Staff Access",login:"Enter",dashboard:"Overview",menuMgmt:"Cuisine",tables:"Seating",notifications:"Alerts",analytics:"Insights",logout:"Exit",addDish:"New Dish",save:"Save",cancel:"Cancel",available:"Available",featured:"Recommended",chefChoice:"Chef's choice",badges:"Distinctions",badgeDry:"Dry",badgeSemiDry:"Semi-Dry",badgeSemiSweet:"Semi-Sweet",chooseOptions:"Choose size",cart:"Basket",cartTotal:"Total",addToCart:"Add",cartHint:"Estimated total for your selection (reference only).",emptyCart:"Your basket is empty.",cartQty:"Qty",cartClose:"Close",submitOrder:"Submit order",confirmOrderTitle:"Send this order?",confirmOrderBody:"Staff will receive your table order in alerts (amount is indicative — confirm at the venue).",confirmOrderBtn:"Confirm & send",orderSent:"Order sent.",portionGramsTitle:"Portion",gramsAbbr:"g",adminPortionGrams:"Net portion (g)",adminPortionGramsHint:"Optional. Shown on the guest menu. Or set Amount + g on each size row below.",variantAmount:"Amount",variantUnit:"Unit",share:"Share",shareCopied:"Link copied",shareFailed:"Could not share",shareWhatsApp:"WhatsApp",shareMessenger:"Messenger",sharePickHint:"Messenger drops photo captions — use Messenger card"},
+  ka:{menu:"მენიუ",callWaiter:"მიმტანის გამოძახება",requestBill:"ანგარიშის მოთხოვნა",ingredients:"წარმომავლობა",soldOut:"მიუწვდომელი",table:"მაგიდა",waiterCalled:"მიმტანი მოდის.",billRequested:"ანგარიში მზადდება.",notifyFailed:"ვერ შენახა — სცადეთ თავიდან.",staffAlertCloudFallback:"სერვერთან კავშირი ვერ დამყარდა — დაუძახეთ მიმტანს, თუ არავინ მოდის.",search:"მოძებნეთ…",all:"ყველა",adminLogin:"პერსონალი",login:"შესვლა",dashboard:"მიმოხილვა",menuMgmt:"სამზარეულო",tables:"მოსასვლელი",notifications:"შეტყობინებები",analytics:"ანალიტიკა",logout:"გამოსვლა",addDish:"ახალი კერძი",save:"შენახვა",cancel:"გაუქმება",available:"ხელმისაწვდომი",featured:"რეკომენდებული",chefChoice:"შეფის არჩევანი",badges:"გამოჩენილი",badgeDry:"მშრალი",badgeSemiDry:"ნახევრადმშრალი",badgeSemiSweet:"ნახევრადტკბილი",chooseOptions:"ზომა / ფასი",cart:"კალათა",cartTotal:"ჯამი",addToCart:"დამატება",cartHint:"არჩეული კერძების სავარაუდო ჯამი (საინფორმაციოდ).",emptyCart:"კალათა ცარიელია.",cartQty:"რაოდ.",cartClose:"დახურვა",submitOrder:"შეკვეთის გაგზავნა",confirmOrderTitle:"გავაგზავნოთ შეკვეთა?",confirmOrderBody:"პერსონალი მიიღებს შეკვეთას შეტყობინებაში (ჯამი საინფორმაციოა — დაადასტურეთ ადგილზე).",confirmOrderBtn:"დადასტურება",orderSent:"შეკვეთა გაიგზავნა.",portionGramsTitle:"პორცია",gramsAbbr:"გ",adminPortionGrams:"წონა (გ)",adminPortionGramsHint:"არჩევითი — სტუმრის მენიუზე ჩანს. ან ქვედა ხაზებზე: რაოდენობა + g.",variantAmount:"რაოდენობა",variantUnit:"ერთეული",share:"გაზიარება",shareCopied:"ბმული დაკოპირდა",shareFailed:"გაზიარება ვერ მოხერხდა",shareWhatsApp:"WhatsApp",shareMessenger:"Messenger",sharePickHint:"Messenger ფოტოზე ტექსტს ყრის — აირჩიე Messenger ბარათი"},
+  ru:{menu:"Меню",callWaiter:"Позвать Официанта",requestBill:"Попросить Счёт",ingredients:"Происхождение",soldOut:"Недоступно",table:"Стол",waiterCalled:"Официант уже идёт.",billRequested:"Счёт готовится.",notifyFailed:"Не удалось сохранить. Попробуйте снова.",staffAlertCloudFallback:"Нет связи с сервером. Если персонал не отвечает — позовите официанта.",search:"Поиск…",all:"Все",adminLogin:"Персонал",login:"Войти",dashboard:"Обзор",menuMgmt:"Кухня",tables:"Места",notifications:"Оповещения",analytics:"Аналитика",logout:"Выйти",addDish:"Новое Блюдо",save:"Сохранить",cancel:"Отмена",available:"Доступно",featured:"Рекомендуем",chefChoice:"Выбор шефа",badges:"Отличия",badgeDry:"Сухое",badgeSemiDry:"Полусухое",badgeSemiSweet:"Полусладкое",chooseOptions:"Размер и цена",cart:"Корзина",cartTotal:"Итого",addToCart:"В корзину",cartHint:"Ориентировочная сумма выбранных блюд (справочно).",emptyCart:"Корзина пуста.",cartQty:"Кол-во",cartClose:"Закрыть",submitOrder:"Отправить заказ",confirmOrderTitle:"Отправить заказ?",confirmOrderBody:"Персонал получит заказ в оповещениях (сумма ориентировочная — уточните у официанта).",confirmOrderBtn:"Подтвердить",orderSent:"Заказ отправлен.",portionGramsTitle:"Порция",gramsAbbr:"г",adminPortionGrams:"Вес порции (г)",adminPortionGramsHint:"Необязательно — полоска в меню. Или укажите количество + г в строках размеров.",variantAmount:"Кол-во",variantUnit:"Ед.",share:"Поделиться",shareCopied:"Ссылка скопирована",shareFailed:"Не удалось поделиться",shareWhatsApp:"WhatsApp",shareMessenger:"Messenger",sharePickHint:"Messenger убирает подпись к фото — выберите карточку Messenger"},
 };
 
 /* ─── SHARED STATE ───────────────────────────────────────────────────────── */
@@ -1426,14 +1593,10 @@ function DishDetailSheet({
   };
 
   const [sharing, setSharing] = useState(false);
+  const [sharePickOpen, setSharePickOpen] = useState(false);
 
-  const handleShare = async () => {
-    if (sharing) return;
+  const buildSharePayload = () => {
     const url = dishShareUrl(dish.id);
-    if (!url) {
-      onToast?.(t.shareFailed);
-      return;
-    }
     const priceLabel = mmPrice
       ? `₾${formatLari(mmPrice.min)} – ₾${formatLari(mmPrice.max)}`
       : `₾${formatLari(dish.price)}`;
@@ -1445,7 +1608,6 @@ function DishDetailSheet({
       descLower.includes("состав")
         ? ""
         : formatDishIngredientsLine(ingredients, lang);
-    /** Image attached separately; caption = name → description → price → link. */
     const textWithUrl = formatDishShareCaption({
       title,
       blurb,
@@ -1455,49 +1617,96 @@ function DishDetailSheet({
       ingredientsText,
       includeUrl: true,
     });
+    return { url, priceLabel, shareTitle, ingredientsText, textWithUrl };
+  };
+
+  const handleShareMode = async (mode) => {
+    if (sharing) return;
+    const { url, priceLabel, shareTitle, ingredientsText, textWithUrl } = buildSharePayload();
+    if (!url) {
+      onToast?.(t.shareFailed);
+      return;
+    }
+    setSharePickOpen(false);
     setSharing(true);
     try {
       if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
-        let photo = null;
-        if (dish.image) {
-          try {
-            photo = await buildDishSharePhotoFile(dish.image);
-          } catch {
-            photo = null;
+        if (mode === "messenger") {
+          /** Messenger keeps File only — caption must be inside the image. */
+          let card = null;
+          if (dish.image) {
+            try {
+              card = await buildMessengerDishCardFile({
+                imageUrl: dish.image,
+                title,
+                blurb,
+                ingredientsText,
+                priceLabel,
+                url,
+                lang,
+              });
+            } catch {
+              card = null;
+            }
           }
-        }
-
-        if (photo && canShareFiles(photo)) {
+          if (card && canShareFiles(card)) {
+            try {
+              await navigator.clipboard?.writeText?.(url);
+            } catch {
+              /* optional */
+            }
+            try {
+              await navigator.share({ title: shareTitle, files: [card], text: textWithUrl });
+              return;
+            } catch (shareErr) {
+              if (shareErr && shareErr.name === "AbortError") return;
+              try {
+                await navigator.share({ files: [card] });
+                return;
+              } catch (shareErr2) {
+                if (shareErr2 && shareErr2.name === "AbortError") return;
+              }
+            }
+          }
+          /** Fallback: text+url (clickable link; no attached photo). */
           try {
-            await navigator.share({ title: shareTitle, text: textWithUrl, files: [photo] });
+            await navigator.share({ title: shareTitle, text: textWithUrl, url });
             return;
           } catch (shareErr) {
             if (shareErr && shareErr.name === "AbortError") return;
+          }
+        } else {
+          /** WhatsApp-style: clean photo + caption text. */
+          let photo = null;
+          if (dish.image) {
             try {
-              await navigator.share({ files: [photo], text: textWithUrl });
-              return;
-            } catch (shareErr2) {
-              if (shareErr2 && shareErr2.name === "AbortError") return;
+              photo = await buildDishSharePhotoFile(dish.image);
+            } catch {
+              photo = null;
             }
           }
-        }
-
-        const textNoUrl = formatDishShareCaption({
-          title,
-          blurb,
-          url,
-          priceLabel,
-          lang,
-          ingredientsText,
-          includeUrl: false,
-        });
-        try {
-          await navigator.share({ title: shareTitle, text: textNoUrl, url });
-          return;
-        } catch (shareErr) {
-          if (shareErr && shareErr.name === "AbortError") return;
-          await navigator.share({ title: shareTitle, text: textWithUrl });
-          return;
+          if (photo && canShareFiles(photo)) {
+            try {
+              await navigator.share({ title: shareTitle, text: textWithUrl, files: [photo] });
+              return;
+            } catch (shareErr) {
+              if (shareErr && shareErr.name === "AbortError") return;
+              try {
+                await navigator.share({ files: [photo], text: textWithUrl });
+                return;
+              } catch (shareErr2) {
+                if (shareErr2 && shareErr2.name === "AbortError") return;
+              }
+            }
+          }
+          try {
+            await navigator.share({ title: shareTitle, text: textWithUrl, url });
+            return;
+          } catch (shareErr) {
+            if (shareErr && shareErr.name === "AbortError") return;
+            await navigator.share({ title: shareTitle, text: textWithUrl });
+            return;
+          }
         }
       }
       if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
@@ -1558,7 +1767,7 @@ function DishDetailSheet({
           <button
             type="button"
             className="menu-dish-sheet-share"
-            onClick={handleShare}
+            onClick={() => setSharePickOpen(true)}
             aria-label={t.share}
             disabled={sharing}
             aria-busy={sharing}
@@ -1695,6 +1904,49 @@ function DishDetailSheet({
           )}
         </div>
       </div>
+
+      {sharePickOpen && (
+        <>
+          <button
+            type="button"
+            aria-label={t.cartClose}
+            className="menu-share-pick-backdrop"
+            onClick={() => setSharePickOpen(false)}
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={t.share}
+            className="menu-share-pick"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="menu-share-pick-hint">{t.sharePickHint}</p>
+            <button
+              type="button"
+              className="menu-share-pick-btn"
+              disabled={sharing}
+              onClick={() => handleShareMode("whatsapp")}
+            >
+              {t.shareWhatsApp}
+            </button>
+            <button
+              type="button"
+              className="menu-share-pick-btn menu-share-pick-btn--messenger"
+              disabled={sharing}
+              onClick={() => handleShareMode("messenger")}
+            >
+              {t.shareMessenger}
+            </button>
+            <button
+              type="button"
+              className="menu-share-pick-cancel"
+              onClick={() => setSharePickOpen(false)}
+            >
+              {t.cancel}
+            </button>
+          </div>
+        </>
+      )}
     </>
   );
 }

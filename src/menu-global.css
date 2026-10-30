@@ -698,6 +698,71 @@ body {
   font-size: 14px;
   line-height: 1;
 }
+.menu-share-pick-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10150;
+  border: none;
+  padding: 0;
+  margin: 0;
+  background: rgba(0, 0, 0, 0.55);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.menu-share-pick {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  z-index: 10160;
+  padding: 18px 16px 14px;
+  border-radius: 18px;
+  background: #0c1410;
+  border: 1px solid rgba(201, 169, 98, 0.28);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: menuSheetUp 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.menu-share-pick-hint {
+  margin: 0 0 4px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  line-height: 1.45;
+  letter-spacing: 0.02em;
+  color: rgba(212, 247, 242, 0.72);
+}
+.menu-share-pick-btn {
+  min-height: 48px;
+  border-radius: 12px;
+  border: 1px solid rgba(201, 169, 98, 0.35);
+  background: rgba(201, 169, 98, 0.14);
+  color: var(--gold-pale);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.menu-share-pick-btn--messenger {
+  background: rgba(0, 132, 255, 0.16);
+  border-color: rgba(0, 132, 255, 0.35);
+  color: #9fd0ff;
+}
+.menu-share-pick-cancel {
+  min-height: 44px;
+  border: none;
+  background: transparent;
+  color: rgba(212, 247, 242, 0.55);
+  font-family: var(--font-body);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
 .menu-dish-sheet-scroll {
   overflow-y: auto;
   flex: 1;
