@@ -2150,11 +2150,7 @@ function CustomerMenu({ tableId, store, lang }) {
         className={`menu-main-column${cartItemCount > 0 ? " menu-main-column--cart" : ""}`}
         style={{ maxWidth: 720, margin: "0 auto", width: "100%" }}
       >
-        {menuLoading && dishes.length === 0 && (
-          <div style={{ textAlign:"center", padding:"80px 20px", fontFamily:"var(--font-display)", fontSize:"20px", fontStyle:"italic", color:"var(--muted)" }}>
-            Loading menu…
-          </div>
-        )}
+        {menuLoading && dishes.length === 0 && <MenuPinSkeleton />}
         {!menuLoading && dishes.length === 0 && (
           <div style={{ textAlign:"center", padding:"60px 20px", fontSize:"13px", color:"var(--muted)", lineHeight:1.6 }}>
             {supabaseMenu
@@ -2563,6 +2559,7 @@ function dishBlurbText(dish, lang) {
 
 function DishRow({ dish, lang, t, distinctionCatalog, onOpenDetail, style, cartQty = 0, onAddToCart, onBumpCartQty, onOpenVariantModal }) {
   const [addPulse, setAddPulse] = useState(false);
+  const [imgReady, setImgReady] = useState(false);
   const addPulseTimerRef = useRef(null);
   const nameObj = dish.name && typeof dish.name === "object" ? dish.name : {};
   const title = String(nameObj[lang] || nameObj.en || nameObj.ka || "—").trim() || "—";
@@ -2573,6 +2570,10 @@ function DishRow({ dish, lang, t, distinctionCatalog, onOpenDetail, style, cartQ
   const mmPrice = minMaxVariantPrice(dish);
 
   const cat = distinctionCatalog || mergedDistinctionCatalog([]);
+
+  useEffect(() => {
+    setImgReady(false);
+  }, [dish.image]);
 
   useEffect(() => {
     return () => {
@@ -2614,9 +2615,13 @@ function DishRow({ dish, lang, t, distinctionCatalog, onOpenDetail, style, cartQ
             <img
               src={dish.image}
               alt={title}
-              className="dish-img"
+              className={`dish-img${imgReady ? " dish-img--ready" : ""}`}
               loading="lazy"
               decoding="async"
+              onLoad={() => setImgReady(true)}
+              ref={(el) => {
+                if (el && el.complete && el.naturalWidth > 0) setImgReady(true);
+              }}
               style={{
                 filter: dish.available ? "none" : "grayscale(1)",
               }}
@@ -5570,99 +5575,48 @@ function readSavedWelcomeLang() {
   return null;
 }
 
+/** Pinterest-style masonry shimmer pins (welcome boot + menu fetch). */
+const PINTEREST_PIN_HEIGHTS = [168, 228, 148, 210, 176, 252, 156, 198, 234, 162, 220, 184, 206, 170, 244, 158];
+
+function PinterestPinGrid({ count = 12, className = "" }) {
+  const pins = useMemo(() => PINTEREST_PIN_HEIGHTS.slice(0, count), [count]);
+  return (
+    <div className={["pinterest-loader-masonry", className].filter(Boolean).join(" ")} aria-hidden="true">
+      {pins.map((h, i) => (
+        <div
+          key={`pin-${i}-${h}`}
+          className="pinterest-loader-pin"
+          style={{
+            height: h,
+            animationDelay: `${0.04 * i}s, ${0.04 * i}s`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
 function WelcomePreloader({ fading }) {
   return (
     <div
-      aria-label="Loading welcome screen"
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 12000,
-        background:
-          "radial-gradient(ellipse at 18% 20%, rgba(64, 224, 208, 0.12), transparent 42%), radial-gradient(ellipse at 82% 80%, rgba(201, 169, 98, 0.12), transparent 44%), linear-gradient(180deg, #020405 0%, #04090b 45%, #020506 100%)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        opacity: fading ? 0 : 1,
-        transition: "opacity 0.9s ease",
-        pointerEvents: fading ? "none" : "auto",
-        overflow: "hidden",
-      }}
+      className={`pinterest-loader${fading ? " pinterest-loader--fade" : ""}`}
+      aria-label="Loading"
+      role="status"
     >
-      <style>{`
-        .rt-preloader-inner { position: relative; z-index: 2; width: min(90vw, 920px); padding: 18px 14px; }
-        .rt-preloader-svg { width: 100%; height: auto; }
-        .rt-preloader-title-base { fill: rgba(64, 224, 208, 0.06); stroke: none; }
-        .rt-preloader-title {
-          fill: none; stroke: #40e0d0; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round;
-          stroke-dasharray: 1620; stroke-dashoffset: 1620;
-          filter: drop-shadow(0 0 6px rgba(64, 224, 208, 0.45)) drop-shadow(0 0 18px rgba(64, 224, 208, 0.25));
-          animation: rtPreloaderStrokeDraw 2.9s cubic-bezier(0.2, 0.75, 0.2, 1) forwards;
-        }
-        .rt-preloader-title-glow {
-          fill: none; stroke: rgba(64, 224, 208, 0.38); stroke-width: 0.95; stroke-linecap: round; stroke-linejoin: round;
-          stroke-dasharray: 1620; stroke-dashoffset: 1620; filter: blur(0.25px);
-          animation: rtPreloaderStrokeDraw 2.9s cubic-bezier(0.2, 0.75, 0.2, 1) forwards;
-        }
-        .rt-preloader-sheen {
-          fill: none; stroke: rgba(255, 255, 255, 0.4); stroke-width: 0.7;
-          stroke-dasharray: 120 1500; stroke-dashoffset: 0; opacity: 0;
-          animation: rtPreloaderSheen 2.6s ease 1.4s forwards;
-        }
-        @keyframes rtPreloaderStrokeDraw { to { stroke-dashoffset: 0; } }
-        @keyframes rtPreloaderSheen {
-          0% { opacity: 0; stroke-dashoffset: 420; }
-          20% { opacity: 0.95; }
-          100% { opacity: 0; stroke-dashoffset: -1320; }
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .rt-preloader-title, .rt-preloader-title-glow, .rt-preloader-sheen { animation: none; stroke-dashoffset: 0; opacity: 1; }
-        }
-      `}</style>
-      <div className="rt-preloader-inner">
-        <svg className="rt-preloader-svg" viewBox="0 0 960 240" role="img" aria-label="Restaurant Tiflisi">
-          <text
-            x="50%"
-            y="55%"
-            textAnchor="middle"
-            dominantBaseline="middle"
-            className="rt-preloader-title-base"
-            style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "126px", fontStyle: "italic", letterSpacing: "0.03em" }}
-          >
-            Restaurant Tiflisi
-          </text>
-          <text
-            x="50%"
-            y="55%"
-            textAnchor="middle"
-            dominantBaseline="middle"
-            className="rt-preloader-title-glow"
-            style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "126px", fontStyle: "italic", letterSpacing: "0.03em" }}
-          >
-            Restaurant Tiflisi
-          </text>
-          <text
-            x="50%"
-            y="55%"
-            textAnchor="middle"
-            dominantBaseline="middle"
-            className="rt-preloader-title"
-            style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "126px", fontStyle: "italic", letterSpacing: "0.03em" }}
-          >
-            Restaurant Tiflisi
-          </text>
-          <text
-            x="50%"
-            y="55%"
-            textAnchor="middle"
-            dominantBaseline="middle"
-            className="rt-preloader-sheen"
-            style={{ fontFamily: "Cormorant Garamond, Georgia, serif", fontSize: "126px", fontStyle: "italic", letterSpacing: "0.03em" }}
-          >
-            Restaurant Tiflisi
-          </text>
-        </svg>
+      <div className="pinterest-loader-veil" aria-hidden="true" />
+      <PinterestPinGrid count={14} />
+      <div className="pinterest-loader-brand">
+        <p className="pinterest-loader-eyebrow">Georgian fine dining</p>
+        <p className="pinterest-loader-title">Tiflisi</p>
       </div>
+    </div>
+  );
+}
+
+function MenuPinSkeleton() {
+  return (
+    <div className="menu-pin-skeleton" role="status" aria-label="Loading menu">
+      <PinterestPinGrid count={10} className="menu-pin-skeleton-grid" />
     </div>
   );
 }
@@ -5877,8 +5831,8 @@ export default function App() {
     preloaderPlayedRef.current = true;
     setShowWelcomePreloader(true);
     setFadeWelcomePreloader(false);
-    const fadeTimer = window.setTimeout(() => setFadeWelcomePreloader(true), 2400);
-    const hideTimer = window.setTimeout(() => setShowWelcomePreloader(false), 3100);
+    const fadeTimer = window.setTimeout(() => setFadeWelcomePreloader(true), 1800);
+    const hideTimer = window.setTimeout(() => setShowWelcomePreloader(false), 2400);
     return () => {
       window.clearTimeout(fadeTimer);
       window.clearTimeout(hideTimer);

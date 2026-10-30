@@ -89,10 +89,10 @@ body {
 @keyframes borderRotate {
   from { transform: rotate(0deg); } to { transform: rotate(360deg); }
 }
-/* No opacity: `both` + stagger delay left cards invisible until their animation started. */
+/* Pinterest-like pin reveal: soft scale + rise (stagger via animation-delay on cards). */
 @keyframes menuCardIn {
-  from { transform: translateY(18px); }
-  to   { transform: translateY(0); }
+  from { transform: translateY(28px) scale(0.92); }
+  to   { transform: translateY(0) scale(1); }
 }
 @keyframes menuAddPulse {
   0%   { box-shadow: 0 0 0 0 rgba(61,191,176,0.45); }
@@ -347,7 +347,15 @@ body {
   object-fit: cover;
   object-position: center;
   display: block;
-  transition: transform 0.65s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  opacity: 0;
+  transform: scale(1.04);
+  transition:
+    opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.65s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+.dish-card.menu-dish-card .dish-card-media .dish-img.dish-img--ready {
+  opacity: 1;
+  transform: scale(1);
 }
 .dish-card.menu-dish-card .dish-card-media .dish-img-placeholder {
   width: 100%;
@@ -1049,116 +1057,154 @@ body {
 .tag:hover { transform: translateY(-1px); }
 }
 
-/* ─── Welcome hero (luxury first screen) ─────────────────────────── */
-.welcome-preloader {
+/* ─── Pinterest-style boot / menu loading ─────────────────────────── */
+.pinterest-loader {
   position: fixed;
   inset: 0;
   z-index: 12000;
-  background:
-    radial-gradient(ellipse at 18% 20%, rgba(64, 224, 208, 0.12), transparent 42%),
-    radial-gradient(ellipse at 82% 80%, rgba(201, 169, 98, 0.12), transparent 44%),
-    linear-gradient(180deg, #020405 0%, #04090b 45%, #020506 100%);
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: max(20px, env(safe-area-inset-top, 0px)) 16px max(20px, env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(180deg, #050708 0%, #0a1010 45%, #040608 100%);
   opacity: 1;
-  transition: opacity 0.9s ease;
+  transition: opacity 0.65s cubic-bezier(0.22, 1, 0.36, 1);
   pointer-events: auto;
   overflow: hidden;
 }
-.welcome-preloader::before {
-  content: "";
+.pinterest-loader--fade {
+  opacity: 0;
+  pointer-events: none;
+}
+.pinterest-loader-veil {
   position: absolute;
-  inset: -20%;
+  inset: 0;
   background:
-    radial-gradient(circle at center, rgba(64, 224, 208, 0.08), transparent 45%),
-    conic-gradient(from 0deg, rgba(64, 224, 208, 0.1), transparent 45%, rgba(201, 169, 98, 0.1), transparent 85%);
-  filter: blur(36px);
-  animation: preloaderAura 9s linear infinite;
+    radial-gradient(ellipse 70% 50% at 50% 40%, rgba(201, 169, 98, 0.08), transparent 60%),
+    linear-gradient(180deg, rgba(4, 8, 10, 0.15) 0%, transparent 35%, rgba(4, 8, 10, 0.75) 100%);
   pointer-events: none;
+  z-index: 1;
 }
-.welcome-preloader::after {
-  content: "";
-  position: absolute;
-  left: -20%;
-  right: -20%;
-  top: 50%;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(64, 224, 208, 0.38), transparent);
-  opacity: 0.45;
-  transform: translateY(-50%);
-  pointer-events: none;
-}
-.welcome-preloader--fade {
-  opacity: 0;
-  pointer-events: none;
-}
-.welcome-preloader-inner {
+.pinterest-loader-masonry {
   position: relative;
+  z-index: 0;
+  width: min(92vw, 440px);
+  max-height: min(78vh, 640px);
+  column-count: 3;
+  column-gap: 10px;
+  overflow: hidden;
+  mask-image: linear-gradient(180deg, #000 0%, #000 62%, transparent 100%);
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 62%, transparent 100%);
+}
+@media (min-width: 720px) {
+  .pinterest-loader-masonry {
+    width: min(88vw, 720px);
+    column-count: 4;
+    column-gap: 12px;
+  }
+}
+.pinterest-loader-pin {
+  break-inside: avoid;
+  margin: 0 0 10px;
+  border-radius: 16px;
+  background:
+    linear-gradient(
+      110deg,
+      rgba(28, 38, 36, 0.95) 0%,
+      rgba(28, 38, 36, 0.95) 35%,
+      rgba(52, 68, 64, 0.95) 50%,
+      rgba(28, 38, 36, 0.95) 65%,
+      rgba(28, 38, 36, 0.95) 100%
+    );
+  background-size: 220% 100%;
+  border: 1px solid rgba(201, 169, 98, 0.1);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+  animation:
+    pinterestPinIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) both,
+    pinterestShimmer 1.35s ease-in-out infinite;
+}
+@keyframes pinterestPinIn {
+  from {
+    opacity: 0;
+    transform: translateY(22px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes pinterestShimmer {
+  0% { background-position: 120% 0; }
+  100% { background-position: -120% 0; }
+}
+.pinterest-loader-brand {
+  position: absolute;
   z-index: 2;
-  width: min(90vw, 920px);
-  padding: 18px 14px;
+  left: 50%;
+  top: 48%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  pointer-events: none;
+  animation: pinterestBrandIn 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.35s both;
 }
-.welcome-preloader-svg {
+.pinterest-loader-eyebrow {
+  margin: 0 0 8px;
+  font-family: var(--font-body);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  color: rgba(201, 169, 98, 0.85);
+}
+.pinterest-loader-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(2.6rem, 10vw, 3.8rem);
+  font-weight: 300;
+  font-style: italic;
+  letter-spacing: 0.04em;
+  color: #f4f7f6;
+  text-shadow: 0 8px 40px rgba(0, 0, 0, 0.65);
+}
+@keyframes pinterestBrandIn {
+  from { opacity: 0; transform: translate(-50%, calc(-50% + 12px)) scale(0.96); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+.menu-pin-skeleton {
+  padding: 28px 4px 40px;
+}
+.menu-pin-skeleton-grid {
   width: 100%;
-  height: auto;
+  max-width: 100%;
+  max-height: none;
+  mask-image: none;
+  -webkit-mask-image: none;
+  column-count: 2;
 }
-.welcome-preloader-title-base {
-  fill: rgba(64, 224, 208, 0.06);
-  stroke: none;
-}
-.welcome-preloader-title {
-  fill: none;
-  stroke: #40e0d0;
-  stroke-width: 1.9;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-dasharray: 1620;
-  stroke-dashoffset: 1620;
-  filter:
-    drop-shadow(0 0 6px rgba(64, 224, 208, 0.45))
-    drop-shadow(0 0 18px rgba(64, 224, 208, 0.25));
-  animation: preloaderStrokeDraw 2.9s cubic-bezier(0.2, 0.75, 0.2, 1) forwards;
-}
-.welcome-preloader-title-glow {
-  fill: none;
-  stroke: rgba(64, 224, 208, 0.38);
-  stroke-width: 0.95;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-dasharray: 1620;
-  stroke-dashoffset: 1620;
-  filter: blur(0.25px);
-  animation: preloaderStrokeDraw 2.9s cubic-bezier(0.2, 0.75, 0.2, 1) forwards;
-}
-.welcome-preloader-sheen {
-  fill: none;
-  stroke: rgba(255, 255, 255, 0.4);
-  stroke-width: 0.7;
-  stroke-dasharray: 120 1500;
-  stroke-dashoffset: 0;
-  opacity: 0;
-  animation: preloaderSheen 2.6s ease 1.4s forwards;
-}
-@keyframes preloaderStrokeDraw {
-  to { stroke-dashoffset: 0; }
-}
-@keyframes preloaderSheen {
-  0% { opacity: 0; stroke-dashoffset: 420; }
-  20% { opacity: 0.95; }
-  100% { opacity: 0; stroke-dashoffset: -1320; }
-}
-@keyframes preloaderAura {
-  from { transform: rotate(0deg) scale(1); }
-  to { transform: rotate(360deg) scale(1.03); }
+@media (min-width: 560px) {
+  .menu-pin-skeleton-grid { column-count: 3; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .welcome-preloader { transition: none; }
-  .welcome-preloader::before { animation: none; }
-  .welcome-preloader-title,
-  .welcome-preloader-title-glow,
-  .welcome-preloader-sheen { animation: none; stroke-dashoffset: 0; opacity: 1; }
+  .pinterest-loader { transition: none; }
+  .pinterest-loader-pin {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    background: rgba(28, 38, 36, 0.95);
+  }
+  .pinterest-loader-brand { animation: none !important; opacity: 1 !important; }
+  .dish-card.menu-dish-card {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .dish-card.menu-dish-card .dish-card-media .dish-img {
+    opacity: 1 !important;
+    transform: none !important;
+  }
 }
+
+/* ─── Welcome hero (luxury first screen) ─────────────────────────── */
 .welcome-hero-root {
   --welcome-champagne: #c9a962;
   --welcome-champagne-dim: rgba(201, 169, 98, 0.55);
