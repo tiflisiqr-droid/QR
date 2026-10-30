@@ -1,7 +1,7 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import QRCode from "qrcode";
 import { supabase, isSupabaseConfigured } from "./src/supabaseClient.js";
+import heroPictureUrl from "./hero picture.png";
 import {
   fetchMenuDishes,
   fetchMenuCategories,
@@ -5143,12 +5143,16 @@ function TableQrImage({ tableId, tableName, zone }) {
     let cancelled = false;
     setDataUrl("");
     setFailed(false);
-    QRCode.toDataURL(url, {
-      width: 240,
-      margin: 2,
-      color: { dark: "#0f1818", light: "#d4f7f2" },
-      errorCorrectionLevel: "M",
-    })
+    import("qrcode")
+      .then((mod) => {
+        const QRCode = mod.default || mod;
+        return QRCode.toDataURL(url, {
+          width: 240,
+          margin: 2,
+          color: { dark: "#0f1818", light: "#d4f7f2" },
+          errorCorrectionLevel: "M",
+        });
+      })
       .then((d) => { if (!cancelled) setDataUrl(d); })
       .catch(() => { if (!cancelled) setFailed(true); });
     return () => { cancelled = true; };
@@ -6054,19 +6058,7 @@ function MenuPinSkeleton() {
 function WelcomeScreen({ onChooseLang, tableId, tables, onTableChange }) {
   const [finePointer, setFinePointer] = useState(false);
   const [shift, setShift] = useState({ x: 0, y: 0 });
-  const [heroUrl, setHeroUrl] = useState("");
-
-  useEffect(() => {
-    let cancelled = false;
-    import("./hero picture.png")
-      .then((m) => {
-        if (!cancelled && m?.default) setHeroUrl(m.default);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const heroUrl = heroPictureUrl;
 
   useEffect(() => {
     try {
@@ -6219,9 +6211,10 @@ export default function App() {
   const [tableId, setTableId] = useState(() => readTableIdFromUrl() ?? readSavedGuestTableId() ?? 1);
   const [adminAuth, setAdminAuth] = useState(() => readPersistedAdminAuth());
   const [staffAuth, setStaffAuth] = useState(() => readPersistedStaffAuth());
-  const [showWelcomePreloader, setShowWelcomePreloader] = useState(true);
+  /** Returning guests (lang already chosen) skip splash — faster resume. */
+  const [showWelcomePreloader, setShowWelcomePreloader] = useState(() => readSavedWelcomeLang() === null);
   const [fadeWelcomePreloader, setFadeWelcomePreloader] = useState(false);
-  const preloaderPlayedRef = useRef(false);
+  const preloaderPlayedRef = useRef(readSavedWelcomeLang() !== null);
 
   useLayoutEffect(() => {
     if (isAdminRoute || isStaffRoute) setEnteredMenu(true);
@@ -6262,8 +6255,9 @@ export default function App() {
     preloaderPlayedRef.current = true;
     setShowWelcomePreloader(true);
     setFadeWelcomePreloader(false);
-    const fadeTimer = window.setTimeout(() => setFadeWelcomePreloader(true), 1800);
-    const hideTimer = window.setTimeout(() => setShowWelcomePreloader(false), 2400);
+    /** Brief brand splash only — was 2.4s artificial wait. */
+    const fadeTimer = window.setTimeout(() => setFadeWelcomePreloader(true), 520);
+    const hideTimer = window.setTimeout(() => setShowWelcomePreloader(false), 820);
     return () => {
       window.clearTimeout(fadeTimer);
       window.clearTimeout(hideTimer);

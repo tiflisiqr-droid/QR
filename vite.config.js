@@ -33,9 +33,32 @@ function injectRepoTrailingSlashNormalize() {
   };
 }
 
+/** Preload hashed hero PNG early for Welcome LCP (safe — only if asset exists in bundle). */
+function injectHeroImagePreload() {
+  return {
+    name: "inject-hero-image-preload",
+    transformIndexHtml: {
+      order: "post",
+      handler(html, ctx) {
+        const bundle = ctx.bundle;
+        if (!bundle) return html;
+        const fileName = Object.keys(bundle).find((k) => /hero[\s_-]*picture.*\.png$/i.test(k));
+        if (!fileName) return html;
+        const base = pagesBase();
+        const href = `${base}${fileName}`.replace(/([^:]\/)\/+/g, "$1");
+        const tag = `<link rel="preload" as="image" href="${href}" fetchpriority="high" />`;
+        if (html.includes(tag) || html.includes(fileName)) {
+          return html.replace("</head>", `  ${tag}\n  </head>`);
+        }
+        return html.replace("</head>", `  ${tag}\n  </head>`);
+      },
+    },
+  };
+}
+
 export default defineConfig({
   base: pagesBase(),
-  plugins: [react(), injectRepoTrailingSlashNormalize()],
+  plugins: [react(), injectRepoTrailingSlashNormalize(), injectHeroImagePreload()],
   /** ლოკალური IP-ით (მაგ. ტელეფონიდან) წვდომისთვის — გასვლითი ინტერფეისი, არა მხოლოდ localhost */
   server: { host: true, port: 3001, strictPort: true },
   preview: { host: true, port: 3001, strictPort: true },
@@ -45,6 +68,7 @@ export default defineConfig({
         manualChunks(id) {
           if (!id.includes("node_modules")) return;
           if (id.includes("react-router")) return "router";
+          if (id.includes("qrcode")) return "qrcode";
           // Do not split @supabase into its own chunk: without env it tree-shakes to empty and Rollup warns.
           if (id.includes("react-dom") || /[/\\]node_modules[/\\]react[/\\]/.test(id)) return "react-vendor";
         },

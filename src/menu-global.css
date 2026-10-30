@@ -230,6 +230,8 @@ body {
 .dish-card.menu-dish-card {
   position: relative;
   isolation: isolate;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 160px;
   animation: menuCardIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
   border-radius: 20px;
   overflow: hidden;
@@ -658,6 +660,16 @@ body {
   -webkit-backdrop-filter: blur(24px);
   box-shadow: 0 -28px 80px rgba(0,0,0,0.65) !important;
   padding-bottom: max(8px, env(safe-area-inset-bottom, 0px)) !important;
+}
+@media (max-width: 720px) {
+  .dish-card.menu-dish-card {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  .menu-cart-sheet {
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
 }
 .menu-dish-sheet-handle {
   width: 40px;
