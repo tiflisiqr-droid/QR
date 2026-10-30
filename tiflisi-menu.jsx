@@ -68,7 +68,7 @@ function guestMenuSearchWithDish(currentSearch, dishId) {
   return q ? `?${q}` : "";
 }
 
-/** Clean guest share link: only `?dish=` (no table UUID clutter). */
+/** Clean guest share link: only `?dish=` (no table/hash clutter; trailing slash before `?`). */
 function dishShareUrl(dishId) {
   if (typeof window === "undefined") return "";
   const base = import.meta.env.BASE_URL || "/";
@@ -76,6 +76,7 @@ function dishShareUrl(dishId) {
   const root = base.endsWith("/") ? base : `${base}/`;
   try {
     const url = new URL(root, origin);
+    if (!url.pathname.endsWith("/")) url.pathname = `${url.pathname}/`;
     url.search = "";
     url.hash = "";
     url.searchParams.set("dish", String(dishId));
@@ -85,7 +86,7 @@ function dishShareUrl(dishId) {
   }
 }
 
-function formatDishShareCaption({ title, blurb, url, priceLabel, lang }) {
+function formatDishShareCaption({ title, blurb, url, priceLabel, lang, includeUrl = true }) {
   const brand =
     lang === "ka"
       ? "Tiflisi · ქართული რესტორანი"
@@ -94,67 +95,74 @@ function formatDishShareCaption({ title, blurb, url, priceLabel, lang }) {
         : "Tiflisi · Georgian Restaurant";
   const cta =
     lang === "ka" ? "მენიუში ნახვა" : lang === "ru" ? "Открыть в меню" : "View on the menu";
-  const lines = [brand, "", title];
-  if (blurb) lines.push(blurb);
-  if (priceLabel) lines.push(priceLabel);
-  lines.push("", `${cta}:`, url);
-  return lines.filter((x) => x != null).join("\n");
+  const lines = [brand];
+  const name = String(title || "").trim();
+  if (name) lines.push("", name);
+  const desc = String(blurb || "").trim();
+  if (desc) lines.push(desc);
+  const price = String(priceLabel || "").trim();
+  if (price) lines.push(price);
+  if (includeUrl && url) lines.push("", `${cta}:`, url);
+  return lines.join("\n");
 }
 
-function loadImageForShare(src) {
-  return new Promise((resolve, reject) => {
-    if (!src) {
-      reject(new Error("no image"));
-      return;
-    }
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error("image load failed"));
-    img.src = src;
-  });
+function shareImageFileName(mime) {
+  const t = String(mime || "").toLowerCase();
+  if (t.includes("png")) return "tiflisi-dish.png";
+  if (t.includes("webp")) return "tiflisi-dish.webp";
+  if (t.includes("gif")) return "tiflisi-dish.gif";
+  return "tiflisi-dish.jpg";
 }
 
-/** Clean dish photo only — no overlays; caption/link go in share text. */
+/** Prefer original photo blob (no canvas text/crop). Canvas only if we must re-encode. */
 async function buildDishShareCardFile({ imageUrl }) {
-  if (typeof document === "undefined") return null;
-  const W = 1080;
-  const H = 1350;
-  const canvas = document.createElement("canvas");
-  canvas.width = W;
-  canvas.height = H;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return null;
+  if (!imageUrl || typeof fetch !== "function") return null;
 
-  ctx.fillStyle = "#060908";
-  ctx.fillRect(0, 0, W, H);
-
-  let bitmap = null;
   try {
-    try {
-      const res = await fetch(imageUrl, { mode: "cors", credentials: "omit", cache: "force-cache" });
-      if (res.ok) {
-        const blob = await res.blob();
-        bitmap = await createImageBitmap(blob);
-      }
-    } catch {
-      /* Image() fallback */
-    }
-    if (!bitmap) bitmap = await loadImageForShare(imageUrl);
-    const iw = bitmap.width || bitmap.naturalWidth || 1;
-    const ih = bitmap.height || bitmap.naturalHeight || 1;
-    const scale = Math.max(W / iw, H / ih);
-    const dw = iw * scale;
-    const dh = ih * scale;
-    ctx.drawImage(bitmap, (W - dw) / 2, (H - dh) / 2, dw, dh);
-    if (typeof bitmap.close === "function") bitmap.close();
+    const res = await fetch(imageUrl, { mode: "cors", credentials: "omit", cache: "force-cache" });
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    if (!blob || blob.size < 32) return null;
+    const type = blob.type && blob.type.startsWith("image/") ? blob.type : "image/jpeg";
+    return new File([blob], shareImageFileName(type), { type });
+  } catch {
+    /* fall through to canvas */
+  }
+
+  if (typeof document === "undefined") return null;
+  try {
+    const img = await new Promise((resolve, reject) => {
+      const el = new Image();
+      el.crossOrigin = "anonymous";
+      el.onload = () => resolve(el);
+      el.onerror = () => reject(new Error("image load failed"));
+      el.src = imageUrl;
+    });
+    const W = Math.min(1080, img.naturalWidth || img.width || 1080);
+    const H = Math.round(W * ((img.naturalHeight || img.height || W) / (img.naturalWidth || img.width || W)));
+    const canvas = document.createElement("canvas");
+    canvas.width = W;
+    canvas.height = Math.max(1, H);
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.92));
+    if (!blob) return null;
+    return new File([blob], "tiflisi-dish.jpg", { type: "image/jpeg" });
   } catch {
     return null;
   }
+}
 
-  const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.92));
-  if (!blob) return null;
-  return new File([blob], "tiflisi-dish.jpg", { type: "image/jpeg" });
+function canShareFiles(file) {
+  if (typeof navigator === "undefined" || typeof navigator.share !== "function") return false;
+  if (!file) return false;
+  if (typeof navigator.canShare !== "function") return true;
+  try {
+    return navigator.canShare({ files: [file] });
+  } catch {
+    return false;
+  }
 }
 
 /* ─── DATA ───────────────────────────────────────────────────────────────── */
@@ -1431,30 +1439,36 @@ function DishDetailSheet({
   const handleShare = async () => {
     if (sharing) return;
     const url = dishShareUrl(dish.id);
+    if (!url) {
+      onToast?.(t.shareFailed);
+      return;
+    }
     const priceLabel = mmPrice
       ? `₾${formatLari(mmPrice.min)} – ₾${formatLari(mmPrice.max)}`
       : `₾${formatLari(dish.price)}`;
-    const shareTitle = `Tiflisi · ${title}`;
-    const text = formatDishShareCaption({ title, blurb, url, priceLabel, lang });
+    const shareTitle = title ? `Tiflisi · ${title}` : "Tiflisi";
+    /** Full caption with link — used for file shares & clipboard (WhatsApp-style). */
+    const textWithUrl = formatDishShareCaption({ title, blurb, url, priceLabel, lang, includeUrl: true });
+    /** Body without URL when the Web Share `url` field is used (avoids duplicate links). */
+    const textNoUrl = formatDishShareCaption({ title, blurb, url, priceLabel, lang, includeUrl: false });
     setSharing(true);
     try {
       if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
-        let card = null;
+        let photo = null;
         if (dish.image) {
           try {
-            card = await buildDishShareCardFile({ imageUrl: dish.image });
+            photo = await buildDishShareCardFile({ imageUrl: dish.image });
           } catch {
-            card = null;
+            photo = null;
           }
         }
 
-        if (card && typeof navigator.canShare === "function" && navigator.canShare({ files: [card] })) {
-          const attempts = [
-            { title: shareTitle, text, url, files: [card] },
-            { title: shareTitle, text, files: [card] },
-            { files: [card], text },
+        if (photo && canShareFiles(photo)) {
+          const fileAttempts = [
+            { title: shareTitle, text: textWithUrl, files: [photo] },
+            { files: [photo], text: textWithUrl },
           ];
-          for (const payload of attempts) {
+          for (const payload of fileAttempts) {
             try {
               await navigator.share(payload);
               return;
@@ -1464,11 +1478,17 @@ function DishDetailSheet({
           }
         }
 
-        await navigator.share({ title: shareTitle, text, url });
-        return;
+        try {
+          await navigator.share({ title: shareTitle, text: textNoUrl, url });
+          return;
+        } catch (shareErr) {
+          if (shareErr && shareErr.name === "AbortError") return;
+          await navigator.share({ title: shareTitle, text: textWithUrl });
+          return;
+        }
       }
       if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(text);
+        await navigator.clipboard.writeText(textWithUrl);
         onToast?.(t.shareCopied);
         return;
       }
@@ -2016,6 +2036,16 @@ function CustomerMenu({ tableId, store, lang }) {
   useEffect(() => {
     if (menuLoading) return;
 
+    const findDishById = (raw) => {
+      const id = String(raw || "").trim();
+      if (!id) return null;
+      return (
+        dishes.find((d) => String(d.id) === id) ||
+        dishes.find((d) => String(d.id).toLowerCase() === id.toLowerCase()) ||
+        null
+      );
+    };
+
     const dishParam = readDishIdFromSearch(location.search);
     if (dishParam) {
       if (skipDishSearchDeepLinkRef.current) {
@@ -2023,7 +2053,7 @@ function CustomerMenu({ tableId, store, lang }) {
         return;
       }
       if (deepLinkHandledDishParamRef.current === dishParam) return;
-      const dish = dishes.find((d) => String(d.id) === dishParam);
+      const dish = findDishById(dishParam);
       if (!dish) return;
       deepLinkHandledDishParamRef.current = dishParam;
       setDetailDishId(dish.id);
@@ -2049,7 +2079,7 @@ function CustomerMenu({ tableId, store, lang }) {
       return;
     }
     const rawId = hash.slice("dish-".length);
-    const dish = dishes.find((d) => String(d.id) === rawId);
+    const dish = findDishById(rawId);
     if (!dish) {
       return;
     }
@@ -5882,11 +5912,11 @@ export default function App() {
     go({ pathname: "/welcome", search: location.search }, { replace: true });
   }, [go, isAdminRoute, isStaffRoute, enteredMenu, isWelcomeRoute, location.search]);
 
-  /** Broken share targets sometimes turn `#dish-1` into path `/dish-1` → GitHub Pages 404. Normalize. */
+  /** Broken share targets: `#dish-1` / `/dish-1` / `/dish/1` → `/?dish=` (avoid GH Pages 404). */
   useEffect(() => {
     if (isAdminRoute || isStaffRoute) return;
     const p = (location.pathname || "/").replace(/\/+$/, "") || "/";
-    const m = p.match(/^\/dish-(.+)$/i);
+    const m = p.match(/^\/dish-(.+)$/i) || p.match(/^\/dish\/([^/]+)$/i);
     if (!m) return;
     let id = m[1];
     try {
@@ -5894,6 +5924,7 @@ export default function App() {
     } catch {
       /* keep raw */
     }
+    if (!id) return;
     const sp = new URLSearchParams(location.search);
     sp.set("dish", id);
     const q = sp.toString();
