@@ -86,7 +86,12 @@ function dishShareUrl(dishId) {
   }
 }
 
-function formatDishShareCaption({ title, blurb, url, priceLabel, lang, includeUrl = true }) {
+/**
+ * Messenger drops captions when a File is attached; WhatsApp keeps them.
+ * Share text+url only, with the dish photo as an https URL so apps unfurl
+ * image + keep the clickable menu link (same content shape in both apps).
+ */
+function formatDishShareCaption({ title, blurb, url, priceLabel, lang, imageUrl, includeUrl = true }) {
   const brand =
     lang === "ka"
       ? "Tiflisi · ქართული რესტორანი"
@@ -102,67 +107,10 @@ function formatDishShareCaption({ title, blurb, url, priceLabel, lang, includeUr
   if (desc) lines.push(desc);
   const price = String(priceLabel || "").trim();
   if (price) lines.push(price);
+  const photo = String(imageUrl || "").trim();
+  if (photo) lines.push("", photo);
   if (includeUrl && url) lines.push("", `${cta}:`, url);
   return lines.join("\n");
-}
-
-function shareImageFileName(mime) {
-  const t = String(mime || "").toLowerCase();
-  if (t.includes("png")) return "tiflisi-dish.png";
-  if (t.includes("webp")) return "tiflisi-dish.webp";
-  if (t.includes("gif")) return "tiflisi-dish.gif";
-  return "tiflisi-dish.jpg";
-}
-
-/** Prefer original photo blob (no canvas text/crop). Canvas only if we must re-encode. */
-async function buildDishShareCardFile({ imageUrl }) {
-  if (!imageUrl || typeof fetch !== "function") return null;
-
-  try {
-    const res = await fetch(imageUrl, { mode: "cors", credentials: "omit", cache: "force-cache" });
-    if (!res.ok) return null;
-    const blob = await res.blob();
-    if (!blob || blob.size < 32) return null;
-    const type = blob.type && blob.type.startsWith("image/") ? blob.type : "image/jpeg";
-    return new File([blob], shareImageFileName(type), { type });
-  } catch {
-    /* fall through to canvas */
-  }
-
-  if (typeof document === "undefined") return null;
-  try {
-    const img = await new Promise((resolve, reject) => {
-      const el = new Image();
-      el.crossOrigin = "anonymous";
-      el.onload = () => resolve(el);
-      el.onerror = () => reject(new Error("image load failed"));
-      el.src = imageUrl;
-    });
-    const W = Math.min(1080, img.naturalWidth || img.width || 1080);
-    const H = Math.round(W * ((img.naturalHeight || img.height || W) / (img.naturalWidth || img.width || W)));
-    const canvas = document.createElement("canvas");
-    canvas.width = W;
-    canvas.height = Math.max(1, H);
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return null;
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.92));
-    if (!blob) return null;
-    return new File([blob], "tiflisi-dish.jpg", { type: "image/jpeg" });
-  } catch {
-    return null;
-  }
-}
-
-function canShareFiles(file) {
-  if (typeof navigator === "undefined" || typeof navigator.share !== "function") return false;
-  if (!file) return false;
-  if (typeof navigator.canShare !== "function") return true;
-  try {
-    return navigator.canShare({ files: [file] });
-  } catch {
-    return false;
-  }
 }
 
 /* ─── DATA ───────────────────────────────────────────────────────────────── */
@@ -1447,37 +1395,32 @@ function DishDetailSheet({
       ? `₾${formatLari(mmPrice.min)} – ₾${formatLari(mmPrice.max)}`
       : `₾${formatLari(dish.price)}`;
     const shareTitle = title ? `Tiflisi · ${title}` : "Tiflisi";
-    /** Full caption with link — used for file shares & clipboard (WhatsApp-style). */
-    const textWithUrl = formatDishShareCaption({ title, blurb, url, priceLabel, lang, includeUrl: true });
-    /** Body without URL when the Web Share `url` field is used (avoids duplicate links). */
-    const textNoUrl = formatDishShareCaption({ title, blurb, url, priceLabel, lang, includeUrl: false });
+    const imageUrl = String(dish.image || "").trim();
+    /**
+     * Never attach File — Messenger keeps only the image and drops caption/link.
+     * Text share with photo URL + menu URL unfurls in Messenger and WhatsApp alike.
+     */
+    const textWithUrl = formatDishShareCaption({
+      title,
+      blurb,
+      url,
+      priceLabel,
+      lang,
+      imageUrl,
+      includeUrl: true,
+    });
+    const textNoUrl = formatDishShareCaption({
+      title,
+      blurb,
+      url,
+      priceLabel,
+      lang,
+      imageUrl,
+      includeUrl: false,
+    });
     setSharing(true);
     try {
       if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
-        let photo = null;
-        if (dish.image) {
-          try {
-            photo = await buildDishShareCardFile({ imageUrl: dish.image });
-          } catch {
-            photo = null;
-          }
-        }
-
-        if (photo && canShareFiles(photo)) {
-          const fileAttempts = [
-            { title: shareTitle, text: textWithUrl, files: [photo] },
-            { files: [photo], text: textWithUrl },
-          ];
-          for (const payload of fileAttempts) {
-            try {
-              await navigator.share(payload);
-              return;
-            } catch (shareErr) {
-              if (shareErr && shareErr.name === "AbortError") return;
-            }
-          }
-        }
-
         try {
           await navigator.share({ title: shareTitle, text: textNoUrl, url });
           return;
