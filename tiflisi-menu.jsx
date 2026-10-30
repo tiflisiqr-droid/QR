@@ -68,20 +68,47 @@ function guestMenuSearchWithDish(currentSearch, dishId) {
   return q ? `?${q}` : "";
 }
 
-/** Canonical absolute guest-menu URL (GitHub Pages `/QR/` safe). */
+/** Clean guest share link: only `?dish=` (no table UUID clutter). */
 function dishShareUrl(dishId) {
   if (typeof window === "undefined") return "";
   const base = import.meta.env.BASE_URL || "/";
   const origin = window.location.origin;
-  const sp = new URLSearchParams(window.location.search);
-  sp.set("dish", String(dishId));
-  const q = `?${sp.toString()}`;
+  const root = base.endsWith("/") ? base : `${base}/`;
   try {
-    return new URL(q, origin + (base.endsWith("/") ? base : `${base}/`)).href;
+    const url = new URL(root, origin);
+    url.search = "";
+    url.hash = "";
+    url.searchParams.set("dish", String(dishId));
+    return url.href;
   } catch {
-    const b = String(base).replace(/\/?$/, "/");
-    return `${origin}${b}${q}`;
+    return `${origin}${root}?dish=${encodeURIComponent(String(dishId))}`;
   }
+}
+
+function dishShareDisplayHost() {
+  try {
+    const base = import.meta.env.BASE_URL || "/";
+    const path = base === "/" ? "" : base.replace(/\/$/, "");
+    return `${window.location.host}${path}`;
+  } catch {
+    return "tiflisiqr-droid.github.io/QR";
+  }
+}
+
+function formatDishShareCaption({ title, blurb, url, priceLabel, lang }) {
+  const brand =
+    lang === "ka"
+      ? "Tiflisi · ქართული რესტორანი"
+      : lang === "ru"
+        ? "Tiflisi · Грузинский ресторан"
+        : "Tiflisi · Georgian Restaurant";
+  const cta =
+    lang === "ka" ? "მენიუში ნახვა" : lang === "ru" ? "Открыть в меню" : "View on the menu";
+  const lines = [brand, "", title];
+  if (blurb) lines.push(blurb);
+  if (priceLabel) lines.push(priceLabel);
+  lines.push("", `${cta}:`, url);
+  return lines.filter((x) => x != null).join("\n");
 }
 
 function wrapCanvasText(ctx, text, maxWidth, maxLines) {
@@ -100,10 +127,11 @@ function wrapCanvasText(ctx, text, maxWidth, maxLines) {
     if (lines.length >= maxLines) break;
   }
   if (lines.length < maxLines && line) lines.push(line);
-  if (lines.length > maxLines) {
-    const last = lines[maxLines - 1] || "";
-    lines.length = maxLines;
-    lines[maxLines - 1] = `${last.replace(/\s+\S*$/, "")}…`;
+  if (lines.length >= maxLines && words.length > 0) {
+    const clipped = lines.slice(0, maxLines);
+    const last = clipped[maxLines - 1] || "";
+    if (ctx.measureText(`${last}…`).width <= maxWidth) clipped[maxLines - 1] = `${last}…`;
+    return clipped;
   }
   return lines;
 }
@@ -122,27 +150,32 @@ function loadImageForShare(src) {
   });
 }
 
-/**
- * Share card: dish photo + title + URL baked in.
- * Messenger often drops captions when a file is attached — text on the image still travels with it.
- */
-async function buildDishShareCardFile({ imageUrl, title, blurb, url, priceLabel }) {
+function roundRectPath(ctx, x, y, w, h, r) {
+  const radius = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.arcTo(x + w, y, x + w, y + h, radius);
+  ctx.arcTo(x + w, y + h, x, y + h, radius);
+  ctx.arcTo(x, y + h, x, y, radius);
+  ctx.arcTo(x, y, x + w, y, radius);
+  ctx.closePath();
+}
+
+/** Luxury 4:5 share card — photo + brand; no raw query string on the artwork. */
+async function buildDishShareCardFile({ imageUrl, title, blurb, priceLabel, displayHost }) {
   if (typeof document === "undefined") return null;
   const W = 1080;
-  const H = 1440;
+  const H = 1350;
   const canvas = document.createElement("canvas");
   canvas.width = W;
   canvas.height = H;
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
 
-  ctx.fillStyle = "#050708";
+  ctx.fillStyle = "#060908";
   ctx.fillRect(0, 0, W, H);
 
-  const photoH = 920;
-  ctx.fillStyle = "#121a18";
-  ctx.fillRect(0, 0, W, photoH);
-
+  const photoH = 780;
   try {
     let bitmap = null;
     try {
@@ -152,7 +185,7 @@ async function buildDishShareCardFile({ imageUrl, title, blurb, url, priceLabel 
         bitmap = await createImageBitmap(blob);
       }
     } catch {
-      /* fall through to Image() */
+      /* Image() fallback */
     }
     if (!bitmap) {
       const img = await loadImageForShare(imageUrl);
@@ -163,79 +196,91 @@ async function buildDishShareCardFile({ imageUrl, title, blurb, url, priceLabel 
     const scale = Math.max(W / iw, photoH / ih);
     const dw = iw * scale;
     const dh = ih * scale;
-    const dx = (W - dw) / 2;
-    const dy = (photoH - dh) / 2;
-    ctx.drawImage(bitmap, dx, dy, dw, dh);
+    ctx.drawImage(bitmap, (W - dw) / 2, (photoH - dh) / 2, dw, dh);
     if (typeof bitmap.close === "function") bitmap.close();
   } catch {
-    ctx.fillStyle = "#1a2824";
+    ctx.fillStyle = "#15201c";
     ctx.fillRect(0, 0, W, photoH);
-    ctx.fillStyle = "rgba(201,169,98,0.55)";
-    ctx.font = "italic 48px Georgia, serif";
-    ctx.textAlign = "center";
-    ctx.fillText("Tiflisi", W / 2, photoH / 2);
   }
 
-  const grad = ctx.createLinearGradient(0, photoH - 160, 0, photoH);
-  grad.addColorStop(0, "rgba(5,7,8,0)");
-  grad.addColorStop(1, "rgba(5,7,8,0.92)");
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, photoH - 160, W, 160);
+  /** Top brand strip on photo */
+  const topGrad = ctx.createLinearGradient(0, 0, 0, 160);
+  topGrad.addColorStop(0, "rgba(4,8,10,0.72)");
+  topGrad.addColorStop(1, "rgba(4,8,10,0)");
+  ctx.fillStyle = topGrad;
+  ctx.fillRect(0, 0, W, 160);
 
-  ctx.fillStyle = "#050708";
+  ctx.fillStyle = "rgba(201,169,98,0.95)";
+  ctx.font = "600 20px Montserrat, Helvetica, sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText("TIFLISI  ·  GEORGIAN RESTAURANT", W / 2, 56);
+
+  /** Soft fade into lower panel */
+  const fade = ctx.createLinearGradient(0, photoH - 120, 0, photoH);
+  fade.addColorStop(0, "rgba(6,9,8,0)");
+  fade.addColorStop(1, "#060908");
+  ctx.fillStyle = fade;
+  ctx.fillRect(0, photoH - 120, W, 120);
+
+  ctx.fillStyle = "#060908";
   ctx.fillRect(0, photoH, W, H - photoH);
 
-  let y = photoH + 56;
-  ctx.fillStyle = "#c9a962";
-  ctx.font = "600 22px Montserrat, sans-serif";
-  ctx.textAlign = "left";
-  ctx.fillText("T I F L I S I", 56, y);
+  /** Gold rule */
+  ctx.strokeStyle = "rgba(201,169,98,0.45)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(W * 0.5 - 40, photoH + 36);
+  ctx.lineTo(W * 0.5 + 40, photoH + 36);
+  ctx.stroke();
 
-  y += 58;
-  ctx.fillStyle = "#f4f7f6";
-  ctx.font = "italic 52px 'Cormorant Garamond', Georgia, serif";
-  const titleLines = wrapCanvasText(ctx, title, W - 112, 2);
-  for (const line of titleLines) {
-    ctx.fillText(line, 56, y);
-    y += 58;
+  let y = photoH + 96;
+  ctx.textAlign = "center";
+  ctx.fillStyle = "#f4f1ea";
+  ctx.font = "italic 56px 'Cormorant Garamond', Georgia, serif";
+  for (const line of wrapCanvasText(ctx, title, W - 120, 2)) {
+    ctx.fillText(line, W / 2, y);
+    y += 64;
   }
 
   if (priceLabel) {
     y += 8;
-    ctx.fillStyle = "#3dbfb0";
-    ctx.font = "300 40px 'Cormorant Garamond', Georgia, serif";
-    ctx.fillText(priceLabel, 56, y);
-    y += 44;
+    ctx.fillStyle = "#c9a962";
+    ctx.font = "300 42px 'Cormorant Garamond', Georgia, serif";
+    ctx.fillText(priceLabel, W / 2, y);
+    y += 48;
   }
 
   if (blurb) {
-    y += 10;
-    ctx.fillStyle = "rgba(212,247,242,0.78)";
-    ctx.font = "28px Montserrat, sans-serif";
-    for (const line of wrapCanvasText(ctx, blurb, W - 112, 3)) {
-      ctx.fillText(line, 56, y);
-      y += 38;
+    y += 6;
+    ctx.fillStyle = "rgba(212,247,242,0.72)";
+    ctx.font = "26px Montserrat, Helvetica, sans-serif";
+    for (const line of wrapCanvasText(ctx, blurb, W - 160, 3)) {
+      ctx.fillText(line, W / 2, y);
+      y += 36;
     }
   }
 
-  y = Math.max(y + 28, H - 110);
-  ctx.strokeStyle = "rgba(201,169,98,0.28)";
-  ctx.beginPath();
-  ctx.moveTo(56, y);
-  ctx.lineTo(W - 56, y);
+  /** CTA pill */
+  const ctaY = H - 118;
+  const ctaLabel = "OPEN DIGITAL MENU";
+  ctx.font = "600 22px Montserrat, Helvetica, sans-serif";
+  const ctaW = Math.max(320, ctx.measureText(ctaLabel).width + 72);
+  const ctaX = (W - ctaW) / 2;
+  roundRectPath(ctx, ctaX, ctaY, ctaW, 56, 28);
+  ctx.strokeStyle = "rgba(201,169,98,0.65)";
+  ctx.lineWidth = 1.5;
   ctx.stroke();
-  y += 48;
-  ctx.fillStyle = "rgba(201,169,98,0.9)";
-  ctx.font = "600 24px Montserrat, sans-serif";
-  ctx.fillText(String(url || "").replace(/^https?:\/\//, ""), 56, y);
+  ctx.fillStyle = "#e8d5a8";
+  ctx.textAlign = "center";
+  ctx.fillText(ctaLabel, W / 2, ctaY + 36);
 
-  const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.9));
+  ctx.fillStyle = "rgba(109,143,137,0.85)";
+  ctx.font = "500 20px Montserrat, Helvetica, sans-serif";
+  ctx.fillText(String(displayHost || dishShareDisplayHost()), W / 2, H - 36);
+
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.92));
   if (!blob) return null;
-  const safe = String(title || "dish")
-    .replace(/[^\p{L}\p{N}\-_]+/gu, "_")
-    .replace(/^_+|_+$/g, "")
-    .slice(0, 40) || "dish";
-  return new File([blob], `${safe}-tiflisi.jpg`, { type: "image/jpeg" });
+  return new File([blob], "tiflisi-menu-share.jpg", { type: "image/jpeg" });
 }
 
 /* ─── DATA ───────────────────────────────────────────────────────────────── */
@@ -1515,8 +1560,9 @@ function DishDetailSheet({
     const priceLabel = mmPrice
       ? `₾${formatLari(mmPrice.min)} – ₾${formatLari(mmPrice.max)}`
       : `₾${formatLari(dish.price)}`;
-    /** Caption always includes the link (apps that keep text). */
-    const text = [title, blurb, url].filter((s) => String(s || "").trim()).join("\n\n");
+    const shareTitle = `Tiflisi · ${title}`;
+    const text = formatDishShareCaption({ title, blurb, url, priceLabel, lang });
+    const displayHost = dishShareDisplayHost();
     setSharing(true);
     try {
       if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
@@ -1527,19 +1573,18 @@ function DishDetailSheet({
               imageUrl: dish.image,
               title,
               blurb,
-              url,
               priceLabel,
+              displayHost,
             });
           } catch {
             card = null;
           }
         }
 
-        /** Image card + text + url. If a target strips caption, the card still shows title/link. */
         if (card && typeof navigator.canShare === "function" && navigator.canShare({ files: [card] })) {
           const attempts = [
-            { title, text, url, files: [card] },
-            { title, text, files: [card] },
+            { title: shareTitle, text, url, files: [card] },
+            { title: shareTitle, text, files: [card] },
             { files: [card], text },
           ];
           for (const payload of attempts) {
@@ -1552,11 +1597,11 @@ function DishDetailSheet({
           }
         }
 
-        await navigator.share({ title, text, url });
+        await navigator.share({ title: shareTitle, text, url });
         return;
       }
       if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(`${title}\n${url}`);
+        await navigator.clipboard.writeText(text);
         onToast?.(t.shareCopied);
         return;
       }
