@@ -1071,42 +1071,61 @@ function socialAccentFromItem(item) {
   return "#3dbfb0";
 }
 
+function SocialTopLink({ item, iconBase }) {
+  const href = socialTopHref(item.env, item.fallback);
+  const isText = item.mode === "text";
+  const accent = socialAccentFromItem(item);
+  const iconUrl = item.brand ? `${iconBase}/${item.brand}.svg` : "";
+  const useGradientIcon = !isText && typeof item.bg === "string" && item.bg.includes("gradient");
+  return (
+    <a
+      className={`social-top-link ${isText ? "social-top-link--text" : "social-top-link--icon"}`}
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      title={item.label}
+      aria-label={item.label}
+      style={{
+        ["--social-accent"]: accent,
+        ...(iconUrl ? { ["--social-icon-url"]: `url("${iconUrl}")` } : {}),
+        ...(useGradientIcon ? { ["--social-icon-gradient"]: item.bg } : {}),
+      }}
+    >
+      {isText ? (
+        item.text
+      ) : (
+        <span
+          className={`social-top-link__icon-mask${useGradientIcon ? " social-top-link__icon-mask--gradient" : ""}`}
+          aria-hidden="true"
+        />
+      )}
+    </a>
+  );
+}
+
+/** Welcome: social icons + delivery as two tidy rows (not one crowded wrap strip). */
 function SocialTopStrip({ className = "" }) {
   const iconBase = "https://cdn.jsdelivr.net/npm/simple-icons@11.6.0/icons";
+  const social = SOCIAL_TOP_ITEMS.filter((item) => item.mode === "icon");
+  const delivery = SOCIAL_TOP_ITEMS.filter((item) => item.mode === "text");
   return (
-    <div className={["social-top-strip", className].filter(Boolean).join(" ")} role="navigation" aria-label="Social & delivery">
-      {SOCIAL_TOP_ITEMS.map((item) => {
-        const href = socialTopHref(item.env, item.fallback);
-        const isText = item.mode === "text";
-        const accent = socialAccentFromItem(item);
-        const iconUrl = `${iconBase}/${item.brand}.svg`;
-        const useGradientIcon = !isText && typeof item.bg === "string" && item.bg.includes("gradient");
-        return (
-          <a
-            key={item.env}
-            className={`social-top-link ${isText ? "social-top-link--text" : "social-top-link--icon"}`}
-            href={href}
-            target="_blank"
-            rel="noopener noreferrer"
-            title={item.label}
-            aria-label={item.label}
-            style={{
-              ["--social-accent"]: accent,
-              ["--social-icon-url"]: `url("${iconUrl}")`,
-              ...(useGradientIcon ? { ["--social-icon-gradient"]: item.bg } : {}),
-            }}
-          >
-            {isText ? (
-              item.text
-            ) : (
-              <span
-                className={`social-top-link__icon-mask${useGradientIcon ? " social-top-link__icon-mask--gradient" : ""}`}
-                aria-hidden="true"
-              />
-            )}
-          </a>
-        );
-      })}
+    <div className={["welcome-link-panel", className].filter(Boolean).join(" ")}>
+      <div className="welcome-link-group">
+        <p className="welcome-link-label">Reviews</p>
+        <nav className="welcome-link-row welcome-link-row--icons" aria-label="Social & reviews">
+          {social.map((item) => (
+            <SocialTopLink key={item.env} item={item} iconBase={iconBase} />
+          ))}
+        </nav>
+      </div>
+      <div className="welcome-link-group">
+        <p className="welcome-link-label">Delivery</p>
+        <nav className="welcome-link-row welcome-link-row--delivery" aria-label="Food delivery">
+          {delivery.map((item) => (
+            <SocialTopLink key={item.env} item={item} iconBase={iconBase} />
+          ))}
+        </nav>
+      </div>
     </div>
   );
 }
@@ -5780,15 +5799,15 @@ function WelcomeScreen({ onChooseLang, tableId, tables, onTableChange }) {
             ქართული
             <small>მენიუს გახსნა</small>
           </button>
-          <button type="button" className="welcome-btn-ghost" onClick={() => onChooseLang("en")}>
-            English
-          </button>
-          <button type="button" className="welcome-btn-ghost" onClick={() => onChooseLang("ru")}>
-            Русский
-          </button>
+          <div className="welcome-hero-actions-secondary">
+            <button type="button" className="welcome-btn-ghost" onClick={() => onChooseLang("en")}>
+              English
+            </button>
+            <button type="button" className="welcome-btn-ghost" onClick={() => onChooseLang("ru")}>
+              Русский
+            </button>
+          </div>
         </div>
-
-        <p className="welcome-hero-hint">აირჩიეთ ენა · Choose language · Выберите язык</p>
       </div>
     </div>
   );

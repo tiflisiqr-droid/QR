@@ -1230,13 +1230,82 @@ body {
   text-align: center;
 }
 .welcome-hero-social {
-  margin-top: clamp(18px, 4.5vw, 26px);
+  margin-top: clamp(20px, 4.5vw, 28px);
   width: 100%;
   max-width: 100%;
 }
-.welcome-hero-social .social-top-strip {
-  margin-bottom: 0;
+.welcome-link-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  opacity: 0;
+  animation: welcomeFadeUp 1s cubic-bezier(0.22, 1, 0.36, 1) 0.52s forwards;
+}
+.welcome-link-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.welcome-link-label {
+  margin: 0;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: rgba(201, 169, 98, 0.72);
+}
+.welcome-link-row {
+  display: grid;
+  width: 100%;
+  align-items: stretch;
+  justify-items: stretch;
+}
+.welcome-link-row--icons {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  max-width: 268px;
+  margin: 0 auto;
+}
+.welcome-link-row--delivery {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  max-width: 360px;
+  margin: 0 auto;
+}
+.welcome-hero-social .social-top-link {
+  width: 100%;
+  margin: 0;
+}
+.welcome-hero-social .social-top-link--icon {
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  height: auto;
+  aspect-ratio: 1;
+  min-height: 52px;
+  border-radius: 18px;
+  padding: 0;
+}
+.welcome-hero-social .social-top-link--text {
+  min-width: 0;
+  min-height: 48px;
+  padding: 0 8px;
+  border-radius: 14px;
+  font-size: 10px;
+  letter-spacing: 0.14em;
   justify-content: center;
+}
+.welcome-hero-social .social-top-link__icon-mask {
+  width: 22px;
+  height: 22px;
+}
+@media (max-width: 380px) {
+  .welcome-link-row--icons { gap: 8px; max-width: 240px; }
+  .welcome-link-row--delivery { gap: 8px; }
+  .welcome-hero-social .social-top-link--icon { min-height: 48px; border-radius: 16px; }
+  .welcome-hero-social .social-top-link--text { min-height: 44px; font-size: 9px; letter-spacing: 0.1em; }
 }
 @media (max-height: 700px) {
   .welcome-hero-inner {
@@ -1246,9 +1315,10 @@ body {
   .welcome-hero-eyebrow { margin-bottom: 10px; letter-spacing: 0.42em; }
   .welcome-hero-sub { margin-top: 12px; }
   .welcome-hero-ka { margin-top: 6px; font-size: 14px; }
+  .welcome-hero-social { margin-top: 14px; }
+  .welcome-link-panel { gap: 12px; }
   .welcome-hero-table { margin-top: 14px; }
-  .welcome-hero-divider { margin: 16px 0 12px; }
-  .welcome-hero-hint { margin-top: 14px; }
+  .welcome-hero-divider { margin: 14px 0 12px; }
 }
 .welcome-hero-eyebrow {
   font-size: clamp(9px, 2.4vw, 11px);
@@ -1308,11 +1378,11 @@ body {
   animation: welcomeFadeUp 1s cubic-bezier(0.22, 1, 0.36, 1) 0.48s forwards;
 }
 .welcome-hero-table {
-  margin-top: clamp(22px, 5vw, 30px);
+  margin-top: clamp(18px, 4vw, 24px);
   width: 100%;
-  max-width: 320px;
+  max-width: 360px;
   opacity: 0;
-  animation: welcomeFadeUp 1s cubic-bezier(0.22, 1, 0.36, 1) 0.55s forwards;
+  animation: welcomeFadeUp 1s cubic-bezier(0.22, 1, 0.36, 1) 0.58s forwards;
 }
 .welcome-hero-table label {
   display: block;
@@ -1330,7 +1400,7 @@ body {
   -webkit-appearance: none;
   touch-action: manipulation;
   padding: 14px 40px 14px 18px;
-  border-radius: 999px;
+  border-radius: 14px;
   border: 1px solid rgba(201, 169, 98, 0.35);
   background: rgba(4,8,10,0.65);
   color: var(--cream);
@@ -1384,10 +1454,10 @@ body {
   align-items: center;
   justify-content: center;
   gap: 14px;
-  margin: clamp(26px, 6vw, 36px) 0 clamp(18px, 4vw, 22px);
+  margin: clamp(20px, 4.5vw, 28px) 0 clamp(14px, 3vw, 18px);
   width: 100%;
   opacity: 0;
-  animation: welcomeFadeUp 1s cubic-bezier(0.22, 1, 0.36, 1) 0.62s forwards;
+  animation: welcomeFadeUp 1s cubic-bezier(0.22, 1, 0.36, 1) 0.64s forwards;
 }
 .welcome-hero-divider i {
   flex: 1;
@@ -1408,18 +1478,26 @@ body {
 .welcome-hero-actions {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
   opacity: 0;
   animation: welcomeFadeUp 1s cubic-bezier(0.22, 1, 0.36, 1) 0.72s forwards;
+}
+.welcome-hero-actions-secondary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: 100%;
 }
 .welcome-btn-primary {
   position: relative;
   width: 100%;
   touch-action: manipulation;
-  padding: 17px 22px;
+  padding: 16px 22px;
   border: none;
-  border-radius: 999px;
+  border-radius: 16px;
   cursor: pointer;
   font-family: var(--font-display);
   font-size: clamp(17px, 4.2vw, 20px);
@@ -1487,43 +1565,37 @@ body {
 }
 .welcome-btn-ghost {
   width: 100%;
+  min-height: 52px;
   touch-action: manipulation;
-  padding: 15px 20px;
-  border-radius: 999px;
+  padding: 14px 12px;
+  border-radius: 14px;
   cursor: pointer;
   font-family: var(--font-body);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.28em;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
   color: rgba(244,247,246,0.92);
-  background: rgba(4,8,10,0.35);
-  border: 1px solid rgba(61, 191, 176, 0.22);
+  background: rgba(4,8,10,0.4);
+  border: 1px solid rgba(201, 169, 98, 0.28);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
-  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.2s ease, color 0.2s ease;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.28);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.2s ease, color 0.2s ease, background 0.2s ease;
   -webkit-tap-highlight-color: transparent;
 }
 @media (hover: hover) {
 .welcome-btn-ghost:hover {
-  border-color: rgba(61, 191, 176, 0.5);
+  border-color: rgba(201, 169, 98, 0.55);
+  background: rgba(12, 18, 18, 0.55);
   box-shadow:
-    0 0 24px rgba(61, 191, 176, 0.15),
+    0 0 20px rgba(201, 169, 98, 0.12),
     0 10px 36px rgba(0,0,0,0.3);
   transform: translateY(-1px);
   color: var(--gold-light);
 }
 }
-.welcome-hero-hint {
-  margin-top: clamp(20px, 4vw, 26px);
-  font-size: 10px;
-  letter-spacing: 0.14em;
-  color: rgba(109, 143, 137, 0.75);
-  line-height: 1.6;
-  opacity: 0;
-  animation: welcomeFadeUp 1s cubic-bezier(0.22, 1, 0.36, 1) 0.85s forwards;
-}
+.welcome-btn-ghost:active { transform: translateY(0); }
 @keyframes welcomeFadeUp {
   from { opacity: 0; transform: translateY(18px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -1532,14 +1604,10 @@ body {
   .welcome-hero-img { animation: none !important; }
   .welcome-btn-primary::before { animation: none; }
   .welcome-hero-eyebrow, .welcome-hero-title, .welcome-hero-sub, .welcome-hero-ka,
-  .welcome-hero-table, .welcome-hero-divider, .welcome-hero-actions, .welcome-hero-hint {
+  .welcome-hero-social .welcome-link-panel, .welcome-hero-table, .welcome-hero-divider, .welcome-hero-actions {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;
-  }
-  @keyframes welcomeFadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
   }
 }
 .admin-panel-layout {
