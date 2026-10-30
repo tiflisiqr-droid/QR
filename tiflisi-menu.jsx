@@ -84,6 +84,160 @@ function dishShareUrl(dishId) {
   }
 }
 
+function wrapCanvasText(ctx, text, maxWidth, maxLines) {
+  const words = String(text || "").trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return [];
+  const lines = [];
+  let line = "";
+  for (const word of words) {
+    const test = line ? `${line} ${word}` : word;
+    if (ctx.measureText(test).width <= maxWidth) {
+      line = test;
+      continue;
+    }
+    if (line) lines.push(line);
+    line = word;
+    if (lines.length >= maxLines) break;
+  }
+  if (lines.length < maxLines && line) lines.push(line);
+  if (lines.length > maxLines) {
+    const last = lines[maxLines - 1] || "";
+    lines.length = maxLines;
+    lines[maxLines - 1] = `${last.replace(/\s+\S*$/, "")}…`;
+  }
+  return lines;
+}
+
+function loadImageForShare(src) {
+  return new Promise((resolve, reject) => {
+    if (!src) {
+      reject(new Error("no image"));
+      return;
+    }
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("image load failed"));
+    img.src = src;
+  });
+}
+
+/**
+ * Share card: dish photo + title + URL baked in.
+ * Messenger often drops captions when a file is attached — text on the image still travels with it.
+ */
+async function buildDishShareCardFile({ imageUrl, title, blurb, url, priceLabel }) {
+  if (typeof document === "undefined") return null;
+  const W = 1080;
+  const H = 1440;
+  const canvas = document.createElement("canvas");
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+
+  ctx.fillStyle = "#050708";
+  ctx.fillRect(0, 0, W, H);
+
+  const photoH = 920;
+  ctx.fillStyle = "#121a18";
+  ctx.fillRect(0, 0, W, photoH);
+
+  try {
+    let bitmap = null;
+    try {
+      const res = await fetch(imageUrl, { mode: "cors", credentials: "omit", cache: "force-cache" });
+      if (res.ok) {
+        const blob = await res.blob();
+        bitmap = await createImageBitmap(blob);
+      }
+    } catch {
+      /* fall through to Image() */
+    }
+    if (!bitmap) {
+      const img = await loadImageForShare(imageUrl);
+      bitmap = img;
+    }
+    const iw = bitmap.width || bitmap.naturalWidth || 1;
+    const ih = bitmap.height || bitmap.naturalHeight || 1;
+    const scale = Math.max(W / iw, photoH / ih);
+    const dw = iw * scale;
+    const dh = ih * scale;
+    const dx = (W - dw) / 2;
+    const dy = (photoH - dh) / 2;
+    ctx.drawImage(bitmap, dx, dy, dw, dh);
+    if (typeof bitmap.close === "function") bitmap.close();
+  } catch {
+    ctx.fillStyle = "#1a2824";
+    ctx.fillRect(0, 0, W, photoH);
+    ctx.fillStyle = "rgba(201,169,98,0.55)";
+    ctx.font = "italic 48px Georgia, serif";
+    ctx.textAlign = "center";
+    ctx.fillText("Tiflisi", W / 2, photoH / 2);
+  }
+
+  const grad = ctx.createLinearGradient(0, photoH - 160, 0, photoH);
+  grad.addColorStop(0, "rgba(5,7,8,0)");
+  grad.addColorStop(1, "rgba(5,7,8,0.92)");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, photoH - 160, W, 160);
+
+  ctx.fillStyle = "#050708";
+  ctx.fillRect(0, photoH, W, H - photoH);
+
+  let y = photoH + 56;
+  ctx.fillStyle = "#c9a962";
+  ctx.font = "600 22px Montserrat, sans-serif";
+  ctx.textAlign = "left";
+  ctx.fillText("T I F L I S I", 56, y);
+
+  y += 58;
+  ctx.fillStyle = "#f4f7f6";
+  ctx.font = "italic 52px 'Cormorant Garamond', Georgia, serif";
+  const titleLines = wrapCanvasText(ctx, title, W - 112, 2);
+  for (const line of titleLines) {
+    ctx.fillText(line, 56, y);
+    y += 58;
+  }
+
+  if (priceLabel) {
+    y += 8;
+    ctx.fillStyle = "#3dbfb0";
+    ctx.font = "300 40px 'Cormorant Garamond', Georgia, serif";
+    ctx.fillText(priceLabel, 56, y);
+    y += 44;
+  }
+
+  if (blurb) {
+    y += 10;
+    ctx.fillStyle = "rgba(212,247,242,0.78)";
+    ctx.font = "28px Montserrat, sans-serif";
+    for (const line of wrapCanvasText(ctx, blurb, W - 112, 3)) {
+      ctx.fillText(line, 56, y);
+      y += 38;
+    }
+  }
+
+  y = Math.max(y + 28, H - 110);
+  ctx.strokeStyle = "rgba(201,169,98,0.28)";
+  ctx.beginPath();
+  ctx.moveTo(56, y);
+  ctx.lineTo(W - 56, y);
+  ctx.stroke();
+  y += 48;
+  ctx.fillStyle = "rgba(201,169,98,0.9)";
+  ctx.font = "600 24px Montserrat, sans-serif";
+  ctx.fillText(String(url || "").replace(/^https?:\/\//, ""), 56, y);
+
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.9));
+  if (!blob) return null;
+  const safe = String(title || "dish")
+    .replace(/[^\p{L}\p{N}\-_]+/gu, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 40) || "dish";
+  return new File([blob], `${safe}-tiflisi.jpg`, { type: "image/jpeg" });
+}
+
 /* ─── DATA ───────────────────────────────────────────────────────────────── */
 const CATEGORIES = [
   { id: 1, name: { en: "Khinkali", ka: "ხინკალი", ru: "Хинкали" }, icon: "◈", order: 1 },
@@ -1353,15 +1507,51 @@ function DishDetailSheet({
     }, 520);
   };
 
+  const [sharing, setSharing] = useState(false);
+
   const handleShare = async () => {
+    if (sharing) return;
     const url = dishShareUrl(dish.id);
-    /**
-     * Messenger/Facebook often send ONLY an attached photo and drop caption/link.
-     * Always share title + text + url (link embedded in text) — no `files`.
-     */
+    const priceLabel = mmPrice
+      ? `₾${formatLari(mmPrice.min)} – ₾${formatLari(mmPrice.max)}`
+      : `₾${formatLari(dish.price)}`;
+    /** Caption always includes the link (apps that keep text). */
     const text = [title, blurb, url].filter((s) => String(s || "").trim()).join("\n\n");
+    setSharing(true);
     try {
       if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+        let card = null;
+        if (dish.image) {
+          try {
+            card = await buildDishShareCardFile({
+              imageUrl: dish.image,
+              title,
+              blurb,
+              url,
+              priceLabel,
+            });
+          } catch {
+            card = null;
+          }
+        }
+
+        /** Image card + text + url. If a target strips caption, the card still shows title/link. */
+        if (card && typeof navigator.canShare === "function" && navigator.canShare({ files: [card] })) {
+          const attempts = [
+            { title, text, url, files: [card] },
+            { title, text, files: [card] },
+            { files: [card], text },
+          ];
+          for (const payload of attempts) {
+            try {
+              await navigator.share(payload);
+              return;
+            } catch (shareErr) {
+              if (shareErr && shareErr.name === "AbortError") return;
+            }
+          }
+        }
+
         await navigator.share({ title, text, url });
         return;
       }
@@ -1372,9 +1562,10 @@ function DishDetailSheet({
       }
       onToast?.(t.shareFailed);
     } catch (err) {
-      /** User dismissed the system share sheet — not an error. */
       if (err && err.name === "AbortError") return;
       onToast?.(t.shareFailed);
+    } finally {
+      setSharing(false);
     }
   };
 
@@ -1419,7 +1610,15 @@ function DishDetailSheet({
       >
         <div className="menu-dish-sheet-handle" aria-hidden="true" />
         <div className="menu-dish-sheet-top">
-          <button type="button" className="menu-dish-sheet-share" onClick={handleShare} aria-label={t.share}>
+          <button
+            type="button"
+            className="menu-dish-sheet-share"
+            onClick={handleShare}
+            aria-label={t.share}
+            disabled={sharing}
+            aria-busy={sharing}
+            style={sharing ? { opacity: 0.65, cursor: "wait" } : undefined}
+          >
             <span aria-hidden="true">↗</span>
             {t.share}
           </button>
