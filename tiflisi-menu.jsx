@@ -48,6 +48,42 @@ function dishAnchorId(dishId) {
   return `dish-${String(dishId)}`;
 }
 
+/** Prefer `?dish=` over hash — messengers/Facebook often strip or break `#…` fragments. */
+function readDishIdFromSearch(search) {
+  try {
+    const q = new URLSearchParams(search ?? "").get("dish");
+    if (q == null || q === "") return null;
+    const trimmed = String(q).trim();
+    return trimmed || null;
+  } catch {
+    return null;
+  }
+}
+
+function guestMenuSearchWithDish(currentSearch, dishId) {
+  const sp = new URLSearchParams(currentSearch || "");
+  if (dishId == null || dishId === "") sp.delete("dish");
+  else sp.set("dish", String(dishId));
+  const q = sp.toString();
+  return q ? `?${q}` : "";
+}
+
+/** Canonical absolute guest-menu URL (GitHub Pages `/QR/` safe). */
+function dishShareUrl(dishId) {
+  if (typeof window === "undefined") return "";
+  const base = import.meta.env.BASE_URL || "/";
+  const origin = window.location.origin;
+  const sp = new URLSearchParams(window.location.search);
+  sp.set("dish", String(dishId));
+  const q = `?${sp.toString()}`;
+  try {
+    return new URL(q, origin + (base.endsWith("/") ? base : `${base}/`)).href;
+  } catch {
+    const b = String(base).replace(/\/?$/, "/");
+    return `${origin}${b}${q}`;
+  }
+}
+
 /* ─── DATA ───────────────────────────────────────────────────────────────── */
 const CATEGORIES = [
   { id: 1, name: { en: "Khinkali", ka: "ხინკალი", ru: "Хинкали" }, icon: "◈", order: 1 },
@@ -1251,12 +1287,6 @@ function DishVariantModal({ dish, lang, t, onClose, onConfirm }) {
   );
 }
 
-function dishShareUrl(dishId) {
-  if (typeof window === "undefined") return "";
-  const anchor = dishAnchorId(dishId);
-  return `${window.location.origin}${window.location.pathname}${window.location.search}#${anchor}`;
-}
-
 function DishDetailSheet({
   dish,
   lang,
@@ -1306,7 +1336,9 @@ function DishDetailSheet({
 
   const handleShare = async () => {
     const url = dishShareUrl(dish.id);
-    const payload = { title, text: blurb || title, url };
+    /** Many apps (IG/Messenger) ignore `url` and only send `text` — always embed the link. */
+    const text = [title, blurb, url].filter((s) => String(s || "").trim()).join("\n\n");
+    const payload = { title, text, url };
     try {
       if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
         await navigator.share(payload);
@@ -1508,6 +1540,7 @@ function DishDetailSheet({
 function CustomerMenu({ tableId, store, lang }) {
   const t = T[lang];
   const location = useLocation();
+  const go = useNavigate();
   const { categories, dishes, tables, addNotification, trackView, menuLoading, menuError } = store;
   const distinctionCatalog = useMemo(
     () => mergedDistinctionCatalog(store.distinctions ?? []),
@@ -1532,8 +1565,12 @@ function CustomerMenu({ tableId, store, lang }) {
   const chipCenterRequestedRef = useRef(false);
   /** Skip hash-on-load effect when we just set `#dish-…` from scrollToDish (avoids double scroll). */
   const skipHashDeepLinkRef = useRef(false);
+  /** Skip `?dish=` deep-link effect when we set the param ourselves. */
+  const skipDishSearchDeepLinkRef = useRef(false);
   /** Same fragment as `location.hash` without `#` — prevents re-scrolling when `dishes` reference churns with same hash. */
   const deepLinkHandledHashRef = useRef(null);
+  /** Last handled `?dish=` value — avoids re-opening when dishes array identity churns. */
+  const deepLinkHandledDishParamRef = useRef(null);
   const table = tables.find((tb) => String(tb.id) === String(tableId)) || { name: `Table ${tableId}`, zone: "Hall" };
 
   const cartLines = useMemo(() => {
@@ -1745,20 +1782,22 @@ function CustomerMenu({ tableId, store, lang }) {
       if (id == null) return;
       setDetailDishId(id);
       trackView(id);
-      const anchor = dishAnchorId(id);
-      const basePath = `${location.pathname}${location.search}`;
+      skipDishSearchDeepLinkRef.current = true;
       skipHashDeepLinkRef.current = true;
-      window.history.replaceState(null, "", `${basePath}#${anchor}`);
-      deepLinkHandledHashRef.current = anchor;
+      deepLinkHandledDishParamRef.current = String(id);
+      deepLinkHandledHashRef.current = dishAnchorId(id);
+      go(
+        { pathname: location.pathname || "/", search: guestMenuSearchWithDish(location.search, id), hash: "" },
+        { replace: true }
+      );
     },
-    [trackView, location.pathname, location.search]
+    [trackView, go, location.pathname, location.search]
   );
 
   const scrollToDish = useCallback(
     (dishId, options = {}) => {
-      const { updateHash = true, openSheet = true } = options;
+      const { updateUrl = true, openSheet = true } = options;
       const anchor = dishAnchorId(dishId);
-      const basePath = `${location.pathname}${location.search}`;
       skipScrollSpyRef.current = true;
 
       const applyHighlight = (el) => {
@@ -1803,10 +1842,19 @@ function CustomerMenu({ tableId, store, lang }) {
           behavior: motionReduced ? "auto" : "smooth",
         });
 
-        if (updateHash) {
+        if (updateUrl) {
+          skipDishSearchDeepLinkRef.current = true;
           skipHashDeepLinkRef.current = true;
-          window.history.replaceState(null, "", `${basePath}#${anchor}`);
+          deepLinkHandledDishParamRef.current = String(dishId);
           deepLinkHandledHashRef.current = anchor;
+          go(
+            {
+              pathname: location.pathname || "/",
+              search: guestMenuSearchWithDish(location.search, dishId),
+              hash: "",
+            },
+            { replace: true }
+          );
         }
 
         if (motionReduced) {
@@ -1829,16 +1877,37 @@ function CustomerMenu({ tableId, store, lang }) {
       };
       tryScroll();
     },
-    [location.pathname, location.search, trackView]
+    [go, location.pathname, location.search, trackView]
   );
 
-  /** Open / refresh with `#dish-…` — scroll after menu mounts (skip if hash came from scrollToDish). */
+  /** Open / refresh with `?dish=` (share-safe) or legacy `#dish-…`. */
   useEffect(() => {
+    if (menuLoading) return;
+
+    const dishParam = readDishIdFromSearch(location.search);
+    if (dishParam) {
+      if (skipDishSearchDeepLinkRef.current) {
+        skipDishSearchDeepLinkRef.current = false;
+        return;
+      }
+      if (deepLinkHandledDishParamRef.current === dishParam) return;
+      const dish = dishes.find((d) => String(d.id) === dishParam);
+      if (!dish) return;
+      deepLinkHandledDishParamRef.current = dishParam;
+      setDetailDishId(dish.id);
+      trackView(dish.id);
+      const tmr = window.setTimeout(() => {
+        scrollToDish(dish.id, { updateUrl: false, openSheet: false });
+      }, 80);
+      return () => window.clearTimeout(tmr);
+    }
+
+    deepLinkHandledDishParamRef.current = null;
+
     if (skipHashDeepLinkRef.current) {
       skipHashDeepLinkRef.current = false;
       return;
     }
-    if (menuLoading) return;
     const hash = (location.hash || "").replace(/^#/, "");
     if (!hash.startsWith("dish-")) {
       deepLinkHandledHashRef.current = null;
@@ -1853,14 +1922,13 @@ function CustomerMenu({ tableId, store, lang }) {
       return;
     }
     deepLinkHandledHashRef.current = hash;
-    /** Open sheet immediately; scroll can finish independently (avoids race where scroll runs but sheet never mounts). */
     setDetailDishId(dish.id);
     trackView(dish.id);
     const tmr = window.setTimeout(() => {
-      scrollToDish(dish.id, { updateHash: false, openSheet: false });
+      scrollToDish(dish.id, { updateUrl: false, openSheet: false });
     }, 80);
     return () => window.clearTimeout(tmr);
-  }, [menuLoading, dishes, location.hash, scrollToDish, trackView]);
+  }, [menuLoading, dishes, location.search, location.hash, scrollToDish, trackView]);
 
   const scrollToSection = useCallback((sectionId) => {
     if (typeof document === "undefined") return false;
@@ -2363,13 +2431,18 @@ function CustomerMenu({ tableId, store, lang }) {
           cartQty={sumCartQtyForDish(cart, detailDish.id)}
           onClose={() => {
             setDetailDishId(null);
-            const basePath = `${location.pathname}${location.search}`;
-            const hash = (window.location.hash || "").replace(/^#/, "");
-            if (hash.startsWith("dish-")) {
-              skipHashDeepLinkRef.current = true;
-              window.history.replaceState(null, "", basePath);
-              deepLinkHandledHashRef.current = null;
-            }
+            skipDishSearchDeepLinkRef.current = true;
+            skipHashDeepLinkRef.current = true;
+            deepLinkHandledDishParamRef.current = null;
+            deepLinkHandledHashRef.current = null;
+            go(
+              {
+                pathname: location.pathname || "/",
+                search: guestMenuSearchWithDish(location.search, null),
+                hash: "",
+              },
+              { replace: true }
+            );
           }}
           onAddToCart={addToCart}
           onBumpCartQty={bumpCartQty}
@@ -5722,6 +5795,24 @@ export default function App() {
     if (isAdminRoute || isStaffRoute || enteredMenu || isWelcomeRoute) return;
     go({ pathname: "/welcome", search: location.search }, { replace: true });
   }, [go, isAdminRoute, isStaffRoute, enteredMenu, isWelcomeRoute, location.search]);
+
+  /** Broken share targets sometimes turn `#dish-1` into path `/dish-1` → GitHub Pages 404. Normalize. */
+  useEffect(() => {
+    if (isAdminRoute || isStaffRoute) return;
+    const p = (location.pathname || "/").replace(/\/+$/, "") || "/";
+    const m = p.match(/^\/dish-(.+)$/i);
+    if (!m) return;
+    let id = m[1];
+    try {
+      id = decodeURIComponent(id);
+    } catch {
+      /* keep raw */
+    }
+    const sp = new URLSearchParams(location.search);
+    sp.set("dish", id);
+    const q = sp.toString();
+    go({ pathname: "/", search: q ? `?${q}` : "" }, { replace: true });
+  }, [go, isAdminRoute, isStaffRoute, location.pathname, location.search]);
 
   const shouldShowWelcome = !isAdminRoute && !isStaffRoute && (isWelcomeRoute || !enteredMenu);
 
