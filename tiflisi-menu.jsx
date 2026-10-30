@@ -84,6 +84,27 @@ function dishShareUrl(dishId) {
   }
 }
 
+/** Fetch dish photo as a File for Web Share Level 2 (WhatsApp/iOS often attach it as an image). */
+async function fetchDishShareFile(imageUrl, fileBaseName) {
+  if (!imageUrl || typeof fetch !== "function") return null;
+  try {
+    const res = await fetch(imageUrl, { mode: "cors", credentials: "omit", cache: "force-cache" });
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    if (!blob.type || !blob.type.startsWith("image/")) return null;
+    let subtype = blob.type.split("/")[1] || "jpeg";
+    if (subtype === "jpeg") subtype = "jpg";
+    const safe =
+      String(fileBaseName || "dish")
+        .replace(/[^\p{L}\p{N}\-_]+/gu, "_")
+        .replace(/^_+|_+$/g, "")
+        .slice(0, 48) || "dish";
+    return new File([blob], `${safe}.${subtype}`, { type: blob.type });
+  } catch {
+    return null;
+  }
+}
+
 /* ─── DATA ───────────────────────────────────────────────────────────────── */
 const CATEGORIES = [
   { id: 1, name: { en: "Khinkali", ka: "ხინკალი", ru: "Хинкали" }, icon: "◈", order: 1 },
@@ -1338,10 +1359,22 @@ function DishDetailSheet({
     const url = dishShareUrl(dish.id);
     /** Many apps (IG/Messenger) ignore `url` and only send `text` — always embed the link. */
     const text = [title, blurb, url].filter((s) => String(s || "").trim()).join("\n\n");
-    const payload = { title, text, url };
     try {
       if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
-        await navigator.share(payload);
+        /** Prefer attaching the dish photo (shows in chat like a sent image + caption). */
+        if (dish.image) {
+          const file = await fetchDishShareFile(dish.image, title);
+          if (file && typeof navigator.canShare === "function" && navigator.canShare({ files: [file] })) {
+            try {
+              await navigator.share({ title, text, files: [file] });
+              return;
+            } catch (fileErr) {
+              if (fileErr && fileErr.name === "AbortError") return;
+              /* fall through to link-only share */
+            }
+          }
+        }
+        await navigator.share({ title, text, url });
         return;
       }
       if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
