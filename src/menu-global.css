@@ -1661,7 +1661,8 @@ body {
 .welcome-lang-flag--wave {
   animation: welcomeFlagWave 2.8s ease-in-out infinite;
 }
-.welcome-btn-primary--ka .welcome-lang-btn-inner .welcome-lang-flag:last-child {
+.welcome-btn-primary--ka .welcome-lang-btn-inner .welcome-lang-flag:last-child,
+.welcome-btn-ghost--en .welcome-lang-btn-inner .welcome-lang-flag:last-child {
   transform-origin: center right;
   animation-delay: 0.35s;
 }
@@ -1669,15 +1670,26 @@ body {
   animation: welcomeBolnisiPulse 2.4s ease-in-out infinite;
   transform-origin: center;
 }
-.welcome-ka-ornaments {
+.welcome-ka-ornaments,
+.welcome-en-ornaments {
   position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: 0;
 }
-.welcome-btn-primary--ka .welcome-lang-btn-inner {
+.welcome-btn-primary--ka .welcome-lang-btn-inner,
+.welcome-btn-ghost--en .welcome-lang-btn-inner {
   position: relative;
   z-index: 1;
+}
+.welcome-btn-ghost--en {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+.welcome-btn-ghost--en .welcome-lang-flag {
+  width: 26px;
+  height: 17px;
 }
 .welcome-bolnisi {
   position: absolute;
@@ -1690,6 +1702,22 @@ body {
 .welcome-bolnisi--b { top: 10px; right: 14px; animation-delay: 0.4s; }
 .welcome-bolnisi--c { bottom: 10px; left: 18px; animation-delay: 0.8s; }
 .welcome-bolnisi--d { bottom: 10px; right: 18px; animation-delay: 1.2s; }
+.welcome-uk-pip {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 1px;
+  background:
+    linear-gradient(#C8102E, #C8102E) center / 100% 2px no-repeat,
+    linear-gradient(#C8102E, #C8102E) center / 2px 100% no-repeat,
+    #012169;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.35) inset;
+  animation: welcomeUkPipFloat 3.2s ease-in-out infinite;
+}
+.welcome-uk-pip--a { top: 8px; left: 10px; animation-delay: 0s; }
+.welcome-uk-pip--b { top: 8px; right: 10px; animation-delay: 0.4s; }
+.welcome-uk-pip--c { bottom: 8px; left: 12px; animation-delay: 0.8s; }
+.welcome-uk-pip--d { bottom: 8px; right: 12px; animation-delay: 1.2s; }
 @keyframes welcomeFlagWave {
   0%, 100% { transform: rotate(-2deg) skewY(0deg); }
   50% { transform: rotate(2.5deg) skewY(-1deg); }
@@ -1702,10 +1730,15 @@ body {
   0%, 100% { opacity: 0.28; transform: scale(0.92) rotate(0deg); }
   50% { opacity: 0.55; transform: scale(1.08) rotate(8deg); }
 }
+@keyframes welcomeUkPipFloat {
+  0%, 100% { opacity: 0.35; transform: scale(0.9) rotate(0deg); }
+  50% { opacity: 0.75; transform: scale(1.15) rotate(-10deg); }
+}
 @media (prefers-reduced-motion: reduce) {
   .welcome-lang-flag--wave,
   .welcome-flag-ka-bolnisi,
-  .welcome-bolnisi {
+  .welcome-bolnisi,
+  .welcome-uk-pip {
     animation: none !important;
   }
 }
