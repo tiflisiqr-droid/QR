@@ -1662,7 +1662,8 @@ body {
   animation: welcomeFlagWave 2.8s ease-in-out infinite;
 }
 .welcome-btn-primary--ka .welcome-lang-btn-inner .welcome-lang-flag:last-child,
-.welcome-btn-ghost--en .welcome-lang-btn-inner .welcome-lang-flag:last-child {
+.welcome-btn-ghost--en .welcome-lang-btn-inner .welcome-lang-flag:last-child,
+.welcome-btn-ghost--ru .welcome-lang-btn-inner .welcome-lang-flag:last-child {
   transform-origin: center right;
   animation-delay: 0.35s;
 }
@@ -1671,23 +1672,27 @@ body {
   transform-origin: center;
 }
 .welcome-ka-ornaments,
-.welcome-en-ornaments {
+.welcome-en-ornaments,
+.welcome-ru-ornaments {
   position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: 0;
 }
 .welcome-btn-primary--ka .welcome-lang-btn-inner,
-.welcome-btn-ghost--en .welcome-lang-btn-inner {
+.welcome-btn-ghost--en .welcome-lang-btn-inner,
+.welcome-btn-ghost--ru .welcome-lang-btn-inner {
   position: relative;
   z-index: 1;
 }
-.welcome-btn-ghost--en {
+.welcome-btn-ghost--en,
+.welcome-btn-ghost--ru {
   position: relative;
   isolation: isolate;
   overflow: hidden;
 }
-.welcome-btn-ghost--en .welcome-lang-flag {
+.welcome-btn-ghost--en .welcome-lang-flag,
+.welcome-btn-ghost--ru .welcome-lang-flag {
   width: 26px;
   height: 17px;
 }
@@ -1718,6 +1723,25 @@ body {
 .welcome-uk-pip--b { top: 8px; right: 10px; animation-delay: 0.4s; }
 .welcome-uk-pip--c { bottom: 8px; left: 12px; animation-delay: 0.8s; }
 .welcome-uk-pip--d { bottom: 8px; right: 12px; animation-delay: 1.2s; }
+.welcome-ru-pip {
+  position: absolute;
+  width: 10px;
+  height: 7px;
+  border-radius: 1px;
+  overflow: hidden;
+  background: linear-gradient(
+    to bottom,
+    #fff 0 33.33%,
+    #0039A6 33.33% 66.66%,
+    #D52B1E 66.66% 100%
+  );
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2) inset;
+  animation: welcomeRuPipFloat 3.2s ease-in-out infinite;
+}
+.welcome-ru-pip--a { top: 8px; left: 10px; animation-delay: 0s; }
+.welcome-ru-pip--b { top: 8px; right: 10px; animation-delay: 0.4s; }
+.welcome-ru-pip--c { bottom: 8px; left: 12px; animation-delay: 0.8s; }
+.welcome-ru-pip--d { bottom: 8px; right: 12px; animation-delay: 1.2s; }
 @keyframes welcomeFlagWave {
   0%, 100% { transform: rotate(-2deg) skewY(0deg); }
   50% { transform: rotate(2.5deg) skewY(-1deg); }
@@ -1734,11 +1758,16 @@ body {
   0%, 100% { opacity: 0.35; transform: scale(0.9) rotate(0deg); }
   50% { opacity: 0.75; transform: scale(1.15) rotate(-10deg); }
 }
+@keyframes welcomeRuPipFloat {
+  0%, 100% { opacity: 0.35; transform: scale(0.9) rotate(0deg); }
+  50% { opacity: 0.8; transform: scale(1.15) rotate(8deg); }
+}
 @media (prefers-reduced-motion: reduce) {
   .welcome-lang-flag--wave,
   .welcome-flag-ka-bolnisi,
   .welcome-bolnisi,
-  .welcome-uk-pip {
+  .welcome-uk-pip,
+  .welcome-ru-pip {
     animation: none !important;
   }
 }

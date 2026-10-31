@@ -5941,10 +5941,17 @@ function WelcomeScreen({ onChooseLang, tableId, tables, onTableChange }) {
                 <WelcomeLangFlag lang="en" animated />
               </span>
             </button>
-            <button type="button" className="welcome-btn-ghost" onClick={() => onChooseLang("ru")}>
+            <button type="button" className="welcome-btn-ghost welcome-btn-ghost--ru" onClick={() => onChooseLang("ru")}>
+              <span className="welcome-ru-ornaments" aria-hidden="true">
+                <span className="welcome-ru-pip welcome-ru-pip--a" />
+                <span className="welcome-ru-pip welcome-ru-pip--b" />
+                <span className="welcome-ru-pip welcome-ru-pip--c" />
+                <span className="welcome-ru-pip welcome-ru-pip--d" />
+              </span>
               <span className="welcome-lang-btn-inner">
-                <WelcomeLangFlag lang="ru" />
+                <WelcomeLangFlag lang="ru" animated />
                 <span>Русский</span>
+                <WelcomeLangFlag lang="ru" animated />
               </span>
             </button>
           </div>
