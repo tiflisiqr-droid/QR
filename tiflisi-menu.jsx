@@ -5804,6 +5804,51 @@ function WelcomeBolnisiCross({ className = "" }) {
   );
 }
 
+/** Soft animated grapevine ornament for welcome hero (decorative only). */
+function WelcomeVineOrnament() {
+  return (
+    <div className="welcome-vine" aria-hidden="true">
+      <svg className="welcome-vine-svg" viewBox="0 0 320 56" width="280" height="49" focusable="false">
+        <defs>
+          <linearGradient id="welcome-vine-stroke" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="rgba(201,169,98,0.15)" />
+            <stop offset="50%" stopColor="rgba(201,169,98,0.85)" />
+            <stop offset="100%" stopColor="rgba(201,169,98,0.15)" />
+          </linearGradient>
+        </defs>
+        <path
+          className="welcome-vine-stem"
+          fill="none"
+          stroke="url(#welcome-vine-stroke)"
+          strokeWidth="1.4"
+          strokeLinecap="round"
+          d="M8 30 C48 12, 72 48, 110 28 S168 8, 210 30 S268 52, 312 26"
+        />
+        <g className="welcome-vine-leaf welcome-vine-leaf--a" fill="rgba(109,143,137,0.55)">
+          <ellipse cx="56" cy="18" rx="10" ry="5" transform="rotate(-28 56 18)" />
+        </g>
+        <g className="welcome-vine-leaf welcome-vine-leaf--b" fill="rgba(109,143,137,0.45)">
+          <ellipse cx="152" cy="14" rx="11" ry="5" transform="rotate(22 152 14)" />
+        </g>
+        <g className="welcome-vine-leaf welcome-vine-leaf--c" fill="rgba(109,143,137,0.5)">
+          <ellipse cx="248" cy="40" rx="10" ry="5" transform="rotate(-18 248 40)" />
+        </g>
+        <g className="welcome-vine-grapes welcome-vine-grapes--a">
+          <circle cx="98" cy="36" r="3.2" fill="rgba(124,58,90,0.75)" />
+          <circle cx="104" cy="38" r="3" fill="rgba(146,64,100,0.7)" />
+          <circle cx="100" cy="42" r="2.8" fill="rgba(110,40,75,0.72)" />
+          <circle cx="107" cy="43" r="2.6" fill="rgba(130,50,88,0.68)" />
+        </g>
+        <g className="welcome-vine-grapes welcome-vine-grapes--b">
+          <circle cx="214" cy="18" r="3.1" fill="rgba(124,58,90,0.72)" />
+          <circle cx="220" cy="20" r="2.9" fill="rgba(146,64,100,0.68)" />
+          <circle cx="216" cy="24" r="2.7" fill="rgba(110,40,75,0.7)" />
+        </g>
+      </svg>
+    </div>
+  );
+}
+
 /** Compact flag marks for welcome language buttons (ka / en / ru). */
 function WelcomeLangFlag({ lang, animated = false }) {
   const waveClass = animated ? " welcome-lang-flag--wave" : "";
@@ -5927,6 +5972,7 @@ function WelcomeScreen({ onChooseLang, tableId, tables, onTableChange }) {
           <p className="welcome-hero-ka" lang="ka">
             კეთილი იყოს თქვენი მობრძანება · Добро пожаловать
           </p>
+          <WelcomeVineOrnament />
         </header>
 
         <div className="welcome-hero-social">

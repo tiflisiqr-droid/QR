@@ -1288,6 +1288,50 @@ body {
   margin: 0 auto;
   text-align: center;
 }
+.welcome-vine {
+  display: flex;
+  justify-content: center;
+  margin: clamp(14px, 3vw, 20px) auto 0;
+  width: 100%;
+  max-width: 300px;
+  opacity: 0;
+  animation: welcomeFadeUp 1s cubic-bezier(0.22, 1, 0.36, 1) 0.42s forwards;
+  pointer-events: none;
+}
+.welcome-vine-svg {
+  width: min(280px, 72vw);
+  height: auto;
+  overflow: visible;
+}
+.welcome-vine-stem {
+  stroke-dasharray: 420;
+  stroke-dashoffset: 420;
+  animation: welcomeVineDraw 2.2s cubic-bezier(0.22, 1, 0.36, 1) 0.5s forwards;
+}
+.welcome-vine-leaf {
+  transform-origin: center;
+  animation: welcomeVineSway 3.6s ease-in-out infinite;
+}
+.welcome-vine-leaf--a { animation-delay: 0.2s; }
+.welcome-vine-leaf--b { animation-delay: 0.7s; }
+.welcome-vine-leaf--c { animation-delay: 1.1s; }
+.welcome-vine-grapes {
+  transform-origin: center top;
+  animation: welcomeVineGrape 3.2s ease-in-out infinite;
+}
+.welcome-vine-grapes--a { animation-delay: 0.4s; }
+.welcome-vine-grapes--b { animation-delay: 0.9s; }
+@keyframes welcomeVineDraw {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes welcomeVineSway {
+  0%, 100% { transform: rotate(-3deg) translateY(0); }
+  50% { transform: rotate(4deg) translateY(1px); }
+}
+@keyframes welcomeVineGrape {
+  0%, 100% { transform: translateY(0) scale(1); opacity: 0.85; }
+  50% { transform: translateY(1.5px) scale(1.04); opacity: 1; }
+}
 .welcome-hero-social {
   margin-top: clamp(20px, 4.5vw, 28px);
   width: 100%;
@@ -1813,10 +1857,19 @@ body {
   .welcome-hero-img { animation: none !important; }
   .welcome-btn-primary::before { animation: none; }
   .welcome-hero-eyebrow, .welcome-hero-title, .welcome-hero-sub, .welcome-hero-ka,
-  .welcome-hero-social .welcome-link-panel, .welcome-hero-table, .welcome-hero-divider, .welcome-hero-actions {
+  .welcome-hero-social .welcome-link-panel, .welcome-hero-table, .welcome-hero-divider, .welcome-hero-actions,
+  .welcome-vine {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;
+  }
+  .welcome-vine-stem,
+  .welcome-vine-leaf,
+  .welcome-vine-grapes {
+    animation: none !important;
+  }
+  .welcome-vine-stem {
+    stroke-dashoffset: 0 !important;
   }
 }
 .admin-panel-layout {
