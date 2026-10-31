@@ -1649,6 +1649,65 @@ body {
   border-radius: 3px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.28);
   overflow: hidden;
+  transform-origin: center left;
+}
+.welcome-btn-primary--ka {
+  isolation: isolate;
+}
+.welcome-btn-primary--ka .welcome-lang-flag {
+  width: 32px;
+  height: 21px;
+}
+.welcome-lang-flag--wave {
+  animation: welcomeFlagWave 2.8s ease-in-out infinite;
+}
+.welcome-btn-primary--ka .welcome-lang-btn-inner .welcome-lang-flag:last-child {
+  transform-origin: center right;
+  animation-delay: 0.35s;
+}
+.welcome-flag-ka-bolnisi {
+  animation: welcomeBolnisiPulse 2.4s ease-in-out infinite;
+  transform-origin: center;
+}
+.welcome-ka-ornaments {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+.welcome-btn-primary--ka .welcome-lang-btn-inner {
+  position: relative;
+  z-index: 1;
+}
+.welcome-bolnisi {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  color: rgba(180, 20, 20, 0.38);
+  animation: welcomeBolnisiFloat 3.2s ease-in-out infinite;
+}
+.welcome-bolnisi--a { top: 10px; left: 14px; animation-delay: 0s; }
+.welcome-bolnisi--b { top: 10px; right: 14px; animation-delay: 0.4s; }
+.welcome-bolnisi--c { bottom: 10px; left: 18px; animation-delay: 0.8s; }
+.welcome-bolnisi--d { bottom: 10px; right: 18px; animation-delay: 1.2s; }
+@keyframes welcomeFlagWave {
+  0%, 100% { transform: rotate(-2deg) skewY(0deg); }
+  50% { transform: rotate(2.5deg) skewY(-1deg); }
+}
+@keyframes welcomeBolnisiPulse {
+  0%, 100% { opacity: 0.85; }
+  50% { opacity: 1; }
+}
+@keyframes welcomeBolnisiFloat {
+  0%, 100% { opacity: 0.28; transform: scale(0.92) rotate(0deg); }
+  50% { opacity: 0.55; transform: scale(1.08) rotate(8deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .welcome-lang-flag--wave,
+  .welcome-flag-ka-bolnisi,
+  .welcome-bolnisi {
+    animation: none !important;
+  }
 }
 .welcome-btn-ghost {
   width: 100%;

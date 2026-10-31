@@ -5739,15 +5739,28 @@ function MenuPinSkeleton() {
   );
 }
 
+/** Bolnisi cross used as animated Georgian flag ornament. */
+function WelcomeBolnisiCross({ className = "" }) {
+  return (
+    <svg className={`welcome-bolnisi ${className}`} viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+      <path
+        fill="currentColor"
+        d="M10.6 2.2h2.8v6.4h6.4v2.8h-6.4v6.4h-2.8v-6.4H4.2v-2.8h6.4V2.2zm-5.2 1.4 1.7 1.7-1.7 1.7-1.7-1.7 1.7-1.7zm12.2 0 1.7 1.7-1.7 1.7-1.7-1.7 1.7-1.7zM5.4 17 7.1 18.7 5.4 20.4 3.7 18.7 5.4 17zm12.2 0 1.7 1.7-1.7 1.7-1.7-1.7 1.7-1.7z"
+      />
+    </svg>
+  );
+}
+
 /** Compact flag marks for welcome language buttons (ka / en / ru). */
-function WelcomeLangFlag({ lang }) {
+function WelcomeLangFlag({ lang, animated = false }) {
+  const waveClass = animated ? " welcome-lang-flag--wave" : "";
   if (lang === "ka") {
     /** Georgian flag — white field, red St George cross + four Bolnisi crosses. */
     return (
-      <svg className="welcome-lang-flag" viewBox="0 0 36 24" width="28" height="19" aria-hidden="true" focusable="false">
+      <svg className={`welcome-lang-flag${waveClass}`} viewBox="0 0 36 24" width="32" height="21" aria-hidden="true" focusable="false">
         <rect width="36" height="24" fill="#fff" rx="2" />
-        <path fill="#FF0000" d="M15 0h6v24h-6zM0 9h36v6H0z" />
-        <g fill="#FF0000">
+        <path className="welcome-flag-ka-cross" fill="#FF0000" d="M15 0h6v24h-6zM0 9h36v6H0z" />
+        <g className="welcome-flag-ka-bolnisi" fill="#FF0000">
           <path d="M7.2 3.2h1.6v5.6H7.2zm-2 2h5.6v1.6H5.2z" />
           <path d="M27.2 3.2h1.6v5.6h-1.6zm-2 2h5.6v1.6h-5.6z" />
           <path d="M7.2 15.2h1.6v5.6H7.2zm-2 2h5.6v1.6H5.2z" />
@@ -5760,7 +5773,7 @@ function WelcomeLangFlag({ lang }) {
   if (lang === "en") {
     /** Union Jack (British). */
     return (
-      <svg className="welcome-lang-flag" viewBox="0 0 36 24" width="28" height="19" aria-hidden="true" focusable="false">
+      <svg className={`welcome-lang-flag${waveClass}`} viewBox="0 0 36 24" width="28" height="19" aria-hidden="true" focusable="false">
         <rect width="36" height="24" fill="#012169" rx="2" />
         <path stroke="#fff" strokeWidth="4" d="M0 0l36 24M36 0L0 24" />
         <path stroke="#C8102E" strokeWidth="2" d="M0 0l36 24M36 0L0 24" />
@@ -5772,7 +5785,7 @@ function WelcomeLangFlag({ lang }) {
   }
   /** Russian tricolor. */
   return (
-    <svg className="welcome-lang-flag" viewBox="0 0 36 24" width="28" height="19" aria-hidden="true" focusable="false">
+    <svg className={`welcome-lang-flag${waveClass}`} viewBox="0 0 36 24" width="28" height="19" aria-hidden="true" focusable="false">
       <rect width="36" height="24" rx="2" fill="#fff" />
       <rect y="0" width="36" height="8" fill="#fff" />
       <rect y="8" width="36" height="8" fill="#0039A6" />
@@ -5898,13 +5911,20 @@ function WelcomeScreen({ onChooseLang, tableId, tables, onTableChange }) {
         </div>
 
         <div className="welcome-hero-actions">
-          <button type="button" className="welcome-btn-primary" onClick={() => onChooseLang("ka")}>
+          <button type="button" className="welcome-btn-primary welcome-btn-primary--ka" onClick={() => onChooseLang("ka")}>
+            <span className="welcome-ka-ornaments" aria-hidden="true">
+              <WelcomeBolnisiCross className="welcome-bolnisi--a" />
+              <WelcomeBolnisiCross className="welcome-bolnisi--b" />
+              <WelcomeBolnisiCross className="welcome-bolnisi--c" />
+              <WelcomeBolnisiCross className="welcome-bolnisi--d" />
+            </span>
             <span className="welcome-lang-btn-inner">
-              <WelcomeLangFlag lang="ka" />
+              <WelcomeLangFlag lang="ka" animated />
               <span className="welcome-lang-btn-text">
                 ქართული
                 <small>მენიუს გახსნა</small>
               </span>
+              <WelcomeLangFlag lang="ka" animated />
             </span>
           </button>
           <div className="welcome-hero-actions-secondary">
