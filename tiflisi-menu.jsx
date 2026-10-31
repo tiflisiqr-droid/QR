@@ -2130,13 +2130,28 @@ function CustomerMenu({ tableId, store, lang }) {
     skipScrollSpyRef.current = true;
     chipCenterRequestedRef.current = true;
     setActiveCat(null);
-    if (!scrollToSection(MENU_TOP_SECTION_ID)) {
-      window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? "auto" : "smooth" });
-    }
+    window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? "auto" : "smooth" });
     window.setTimeout(() => {
       skipScrollSpyRef.current = false;
     }, 950);
-  }, [scrollToSection]);
+  }, []);
+
+  /** Keep CSS scroll-margin in sync with real sticky nav height (search + chips). */
+  useEffect(() => {
+    const nav = headerRef.current;
+    if (!nav || typeof ResizeObserver === "undefined") return undefined;
+    const sync = () => {
+      const h = Math.ceil(nav.getBoundingClientRect().height) + 12;
+      document.documentElement.style.setProperty("--menu-sticky-offset", `${h}px`);
+    };
+    sync();
+    const ro = new ResizeObserver(sync);
+    ro.observe(nav);
+    return () => {
+      ro.disconnect();
+      document.documentElement.style.removeProperty("--menu-sticky-offset");
+    };
+  }, []);
 
   /** Sync active category chip with scroll position (spy). */
   useEffect(() => {
@@ -2145,20 +2160,38 @@ function CustomerMenu({ tableId, store, lang }) {
       const nav = headerRef.current;
       if (!nav) return;
       const line = nav.getBoundingClientRect().bottom + 10;
-      let current = grouped[0]?.id ?? null;
-      for (const cat of grouped) {
-        const el = catRefs.current[String(cat.id)];
-        if (!el) continue;
-        const top = el.getBoundingClientRect().top;
-        if (top <= line) current = cat.id;
+      let current = null;
+      const first = grouped[0];
+      if (first) {
+        const firstEl = catRefs.current[String(first.id)];
+        /** Above first category section → "All" stays active. */
+        if (firstEl && firstEl.getBoundingClientRect().top > line + 8) {
+          current = null;
+        } else {
+          current = first.id;
+          for (const cat of grouped) {
+            const el = catRefs.current[String(cat.id)];
+            if (!el) continue;
+            if (el.getBoundingClientRect().top <= line) current = cat.id;
+          }
+        }
       }
-      const nearBottom =
-        typeof window !== "undefined" &&
-        window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4;
+      const doc = document.documentElement;
+      const bottomSlack = Math.max(48, Math.round(window.innerHeight * 0.06));
+      const nearBottom = window.innerHeight + window.scrollY >= doc.scrollHeight - bottomSlack;
       if (nearBottom && grouped.length > 0) {
-        current = grouped[grouped.length - 1].id;
+        const last = grouped[grouped.length - 1];
+        const lastEl = catRefs.current[String(last.id)];
+        /** Only force last category when its section has actually reached the spy line. */
+        if (!lastEl || lastEl.getBoundingClientRect().top <= line) {
+          current = last.id;
+        }
       }
-      setActiveCat((prev) => (String(prev) === String(current) ? prev : current));
+      setActiveCat((prev) => {
+        if (prev == null && current == null) return prev;
+        if (prev != null && current != null && String(prev) === String(current)) return prev;
+        return current;
+      });
     };
 
     let raf = 0;
@@ -2180,19 +2213,35 @@ function CustomerMenu({ tableId, store, lang }) {
     };
   }, [grouped]);
 
-  /** Keep chip strip stable while page scrolls; center chip only for explicit clicks. */
+  /**
+   * Chip strip: always center on explicit click; on spy change only nudge if chip is off-screen
+   * (avoids constant horizontal jumping while scrolling).
+   */
   useLayoutEffect(() => {
-    if (!chipCenterRequestedRef.current) return;
-    chipCenterRequestedRef.current = false;
     const wrap = catScrollRef.current;
     if (!wrap) return;
     const key = activeCat == null ? "all" : String(activeCat);
-    const esc = typeof CSS !== "undefined" && typeof CSS.escape === "function" ? CSS.escape(key) : key.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+    const esc =
+      typeof CSS !== "undefined" && typeof CSS.escape === "function"
+        ? CSS.escape(key)
+        : key.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
     const btn = wrap.querySelector(`[data-cat-tab="${esc}"]`);
-    if (btn) {
-      const targetLeft = btn.offsetLeft - (wrap.clientWidth - btn.offsetWidth) / 2;
-      wrap.scrollTo({ left: Math.max(0, targetLeft), behavior: "auto" });
-    }
+    if (!btn) return;
+
+    const forceCenter = chipCenterRequestedRef.current;
+    if (forceCenter) chipCenterRequestedRef.current = false;
+
+    const wrapRect = wrap.getBoundingClientRect();
+    const btnRect = btn.getBoundingClientRect();
+    const pad = 10;
+    const offscreen = btnRect.left < wrapRect.left + pad || btnRect.right > wrapRect.right - pad;
+    if (!forceCenter && !offscreen) return;
+
+    const targetLeft = btn.offsetLeft - (wrap.clientWidth - btn.offsetWidth) / 2;
+    wrap.scrollTo({
+      left: Math.max(0, targetLeft),
+      behavior: forceCenter || prefersReducedMotion() ? "auto" : "smooth",
+    });
   }, [activeCat]);
 
   return (
@@ -2217,7 +2266,11 @@ function CustomerMenu({ tableId, store, lang }) {
       </div>
 
       {/* STICKY NAV */}
-      <div ref={headerRef} className="menu-sticky-nav" style={{ position: "sticky", top: 0, zIndex: 100, overflowAnchor: "none" }}>
+      <div
+        ref={headerRef}
+        className="menu-sticky-nav"
+        style={{ position: "sticky", top: "env(safe-area-inset-top, 0px)", zIndex: 100, overflowAnchor: "none" }}
+      >
         <div className="menu-sticky-nav-inner">
           <div className="menu-search-wrap">
             <span className="menu-search-icon" aria-hidden="true">✦</span>

@@ -114,11 +114,12 @@ body {
 .menu-main-column--cart {
   padding-bottom: max(232px, calc(196px + env(safe-area-inset-bottom, 0px)));
 }
-/* Keep section title visible below sticky category nav. */
+/* Keep section title visible below sticky category nav (synced from JS → --menu-sticky-offset). */
 .menu-cat-section-anchor {
-  scroll-margin-top: 132px;
+  scroll-margin-top: var(--menu-sticky-offset, 132px);
 }
 .menu-sticky-nav {
+  top: env(safe-area-inset-top, 0px);
   background: rgba(5, 10, 10, 0.78) !important;
   backdrop-filter: blur(22px) saturate(1.2);
   -webkit-backdrop-filter: blur(22px) saturate(1.2);
@@ -1974,11 +1975,11 @@ body {
 
 /* Scroll-target offsets for sticky category/search bar */
 .dish-card.menu-dish-card.menu-dish-anchor {
-  scroll-margin-top: min(132px, 34vw);
+  scroll-margin-top: var(--menu-sticky-offset, min(132px, 34vw));
 }
 @media (min-width: 521px) {
   .dish-card.menu-dish-card.menu-dish-anchor {
-    scroll-margin-top: 108px;
+    scroll-margin-top: var(--menu-sticky-offset, 108px);
   }
 }
 
