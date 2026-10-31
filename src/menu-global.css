@@ -1621,6 +1621,35 @@ body {
   text-transform: uppercase;
   opacity: 0.72;
 }
+.welcome-lang-btn-inner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+}
+.welcome-lang-btn-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  line-height: 1.15;
+}
+.welcome-btn-primary .welcome-lang-btn-inner {
+  justify-content: center;
+}
+.welcome-btn-primary .welcome-lang-btn-text {
+  align-items: center;
+  text-align: center;
+}
+.welcome-lang-flag {
+  flex-shrink: 0;
+  width: 28px;
+  height: 19px;
+  border-radius: 3px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.28);
+  overflow: hidden;
+}
 .welcome-btn-ghost {
   width: 100%;
   min-height: 52px;

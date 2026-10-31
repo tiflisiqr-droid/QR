@@ -5739,6 +5739,49 @@ function MenuPinSkeleton() {
   );
 }
 
+/** Compact flag marks for welcome language buttons (ka / en / ru). */
+function WelcomeLangFlag({ lang }) {
+  if (lang === "ka") {
+    /** Georgian flag — white field, red St George cross + four Bolnisi crosses. */
+    return (
+      <svg className="welcome-lang-flag" viewBox="0 0 36 24" width="28" height="19" aria-hidden="true" focusable="false">
+        <rect width="36" height="24" fill="#fff" rx="2" />
+        <path fill="#FF0000" d="M15 0h6v24h-6zM0 9h36v6H0z" />
+        <g fill="#FF0000">
+          <path d="M7.2 3.2h1.6v5.6H7.2zm-2 2h5.6v1.6H5.2z" />
+          <path d="M27.2 3.2h1.6v5.6h-1.6zm-2 2h5.6v1.6h-5.6z" />
+          <path d="M7.2 15.2h1.6v5.6H7.2zm-2 2h5.6v1.6H5.2z" />
+          <path d="M27.2 15.2h1.6v5.6h-1.6zm-2 2h5.6v1.6h-5.6z" />
+        </g>
+        <rect x="0.4" y="0.4" width="35.2" height="23.2" fill="none" stroke="rgba(0,0,0,0.12)" rx="1.8" />
+      </svg>
+    );
+  }
+  if (lang === "en") {
+    /** Union Jack (British). */
+    return (
+      <svg className="welcome-lang-flag" viewBox="0 0 36 24" width="28" height="19" aria-hidden="true" focusable="false">
+        <rect width="36" height="24" fill="#012169" rx="2" />
+        <path stroke="#fff" strokeWidth="4" d="M0 0l36 24M36 0L0 24" />
+        <path stroke="#C8102E" strokeWidth="2" d="M0 0l36 24M36 0L0 24" />
+        <path stroke="#fff" strokeWidth="7" d="M18 0v24M0 12h36" />
+        <path stroke="#C8102E" strokeWidth="4" d="M18 0v24M0 12h36" />
+        <rect x="0.4" y="0.4" width="35.2" height="23.2" fill="none" stroke="rgba(0,0,0,0.12)" rx="1.8" />
+      </svg>
+    );
+  }
+  /** Russian tricolor. */
+  return (
+    <svg className="welcome-lang-flag" viewBox="0 0 36 24" width="28" height="19" aria-hidden="true" focusable="false">
+      <rect width="36" height="24" rx="2" fill="#fff" />
+      <rect y="0" width="36" height="8" fill="#fff" />
+      <rect y="8" width="36" height="8" fill="#0039A6" />
+      <rect y="16" width="36" height="8" fill="#D52B1E" />
+      <rect x="0.4" y="0.4" width="35.2" height="23.2" fill="none" stroke="rgba(0,0,0,0.12)" rx="1.8" />
+    </svg>
+  );
+}
+
 function WelcomeScreen({ onChooseLang, tableId, tables, onTableChange }) {
   const [finePointer, setFinePointer] = useState(false);
   const [shift, setShift] = useState({ x: 0, y: 0 });
@@ -5856,15 +5899,26 @@ function WelcomeScreen({ onChooseLang, tableId, tables, onTableChange }) {
 
         <div className="welcome-hero-actions">
           <button type="button" className="welcome-btn-primary" onClick={() => onChooseLang("ka")}>
-            ქართული
-            <small>მენიუს გახსნა</small>
+            <span className="welcome-lang-btn-inner">
+              <WelcomeLangFlag lang="ka" />
+              <span className="welcome-lang-btn-text">
+                ქართული
+                <small>მენიუს გახსნა</small>
+              </span>
+            </span>
           </button>
           <div className="welcome-hero-actions-secondary">
             <button type="button" className="welcome-btn-ghost" onClick={() => onChooseLang("en")}>
-              English
+              <span className="welcome-lang-btn-inner">
+                <WelcomeLangFlag lang="en" />
+                <span>English</span>
+              </span>
             </button>
             <button type="button" className="welcome-btn-ghost" onClick={() => onChooseLang("ru")}>
-              Русский
+              <span className="welcome-lang-btn-inner">
+                <WelcomeLangFlag lang="ru" />
+                <span>Русский</span>
+              </span>
             </button>
           </div>
         </div>
