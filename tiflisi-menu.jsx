@@ -5416,9 +5416,6 @@ function StaffZonePicker({ zones, tables, notifications, tablesLoading, onChoose
             <div style={{ fontFamily: "var(--font-display)", fontSize: "clamp(1.85rem, 5.8vw, 2.35rem)", fontWeight: 600, fontStyle: "italic", color: "var(--brick-deep, #5a2a22)", letterSpacing: "-0.015em", lineHeight: 1.08 }}>
               აირჩიეთ დარბაზი
             </div>
-            <div style={{ marginTop: 8, fontSize: 14, color: "var(--muted)", fontWeight: 500, lineHeight: 1.4 }}>
-              მხოლოდ ამ დარბაზის მაგიდების მოთხოვნები გამოჩნდება
-            </div>
           </div>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8, flexShrink: 0 }}>
             {notifControl}
@@ -5655,40 +5652,24 @@ function StaffAlertsScreen({ store, onLogout }) {
     <div className="staff-waiter-screen staff-theme" style={{ minHeight: "100vh", position: "relative", display: "flex", flexDirection: "column" }}>
       <div className="noise" />
       <header className="staff-shell-header staff-shell-header--sticky">
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-              <span style={{ fontSize: 11, letterSpacing: "0.16em", color: "var(--gold)", textTransform: "uppercase", fontWeight: 800 }}>მიმტანი</span>
+        <div className="staff-shell-header-bar">
+          <div className="staff-shell-header-copy">
+            <div className="staff-shell-header-kicker">
+              <span>მიმტანი</span>
               {unread > 0 ? <span className="staff-live-dot" aria-hidden /> : null}
+              <span className="staff-shell-zone-chip">
+                <span aria-hidden>{zoneMeta.mark}</span>
+                {zoneMeta.label}
+              </span>
             </div>
-            <div style={{ fontFamily: "var(--font-display)", fontSize: "clamp(1.6rem, 4.8vw, 2.05rem)", fontWeight: 600, fontStyle: "italic", marginTop: 4, color: "var(--brick-deep, #5a2a22)", lineHeight: 1.08, letterSpacing: "-0.015em" }}>
-              მოთხოვნები
-            </div>
-            <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 8,
-                marginTop: 10,
-                padding: "6px 12px",
-                borderRadius: 999,
-                background: "rgba(61,191,176,0.14)",
-                border: "1px solid rgba(61,191,176,0.28)",
-                color: "#2a9a8d",
-                fontSize: 13,
-                fontWeight: 700,
-              }}
-            >
-              <span aria-hidden>{zoneMeta.mark}</span>
-              {zoneMeta.label}
-            </div>
+            <div className="staff-shell-header-title">მოთხოვნები</div>
           </div>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8, flexShrink: 0 }}>
+          <div className="staff-shell-header-actions">
             {notifControl}
-            <button type="button" className="staff-soft-btn" onClick={goPickZone} style={{ padding: "9px 14px", fontSize: 12, textTransform: "uppercase" }}>
+            <button type="button" className="staff-soft-btn" onClick={goPickZone}>
               დარბაზი
             </button>
-            <button type="button" className="staff-ghost-btn" onClick={pickLogout} style={{ padding: "9px 14px", fontSize: 12, textTransform: "uppercase" }}>
+            <button type="button" className="staff-ghost-btn" onClick={pickLogout}>
               გასვლა
             </button>
           </div>
