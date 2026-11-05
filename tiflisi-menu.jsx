@@ -386,13 +386,20 @@ function sumCartQtyForDish(cart, dishId) {
 /** Shared across tabs so guest menu (/) and admin (/admin) see the same alerts. */
 const NOTIF_STORAGE_KEY = "tiflisi_notifications_v1";
 
-/** Staff session: last chosen seating zone (hall). */
+/** Staff: last chosen seating zone — localStorage so PWA reopen keeps it until logout. */
 const STAFF_ZONE_STORAGE_KEY = "tiflisi_staff_zone_v1";
 
 function readStaffZoneSession(validZones) {
   if (!Array.isArray(validZones) || validZones.length === 0) return null;
   try {
-    const raw = sessionStorage.getItem(STAFF_ZONE_STORAGE_KEY);
+    let raw = localStorage.getItem(STAFF_ZONE_STORAGE_KEY);
+    if (!raw) {
+      raw = sessionStorage.getItem(STAFF_ZONE_STORAGE_KEY);
+      if (raw) {
+        localStorage.setItem(STAFF_ZONE_STORAGE_KEY, raw);
+        sessionStorage.removeItem(STAFF_ZONE_STORAGE_KEY);
+      }
+    }
     if (!raw || !validZones.includes(raw)) return null;
     return raw;
   } catch {
@@ -402,7 +409,8 @@ function readStaffZoneSession(validZones) {
 
 function writeStaffZoneSession(zone) {
   try {
-    sessionStorage.setItem(STAFF_ZONE_STORAGE_KEY, String(zone));
+    localStorage.setItem(STAFF_ZONE_STORAGE_KEY, String(zone));
+    sessionStorage.removeItem(STAFF_ZONE_STORAGE_KEY);
   } catch {
     /* ignore */
   }
@@ -410,18 +418,25 @@ function writeStaffZoneSession(zone) {
 
 function clearStaffZoneSession() {
   try {
+    localStorage.removeItem(STAFF_ZONE_STORAGE_KEY);
     sessionStorage.removeItem(STAFF_ZONE_STORAGE_KEY);
   } catch {
     /* ignore */
   }
 }
 
-/** მიმტანის OS / browser notification preference. */
+/** მიმტანის OS / browser notification preference (persists across app restarts). */
 const STAFF_BROWSER_NOTIF_KEY = "tiflisi_staff_browser_notif_v1";
 
 function readStaffBrowserNotifPref() {
   try {
-    return sessionStorage.getItem(STAFF_BROWSER_NOTIF_KEY) === "1";
+    if (localStorage.getItem(STAFF_BROWSER_NOTIF_KEY) === "1") return true;
+    if (sessionStorage.getItem(STAFF_BROWSER_NOTIF_KEY) === "1") {
+      localStorage.setItem(STAFF_BROWSER_NOTIF_KEY, "1");
+      sessionStorage.removeItem(STAFF_BROWSER_NOTIF_KEY);
+      return true;
+    }
+    return false;
   } catch {
     return false;
   }
@@ -429,8 +444,13 @@ function readStaffBrowserNotifPref() {
 
 function writeStaffBrowserNotifPref(on) {
   try {
-    if (on) sessionStorage.setItem(STAFF_BROWSER_NOTIF_KEY, "1");
-    else sessionStorage.removeItem(STAFF_BROWSER_NOTIF_KEY);
+    if (on) {
+      localStorage.setItem(STAFF_BROWSER_NOTIF_KEY, "1");
+      sessionStorage.removeItem(STAFF_BROWSER_NOTIF_KEY);
+    } else {
+      localStorage.removeItem(STAFF_BROWSER_NOTIF_KEY);
+      sessionStorage.removeItem(STAFF_BROWSER_NOTIF_KEY);
+    }
   } catch {
     /* ignore */
   }
@@ -479,7 +499,7 @@ function showStaffOsNotification({ title, body, tag }) {
   }
 }
 
-/** Admin / staff ლოგინი — იგივე ტაბში გადატვირთვის შემდეგ არ მოიხსნას (პაროლს არ ვინახავთ). */
+/** Admin: ტაბის session. Staff: localStorage — აპის ხელახლა გახსნაზეც რჩება სანამ გასვლას არ დააჭერს. */
 const ADMIN_AUTH_STORAGE_KEY = "tiflisi_admin_auth_v1";
 const STAFF_AUTH_STORAGE_KEY = "tiflisi_staff_auth_v1";
 /** Staff: სიის გასუფთავება (იგივე პაროლი, რაც მიმტანის შესვლაზე). */
@@ -495,7 +515,13 @@ function readPersistedAdminAuth() {
 
 function readPersistedStaffAuth() {
   try {
-    return sessionStorage.getItem(STAFF_AUTH_STORAGE_KEY) === "1";
+    if (localStorage.getItem(STAFF_AUTH_STORAGE_KEY) === "1") return true;
+    if (sessionStorage.getItem(STAFF_AUTH_STORAGE_KEY) === "1") {
+      localStorage.setItem(STAFF_AUTH_STORAGE_KEY, "1");
+      sessionStorage.removeItem(STAFF_AUTH_STORAGE_KEY);
+      return true;
+    }
+    return false;
   } catch {
     return false;
   }
@@ -512,8 +538,13 @@ function setPersistedAdminAuth(ok) {
 
 function setPersistedStaffAuth(ok) {
   try {
-    if (ok) sessionStorage.setItem(STAFF_AUTH_STORAGE_KEY, "1");
-    else sessionStorage.removeItem(STAFF_AUTH_STORAGE_KEY);
+    if (ok) {
+      localStorage.setItem(STAFF_AUTH_STORAGE_KEY, "1");
+      sessionStorage.removeItem(STAFF_AUTH_STORAGE_KEY);
+    } else {
+      localStorage.removeItem(STAFF_AUTH_STORAGE_KEY);
+      sessionStorage.removeItem(STAFF_AUTH_STORAGE_KEY);
+    }
   } catch {
     /* ignore */
   }
