@@ -2570,3 +2570,175 @@ body.staff-route ::-webkit-scrollbar-thumb { background: #b7a99a; }
     outline-offset: 0;
   }
 }
+
+/* ─── PWA install prompt ─────────────────────────────────────────────────── */
+.pwa-install {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+.pwa-install--welcome {
+  margin-top: clamp(18px, 4vw, 26px);
+  opacity: 0;
+  animation: welcomeFadeUp 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.75s forwards;
+}
+.pwa-install--menu {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  /* Sit above the guest bottom dock (waiter / bill / cart) */
+  bottom: calc(118px + env(safe-area-inset-bottom, 0px));
+  z-index: 90;
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 10px;
+  border-radius: 18px;
+  background: rgba(8, 12, 14, 0.92);
+  border: 1px solid rgba(201, 169, 98, 0.28);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+}
+.menu-main-column--cart ~ .pwa-install--menu,
+.menu-page-shell:has(.menu-cart-open-btn) .pwa-install--menu {
+  bottom: calc(168px + env(safe-area-inset-bottom, 0px));
+}
+.pwa-install-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 360px;
+  padding: 12px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(201, 169, 98, 0.45);
+  background: linear-gradient(135deg, rgba(201, 169, 98, 0.18), rgba(61, 191, 176, 0.08));
+  color: var(--cream, #f4f1ea);
+  cursor: pointer;
+  font-family: var(--font-body, "Montserrat", sans-serif);
+  text-align: left;
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+.pwa-install-btn:hover {
+  transform: translateY(-1px);
+  border-color: rgba(201, 169, 98, 0.75);
+  background: linear-gradient(135deg, rgba(201, 169, 98, 0.26), rgba(61, 191, 176, 0.12));
+}
+.pwa-install-btn:active {
+  transform: translateY(0);
+}
+.pwa-install-btn__icon {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(201, 169, 98, 0.16);
+  color: #c9a962;
+}
+.pwa-install-btn__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.pwa-install-btn__text strong {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.pwa-install-btn__text small {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: rgba(244, 241, 234, 0.62);
+  text-transform: none;
+}
+.pwa-install-dismiss {
+  border: 0;
+  background: transparent;
+  color: rgba(244, 241, 234, 0.45);
+  font-family: var(--font-body, "Montserrat", sans-serif);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+.pwa-install-dismiss:hover {
+  color: rgba(244, 241, 234, 0.75);
+}
+.pwa-ios-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+  background: rgba(0, 0, 0, 0.62);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 16px;
+  padding-bottom: max(16px, env(safe-area-inset-bottom, 0px));
+}
+.pwa-ios-sheet {
+  width: 100%;
+  max-width: 420px;
+  border-radius: 22px 22px 18px 18px;
+  background: linear-gradient(180deg, #12161a 0%, #0a0c0e 100%);
+  border: 1px solid rgba(201, 169, 98, 0.28);
+  padding: 22px 20px 18px;
+  color: var(--cream, #f4f1ea);
+  font-family: var(--font-body, "Montserrat", sans-serif);
+  box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.5);
+}
+.pwa-ios-sheet__title {
+  font-family: var(--font-display, "Cormorant Garamond", serif);
+  font-size: 26px;
+  font-style: italic;
+  font-weight: 400;
+  margin-bottom: 8px;
+}
+.pwa-ios-sheet__body {
+  margin: 0 0 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(244, 241, 234, 0.7);
+}
+.pwa-ios-sheet__steps {
+  margin: 0 0 18px;
+  padding-left: 1.2em;
+  font-size: 13px;
+  line-height: 1.55;
+  color: rgba(244, 241, 234, 0.88);
+}
+.pwa-ios-sheet__steps li + li {
+  margin-top: 8px;
+}
+.pwa-ios-sheet__ok {
+  width: 100%;
+  min-height: 48px;
+  border-radius: 999px;
+  border: 1px solid rgba(201, 169, 98, 0.55);
+  background: rgba(201, 169, 98, 0.16);
+  color: #f4f1ea;
+  font-family: var(--font-body, "Montserrat", sans-serif);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pwa-install--welcome {
+    opacity: 1;
+    animation: none;
+  }
+}
+@media (display-mode: standalone), (display-mode: fullscreen) {
+  .pwa-install {
+    display: none !important;
+  }
+}
