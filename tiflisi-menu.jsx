@@ -718,9 +718,9 @@ function badgeLabelForKey(b, lang, catalog, t) {
 }
 
 const T = {
-  en:{menu:"Menu",callWaiter:"Summon Waiter",requestBill:"Request Bill",ingredients:"Provenance",soldOut:"Unavailable",table:"Table",waiterCalled:"Your waiter is on the way.",billRequested:"Your bill is being prepared.",notifyFailed:"Could not save. Please try again.",staffAlertCloudFallback:"Couldn't reach the server. If staff doesn't respond, ask your waiter.",search:"Search the menu…",all:"All",adminLogin:"Staff Access",login:"Enter",dashboard:"Overview",menuMgmt:"Cuisine",tables:"Seating",notifications:"Alerts",analytics:"Insights",logout:"Exit",addDish:"New Dish",save:"Save",cancel:"Cancel",available:"Available",featured:"Recommended",chefChoice:"Chef's choice",badges:"Distinctions",badgeDry:"Dry",badgeSemiDry:"Semi-Dry",badgeSemiSweet:"Semi-Sweet",chooseOptions:"Choose size",cart:"Basket",cartTotal:"Total",addToCart:"Add",cartHint:"Estimated total for your selection (reference only).",emptyCart:"Your basket is empty.",cartQty:"Qty",cartClose:"Close",submitOrder:"Submit order",confirmOrderTitle:"Send this order?",confirmOrderBody:"Staff will receive your table order in alerts (amount is indicative — confirm at the venue).",confirmOrderBtn:"Confirm & send",orderSent:"Order sent.",portionGramsTitle:"Portion",gramsAbbr:"g",adminPortionGrams:"Net portion (g)",adminPortionGramsHint:"Optional. Shown on the guest menu. Or set Amount + g on each size row below.",variantAmount:"Amount",variantUnit:"Unit",share:"Share",shareCopied:"Link copied",shareFailed:"Could not share",installApp:"Install app",installAppHint:"Add Tiflisi menu to your home screen",installDismiss:"Not now",installIosTitle:"Add to Home Screen",installIosBody:"Install Tiflisi like an app on your iPhone or iPad.",installIosStep1:"Tap the Share button in Safari",installIosStep2:"Scroll and choose “Add to Home Screen”",installIosStep3:"Tap Add — the menu opens like an app",installGotIt:"Got it"},
-  ka:{menu:"მენიუ",callWaiter:"მიმტანის გამოძახება",requestBill:"ანგარიშის მოთხოვნა",ingredients:"წარმომავლობა",soldOut:"მიუწვდომელი",table:"მაგიდა",waiterCalled:"მიმტანი მოდის.",billRequested:"ანგარიში მზადდება.",notifyFailed:"ვერ შენახა — სცადეთ თავიდან.",staffAlertCloudFallback:"სერვერთან კავშირი ვერ დამყარდა — დაუძახეთ მიმტანს, თუ არავინ მოდის.",search:"მოძებნეთ…",all:"ყველა",adminLogin:"პერსონალი",login:"შესვლა",dashboard:"მიმოხილვა",menuMgmt:"სამზარეულო",tables:"მოსასვლელი",notifications:"შეტყობინებები",analytics:"ანალიტიკა",logout:"გამოსვლა",addDish:"ახალი კერძი",save:"შენახვა",cancel:"გაუქმება",available:"ხელმისაწვდომი",featured:"რეკომენდებული",chefChoice:"შეფის არჩევანი",badges:"გამოჩენილი",badgeDry:"მშრალი",badgeSemiDry:"ნახევრადმშრალი",badgeSemiSweet:"ნახევრადტკბილი",chooseOptions:"ზომა / ფასი",cart:"კალათა",cartTotal:"ჯამი",addToCart:"დამატება",cartHint:"არჩეული კერძების სავარაუდო ჯამი (საინფორმაციოდ).",emptyCart:"კალათა ცარიელია.",cartQty:"რაოდ.",cartClose:"დახურვა",submitOrder:"შეკვეთის გაგზავნა",confirmOrderTitle:"გავაგზავნოთ შეკვეთა?",confirmOrderBody:"პერსონალი მიიღებს შეკვეთას შეტყობინებაში (ჯამი საინფორმაციოა — დაადასტურეთ ადგილზე).",confirmOrderBtn:"დადასტურება",orderSent:"შეკვეთა გაიგზავნა.",portionGramsTitle:"პორცია",gramsAbbr:"გ",adminPortionGrams:"წონა (გ)",adminPortionGramsHint:"არჩევითი — სტუმრის მენიუზე ჩანს. ან ქვედა ხაზებზე: რაოდენობა + g.",variantAmount:"რაოდენობა",variantUnit:"ერთეული",share:"გაზიარება",shareCopied:"ბმული დაკოპირდა",shareFailed:"გაზიარება ვერ მოხერხდა",installApp:"აპის დაყენება",installAppHint:"დაამატეთ Tiflisi მენიუ მთავარ ეკრანზე",installDismiss:"ახლა არა",installIosTitle:"მთავარ ეკრანზე დამატება",installIosBody:"დააყენეთ Tiflisi აპლიკაციად iPhone-ზე ან iPad-ზე.",installIosStep1:"Safari-ში დააჭირეთ Share ღილაკს",installIosStep2:"აირჩიეთ „Add to Home Screen“ / „მთავარ ეკრანზე“",installIosStep3:"დააჭირეთ Add — მენიუ გაიხსნება როგორც აპი",installGotIt:"გასაგებია"},
-  ru:{menu:"Меню",callWaiter:"Позвать Официанта",requestBill:"Попросить Счёт",ingredients:"Происхождение",soldOut:"Недоступно",table:"Стол",waiterCalled:"Официант уже идёт.",billRequested:"Счёт готовится.",notifyFailed:"Не удалось сохранить. Попробуйте снова.",staffAlertCloudFallback:"Нет связи с сервером. Если персонал не отвечает — позовите официанта.",search:"Поиск…",all:"Все",adminLogin:"Персонал",login:"Войти",dashboard:"Обзор",menuMgmt:"Кухня",tables:"Места",notifications:"Оповещения",analytics:"Аналитика",logout:"Выйти",addDish:"Новое Блюдо",save:"Сохранить",cancel:"Отмена",available:"Доступно",featured:"Рекомендуем",chefChoice:"Выбор шефа",badges:"Отличия",badgeDry:"Сухое",badgeSemiDry:"Полусухое",badgeSemiSweet:"Полусладкое",chooseOptions:"Размер и цена",cart:"Корзина",cartTotal:"Итого",addToCart:"В корзину",cartHint:"Ориентировочная сумма выбранных блюд (справочно).",emptyCart:"Корзина пуста.",cartQty:"Кол-во",cartClose:"Закрыть",submitOrder:"Отправить заказ",confirmOrderTitle:"Отправить заказ?",confirmOrderBody:"Персонал получит заказ в оповещениях (сумма ориентировочная — уточните у официанта).",confirmOrderBtn:"Подтвердить",orderSent:"Заказ отправлен.",portionGramsTitle:"Порция",gramsAbbr:"г",adminPortionGrams:"Вес порции (г)",adminPortionGramsHint:"Необязательно — полоска в меню. Или укажите количество + г в строках размеров.",variantAmount:"Кол-во",variantUnit:"Ед.",share:"Поделиться",shareCopied:"Ссылка скопирована",shareFailed:"Не удалось поделиться",installApp:"Установить приложение",installAppHint:"Добавьте меню Tiflisi на домашний экран",installDismiss:"Не сейчас",installIosTitle:"На экран «Домой»",installIosBody:"Установите Tiflisi как приложение на iPhone или iPad.",installIosStep1:"В Safari нажмите кнопку Поделиться",installIosStep2:"Выберите «На экран „Домой“»",installIosStep3:"Нажмите Добавить — меню откроется как приложение",installGotIt:"Понятно"},
+  en:{menu:"Menu",callWaiter:"Summon Waiter",requestBill:"Request Bill",ingredients:"Provenance",soldOut:"Unavailable",table:"Table",waiterCalled:"Your waiter is on the way.",billRequested:"Your bill is being prepared.",notifyFailed:"Could not save. Please try again.",staffAlertCloudFallback:"Couldn't reach the server. If staff doesn't respond, ask your waiter.",search:"Search the menu…",all:"All",adminLogin:"Staff Access",login:"Enter",dashboard:"Overview",menuMgmt:"Cuisine",tables:"Seating",notifications:"Alerts",analytics:"Insights",logout:"Exit",addDish:"New Dish",save:"Save",cancel:"Cancel",available:"Available",featured:"Recommended",chefChoice:"Chef's choice",badges:"Distinctions",badgeDry:"Dry",badgeSemiDry:"Semi-Dry",badgeSemiSweet:"Semi-Sweet",chooseOptions:"Choose size",cart:"Basket",cartTotal:"Total",addToCart:"Add",cartHint:"Estimated total for your selection (reference only).",emptyCart:"Your basket is empty.",cartQty:"Qty",cartClose:"Close",submitOrder:"Submit order",confirmOrderTitle:"Send this order?",confirmOrderBody:"Staff will receive your table order in alerts (amount is indicative — confirm at the venue).",confirmOrderBtn:"Confirm & send",orderSent:"Order sent.",portionGramsTitle:"Portion",gramsAbbr:"g",adminPortionGrams:"Net portion (g)",adminPortionGramsHint:"Optional. Shown on the guest menu. Or set Amount + g on each size row below.",variantAmount:"Amount",variantUnit:"Unit",share:"Share",shareCopied:"Link copied",shareFailed:"Could not share",installApp:"Install staff app",installAppHint:"Open waiter alerts from your home screen",installDismiss:"Not now",installIosTitle:"Add to Home Screen",installIosBody:"Install the Tiflisi waiter panel on your iPhone or iPad.",installIosStep1:"Open this page in Safari: /staff",installIosStep2:"Tap Share, then “Add to Home Screen”",installIosStep3:"Tap Add — the waiter app opens at /staff",installGotIt:"Got it"},
+  ka:{menu:"მენიუ",callWaiter:"მიმტანის გამოძახება",requestBill:"ანგარიშის მოთხოვნა",ingredients:"წარმომავლობა",soldOut:"მიუწვდომელი",table:"მაგიდა",waiterCalled:"მიმტანი მოდის.",billRequested:"ანგარიში მზადდება.",notifyFailed:"ვერ შენახა — სცადეთ თავიდან.",staffAlertCloudFallback:"სერვერთან კავშირი ვერ დამყარდა — დაუძახეთ მიმტანს, თუ არავინ მოდის.",search:"მოძებნეთ…",all:"ყველა",adminLogin:"პერსონალი",login:"შესვლა",dashboard:"მიმოხილვა",menuMgmt:"სამზარეულო",tables:"მოსასვლელი",notifications:"შეტყობინებები",analytics:"ანალიტიკა",logout:"გამოსვლა",addDish:"ახალი კერძი",save:"შენახვა",cancel:"გაუქმება",available:"ხელმისაწვდომი",featured:"რეკომენდებული",chefChoice:"შეფის არჩევანი",badges:"გამოჩენილი",badgeDry:"მშრალი",badgeSemiDry:"ნახევრადმშრალი",badgeSemiSweet:"ნახევრადტკბილი",chooseOptions:"ზომა / ფასი",cart:"კალათა",cartTotal:"ჯამი",addToCart:"დამატება",cartHint:"არჩეული კერძების სავარაუდო ჯამი (საინფორმაციოდ).",emptyCart:"კალათა ცარიელია.",cartQty:"რაოდ.",cartClose:"დახურვა",submitOrder:"შეკვეთის გაგზავნა",confirmOrderTitle:"გავაგზავნოთ შეკვეთა?",confirmOrderBody:"პერსონალი მიიღებს შეკვეთას შეტყობინებაში (ჯამი საინფორმაციოა — დაადასტურეთ ადგილზე).",confirmOrderBtn:"დადასტურება",orderSent:"შეკვეთა გაიგზავნა.",portionGramsTitle:"პორცია",gramsAbbr:"გ",adminPortionGrams:"წონა (გ)",adminPortionGramsHint:"არჩევითი — სტუმრის მენიუზე ჩანს. ან ქვედა ხაზებზე: რაოდენობა + g.",variantAmount:"რაოდენობა",variantUnit:"ერთეული",share:"გაზიარება",shareCopied:"ბმული დაკოპირდა",shareFailed:"გაზიარება ვერ მოხერხდა",installApp:"აპის დაყენება",installAppHint:"მიმტანის პანელი მთავარ ეკრანზე",installDismiss:"ახლა არა",installIosTitle:"მთავარ ეკრანზე დამატება",installIosBody:"დააყენეთ Tiflisi მიმტანის პანელი iPhone-ზე ან iPad-ზე.",installIosStep1:"გახსენით Safari-ში გვერდი /staff",installIosStep2:"დააჭირეთ Share → „Add to Home Screen“",installIosStep3:"დააჭირეთ Add — აპი გაიხსნება /staff-ზე",installGotIt:"გასაგებია"},
+  ru:{menu:"Меню",callWaiter:"Позвать Официанта",requestBill:"Попросить Счёт",ingredients:"Происхождение",soldOut:"Недоступно",table:"Стол",waiterCalled:"Официант уже идёт.",billRequested:"Счёт готовится.",notifyFailed:"Не удалось сохранить. Попробуйте снова.",staffAlertCloudFallback:"Нет связи с сервером. Если персонал не отвечает — позовите официанта.",search:"Поиск…",all:"Все",adminLogin:"Персонал",login:"Войти",dashboard:"Обзор",menuMgmt:"Кухня",tables:"Места",notifications:"Оповещения",analytics:"Аналитика",logout:"Выйти",addDish:"Новое Блюдо",save:"Сохранить",cancel:"Отмена",available:"Доступно",featured:"Рекомендуем",chefChoice:"Выбор шефа",badges:"Отличия",badgeDry:"Сухое",badgeSemiDry:"Полусухое",badgeSemiSweet:"Полусладкое",chooseOptions:"Размер и цена",cart:"Корзина",cartTotal:"Итого",addToCart:"В корзину",cartHint:"Ориентировочная сумма выбранных блюд (справочно).",emptyCart:"Корзина пуста.",cartQty:"Кол-во",cartClose:"Закрыть",submitOrder:"Отправить заказ",confirmOrderTitle:"Отправить заказ?",confirmOrderBody:"Персонал получит заказ в оповещениях (сумма ориентировочная — уточните у официанта).",confirmOrderBtn:"Подтвердить",orderSent:"Заказ отправлен.",portionGramsTitle:"Порция",gramsAbbr:"г",adminPortionGrams:"Вес порции (г)",adminPortionGramsHint:"Необязательно — полоска в меню. Или укажите количество + г в строках размеров.",variantAmount:"Кол-во",variantUnit:"Ед.",share:"Поделиться",shareCopied:"Ссылка скопирована",shareFailed:"Не удалось поделиться",installApp:"Установить приложение",installAppHint:"Панель официанта на домашний экран",installDismiss:"Не сейчас",installIosTitle:"На экран «Домой»",installIosBody:"Установите панель официанта Tiflisi на iPhone или iPad.",installIosStep1:"Откройте в Safari страницу /staff",installIosStep2:"Нажмите Поделиться → «На экран „Домой“»",installIosStep3:"Нажмите Добавить — приложение откроется на /staff",installGotIt:"Понятно"},
 };
 
 /* ─── SHARED STATE ───────────────────────────────────────────────────────── */
@@ -2697,8 +2697,6 @@ function CustomerMenu({ tableId, store, lang }) {
         </>
       )}
 
-      <InstallAppPrompt lang={lang} labels={t} variant="menu" />
-
       {/* BOTTOM ACTIONS — full-width fixed strip; cart CTA stays above thumb reach */}
       <div className="menu-bottom-dock">
         <div className="menu-bottom-dock-inner">
@@ -3130,6 +3128,8 @@ function StaffLogin({ onLogin }) {
             შესვლა
           </button>
         </div>
+
+        <InstallAppPrompt lang="ka" labels={T.ka} variant="staff" />
       </div>
     </div>
   );
@@ -5506,6 +5506,8 @@ function StaffZonePicker({ zones, tables, notifications, tablesLoading, onChoose
             </section>
           </>
         )}
+
+        <InstallAppPrompt lang="ka" labels={T.ka} variant="staff-panel" />
       </div>
     </div>
   );
@@ -6374,7 +6376,6 @@ function WelcomeScreen({ onChooseLang, tableId, tables, onTableChange }) {
           </div>
         </div>
 
-        <InstallAppPrompt lang="ka" labels={T.ka} variant="welcome" />
       </div>
     </div>
   );
@@ -6410,6 +6411,24 @@ export default function App() {
   useLayoutEffect(() => {
     if (isAdminRoute || isStaffRoute) setEnteredMenu(true);
   }, [isAdminRoute, isStaffRoute]);
+
+  /** Installed PWA must always open the waiter panel — never guest /welcome. */
+  useLayoutEffect(() => {
+    if (typeof window === "undefined") return;
+    let standalone = false;
+    try {
+      standalone =
+        window.matchMedia("(display-mode: standalone)").matches ||
+        window.matchMedia("(display-mode: fullscreen)").matches ||
+        window.navigator.standalone === true;
+    } catch {
+      standalone = false;
+    }
+    if (!standalone) return;
+    if (isStaffRoute || isAdminRoute) return;
+    setEnteredMenu(true);
+    go({ pathname: "/staff", search: "" }, { replace: true });
+  }, [go, isStaffRoute, isAdminRoute, location.pathname]);
 
   useEffect(() => {
     if (isAdminRoute || isStaffRoute || enteredMenu || isWelcomeRoute) return;
@@ -6569,7 +6588,7 @@ export default function App() {
           onLogout={() => {
             setStaffAuth(false);
             setPersistedStaffAuth(false);
-            go("/");
+            go("/staff");
           }}
         />
       )}

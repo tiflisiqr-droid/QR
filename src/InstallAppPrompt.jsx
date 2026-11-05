@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
-const DISMISS_KEY = "tiflisi-pwa-install-dismissed";
+const DISMISS_KEY = "tiflisi-staff-pwa-install-dismissed";
 const DISMISS_MS = 14 * 24 * 60 * 60 * 1000;
 
 function isStandaloneDisplay() {

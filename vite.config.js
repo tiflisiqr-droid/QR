@@ -72,49 +72,56 @@ export default defineConfig({
         "og-image.png",
         "alert.mp3",
       ],
-      manifest: {
-        id: "./?source=pwa",
-        name: "Tiflisi — Digital Menu",
-        short_name: "Tiflisi",
-        description:
-          "Tiflisi Georgian Restaurant — digital menu. Scan the QR, choose your language, explore dishes.",
-        theme_color: "#0a0a0c",
-        background_color: "#020506",
-        display: "standalone",
-        orientation: "portrait-primary",
-        lang: "ka",
-        dir: "ltr",
-        start_url: "./",
-        scope: "./",
-        categories: ["food", "lifestyle"],
-        icons: [
-          {
-            src: "pwa-192.png",
-            sizes: "192x192",
-            type: "image/png",
-            purpose: "any",
-          },
-          {
-            src: "pwa-512.png",
-            sizes: "512x512",
-            type: "image/png",
-            purpose: "any",
-          },
-          {
-            src: "pwa-512.png",
-            sizes: "512x512",
-            type: "image/png",
-            purpose: "maskable",
-          },
-        ],
-      },
+      manifest: (() => {
+        const base = pagesBase();
+        const staffPath = `${base}staff`.replace(/([^:]\/)\/+/g, "$1");
+        return {
+          id: `${staffPath}?source=pwa`,
+          name: "Tiflisi · მიმტანი",
+          short_name: "მიმტანი",
+          description:
+            "Tiflisi waiter panel — table calls, bills, and order alerts.",
+          theme_color: "#0a0a0c",
+          background_color: "#020506",
+          display: "standalone",
+          orientation: "portrait-primary",
+          lang: "ka",
+          dir: "ltr",
+          /** Absolute within site base — local /staff, Pages /QR/staff */
+          start_url: staffPath,
+          scope: base,
+          categories: ["food", "business", "productivity"],
+          icons: [
+            {
+              src: "pwa-192.png",
+              sizes: "192x192",
+              type: "image/png",
+              purpose: "any",
+            },
+            {
+              src: "pwa-512.png",
+              sizes: "512x512",
+              type: "image/png",
+              purpose: "any",
+            },
+            {
+              src: "pwa-512.png",
+              sizes: "512x512",
+              type: "image/png",
+              purpose: "maskable",
+            },
+          ],
+        };
+      })(),
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2,mp3,webp,jpg,jpeg}"],
         navigateFallback: "index.html",
         navigateFallbackDenylist: [/^\/api\//],
       },
+      /** Allow install testing on http://localhost:3001/staff */
       devOptions: {
-        enabled: false,
+        enabled: true,
+        type: "module",
       },
     }),
   ],
