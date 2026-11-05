@@ -415,6 +415,69 @@ function clearStaffZoneSession() {
   }
 }
 
+/** მიმტანის OS / browser notification preference. */
+const STAFF_BROWSER_NOTIF_KEY = "tiflisi_staff_browser_notif_v1";
+
+function readStaffBrowserNotifPref() {
+  try {
+    return sessionStorage.getItem(STAFF_BROWSER_NOTIF_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function writeStaffBrowserNotifPref(on) {
+  try {
+    if (on) sessionStorage.setItem(STAFF_BROWSER_NOTIF_KEY, "1");
+    else sessionStorage.removeItem(STAFF_BROWSER_NOTIF_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+function staffBrowserNotifSupported() {
+  return typeof window !== "undefined" && typeof Notification !== "undefined";
+}
+
+function staffAlertIconUrl() {
+  try {
+    const base = import.meta.env.BASE_URL || "/";
+    return `${base.endsWith("/") ? base : `${base}/`}og-image.png`;
+  } catch {
+    return "/og-image.png";
+  }
+}
+
+function showStaffOsNotification({ title, body, tag }) {
+  if (!staffBrowserNotifSupported()) return;
+  if (Notification.permission !== "granted") return;
+  if (!readStaffBrowserNotifPref()) return;
+  try {
+    const note = new Notification(title, {
+      body: body || "ახალი მოთხოვნა",
+      tag: tag || "tiflisi-staff",
+      renotify: true,
+      lang: "ka",
+      icon: staffAlertIconUrl(),
+      badge: staffAlertIconUrl(),
+    });
+    note.onclick = () => {
+      try {
+        window.focus();
+      } catch {
+        /* ignore */
+      }
+      try {
+        note.close();
+      } catch {
+        /* ignore */
+      }
+    };
+  } catch {
+    /* ignore */
+  }
+}
+
 /** Admin / staff ლოგინი — იგივე ტაბში გადატვირთვის შემდეგ არ მოიხსნას (პაროლს არ ვინახავთ). */
 const ADMIN_AUTH_STORAGE_KEY = "tiflisi_admin_auth_v1";
 const STAFF_AUTH_STORAGE_KEY = "tiflisi_staff_auth_v1";
@@ -462,6 +525,31 @@ function uniqueZonesFromTables(tables) {
     if (z) set.add(z);
   }
   return [...set].sort((a, b) => a.localeCompare(b, "ka"));
+}
+
+/** მიმტანის ეკრანზე დარბაზის სახელი ქართულად + ვიზუალური მეტა. */
+function staffZoneMeta(zone) {
+  const z = String(zone || "").trim();
+  if (z === "Grand Hall" || z === "Hall") {
+    return { label: "ჰოლი", hint: "მთავარი დარბაზი", tone: "hall", mark: "Ⅰ" };
+  }
+  if (z === "Private") {
+    return { label: "ანტრესოლი", hint: "ზედა სართული", tone: "private", mark: "Ⅱ" };
+  }
+  if (z === "Terrace") {
+    return { label: "ვერანდა", hint: "ღია სივრცე", tone: "terrace", mark: "Ⅲ" };
+  }
+  if (z === "VIP") {
+    return { label: "VIP", hint: "პრივატი", tone: "vip", mark: "◆" };
+  }
+  if (z === "Bar") {
+    return { label: "ბარი", hint: "ბარი", tone: "bar", mark: "◇" };
+  }
+  return { label: z || "—", hint: "დარბაზი", tone: "default", mark: "○" };
+}
+
+function staffZoneLabel(zone) {
+  return staffZoneMeta(zone).label;
 }
 
 /** სტუმრის მაგიდის დარბაზი — ჯერ შენახული ველი, შემდეგ მაგიდის ძიება. */
@@ -2998,25 +3086,25 @@ function StaffLogin({ onLogin }) {
   };
 
   return (
-    <div style={{ minHeight:"100vh", background:"var(--obsidian)", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"var(--font-body)", position:"relative" }}>
+    <div className="staff-theme" style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"var(--font-body)", position:"relative" }}>
       <div className="noise" />
-      <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse at 20% 70%, rgba(196,88,68,0.07) 0%, transparent 50%), radial-gradient(ellipse at 50% 30%, rgba(61,191,176,0.08) 0%, transparent 60%)" }} />
+      <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse at 20% 70%, rgba(196,88,68,0.06) 0%, transparent 50%), radial-gradient(ellipse at 50% 30%, rgba(12,107,98,0.08) 0%, transparent 60%)" }} />
 
       <div style={{ width:"min(380px, 92vw)", position:"relative", zIndex:1 }}>
         <div style={{ textAlign:"center", marginBottom:"48px" }}>
-          <div style={{ fontSize:"9px", letterSpacing:"5px", color:"var(--gold)", textTransform:"uppercase", marginBottom:"14px" }}>მიმტანი · WAITER</div>
-          <div style={{ fontFamily:"var(--font-display)", fontSize:"52px", fontWeight:300, fontStyle:"italic", color:"var(--cream)", lineHeight:1 }}>Tiflisi</div>
+          <div style={{ fontSize:"12px", letterSpacing:"0.18em", color:"var(--gold)", textTransform:"uppercase", marginBottom:"14px", fontWeight:700 }}>მიმტანი · WAITER</div>
+          <div style={{ fontFamily:"var(--font-display)", fontSize:"52px", fontWeight:500, fontStyle:"italic", color:"var(--cream)", lineHeight:1 }}>Tiflisi</div>
           <div style={{ marginTop:"16px", display:"flex", alignItems:"center", justifyContent:"center", gap:"10px" }}>
             <div style={{ width:"40px", height:"1px", background:"linear-gradient(90deg, transparent, var(--gold))" }} />
-            <span style={{ fontSize:"8px", color:"var(--muted)", letterSpacing:"3px" }}>გამოძახება · ანგარიში · ALERT</span>
+            <span style={{ fontSize:"12px", color:"var(--muted)", letterSpacing:"0.06em", fontWeight:600 }}>გამოძახება · ანგარიში · ALERT</span>
             <div style={{ width:"40px", height:"1px", background:"linear-gradient(90deg, var(--gold), transparent)" }} />
           </div>
         </div>
 
-        <div style={{ background:"rgba(26,22,32,0.8)", border:"1px solid rgba(61,191,176,0.15)", padding:"40px", backdropFilter:"blur(20px)" }}>
+        <div style={{ background:"#fff", border:"1px solid rgba(12,107,98,0.14)", padding:"40px", borderRadius:16, boxShadow:"0 18px 48px rgba(15,26,24,0.08)" }}>
           {[{ label:"Username", val: u, set: setU, type: "text" }, { label:"Password", val: p, set: setP, type: "password" }].map((f) => (
             <div key={f.label} style={{ marginBottom:"20px" }}>
-              <div style={{ fontSize:"8px", color:"var(--gold)", letterSpacing:"3px", textTransform:"uppercase", marginBottom:"8px" }}>{f.label}</div>
+              <div style={{ fontSize:"12px", color:"var(--gold)", letterSpacing:"0.12em", textTransform:"uppercase", marginBottom:"8px", fontWeight:700 }}>{f.label}</div>
               <input
                 value={f.val}
                 onChange={(e) => {
@@ -3025,16 +3113,16 @@ function StaffLogin({ onLogin }) {
                 }}
                 type={f.type}
                 onKeyDown={(e) => e.key === "Enter" && submit()}
-                style={{ width:"100%", padding:"12px 0", background:"transparent", border:"none", borderBottom:`1px solid ${err ? "#ef4444" : "rgba(61,191,176,0.25)"}`, color:"var(--cream)", fontSize:"14px", fontFamily:"var(--font-display)", outline:"none", letterSpacing:"1px", boxSizing:"border-box" }}
+                style={{ width:"100%", padding:"12px 0", background:"transparent", border:"none", borderBottom:`1px solid ${err ? "#ef4444" : "rgba(12,107,98,0.28)"}`, color:"var(--cream)", fontSize:"17px", fontFamily:"var(--font-body)", fontWeight:600, outline:"none", letterSpacing:"0.02em", boxSizing:"border-box" }}
               />
             </div>
           ))}
-          {err && <div style={{ color:"#ef4444", fontSize:"10px", letterSpacing:"1px", marginBottom:"16px" }}>არასწორი მონაცემი</div>}
-          <div style={{ fontSize:"9px", color:"var(--muted)", marginBottom:"20px", letterSpacing:"1px" }}>waiter / tiflisi2024</div>
+          {err && <div style={{ color:"#b91c1c", fontSize:"13px", fontWeight:600, marginBottom:"16px" }}>არასწორი მონაცემი</div>}
+          <div style={{ fontSize:"13px", color:"var(--muted)", marginBottom:"20px", fontWeight:500 }}>waiter / tiflisi2024</div>
           <button
             type="button"
             onClick={submit}
-            style={{ width:"100%", padding:"14px", background:"linear-gradient(135deg, rgba(61,191,176,0.2), rgba(61,191,176,0.08))", border:"1px solid var(--gold)", color:"var(--gold-pale)", fontSize:"10px", fontWeight:"600", letterSpacing:"4px", textTransform:"uppercase", cursor:"pointer", fontFamily:"var(--font-body)", transition:"all 0.3s" }}
+            style={{ width:"100%", padding:"14px", background:"linear-gradient(135deg, rgba(12,107,98,0.16), rgba(12,107,98,0.06))", border:"1px solid var(--gold)", color:"var(--gold-pale)", fontSize:"14px", fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", cursor:"pointer", fontFamily:"var(--font-body)", transition:"all 0.3s", borderRadius:10 }}
           >
             შესვლა
           </button>
@@ -3476,6 +3564,175 @@ function useUnreadAlertSound(unread) {
       } catch {}
     };
   }, []);
+}
+
+/**
+ * მიმტანი: ახალი მოთხოვნისას ხმა + OS notification (თუ ჩართულია).
+ * მუშაობს ყველა დარბაზზე — დარბაზის არჩევამდეც.
+ */
+function useStaffIncomingAlerts(notifications, tables) {
+  const mp3Ref = useRef(null);
+  const seenIdsRef = useRef(null);
+  const titleBaseRef = useRef("Tiflisi · მიმტანი");
+
+  const playAlertChime = useCallback(() => {
+    try {
+      const url = alertMp3Url();
+      let a = mp3Ref.current;
+      if (!a) {
+        a = new Audio(url);
+        a.preload = "auto";
+        mp3Ref.current = a;
+      }
+      a.volume = Math.min(1, Math.max(0, ALERT_MP3_VOLUME));
+      a.currentTime = 0;
+      const p = a.play();
+      if (p && typeof p.catch === "function") {
+        p.catch(() => playAlertSynthFallback());
+      }
+    } catch {
+      playAlertSynthFallback();
+    }
+  }, []);
+
+  useEffect(() => {
+    const list = Array.isArray(notifications) ? notifications : [];
+    if (seenIdsRef.current == null) {
+      seenIdsRef.current = new Set(list.map((n) => String(n.id)));
+      return;
+    }
+    const newcomers = list.filter((n) => !seenIdsRef.current.has(String(n.id)));
+    seenIdsRef.current = new Set(list.map((n) => String(n.id)));
+    if (newcomers.length === 0) return;
+
+    playAlertChime();
+
+    const newest = newcomers[newcomers.length - 1];
+    const zone = resolveNotificationZone(newest, tables);
+    const zoneKa = zone ? staffZoneLabel(zone) : "";
+    const typeKa = staffNotificationLabel(newest.type);
+    const msg =
+      newest.message && newest.message !== "Waiter Request" && newest.message !== "Bill Request"
+        ? String(newest.message).replace(/\s+/g, " ").trim().slice(0, 120)
+        : "";
+
+    if (newcomers.length === 1) {
+      showStaffOsNotification({
+        title: `${newest.tableName || "მაგიდა"} · ${typeKa}`,
+        body: [zoneKa, msg].filter(Boolean).join(" · ") || "ახალი მოთხოვნა",
+        tag: `tiflisi-alert-${newest.id}`,
+      });
+    } else {
+      showStaffOsNotification({
+        title: `Tiflisi · ${newcomers.length} ახალი მოთხოვნა`,
+        body: newcomers
+          .slice(-4)
+          .map((n) => `${n.tableName || "მაგიდა"} (${staffNotificationLabel(n.type)})`)
+          .join(", "),
+        tag: "tiflisi-staff-batch",
+      });
+    }
+  }, [notifications, tables, playAlertChime]);
+
+  useEffect(() => {
+    const unread = (notifications || []).filter((n) => !n.read).length;
+    const base = titleBaseRef.current;
+    document.title = unread > 0 ? `(${unread}) ${base}` : base;
+    return () => {
+      document.title = base;
+    };
+  }, [notifications]);
+
+  useEffect(() => {
+    return () => {
+      try {
+        const a = mp3Ref.current;
+        if (a) {
+          a.pause();
+          a.src = "";
+        }
+        mp3Ref.current = null;
+      } catch {
+        /* ignore */
+      }
+    };
+  }, []);
+}
+
+/** მიმტანის ეკრანი — browser notification ჩართვა/გამორთვა. */
+function StaffBrowserNotifControl() {
+  const supported = staffBrowserNotifSupported();
+  const [perm, setPerm] = useState(() => (supported ? Notification.permission : "unsupported"));
+  const [enabled, setEnabled] = useState(() => readStaffBrowserNotifPref());
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!supported) return undefined;
+    const sync = () => setPerm(Notification.permission);
+    sync();
+    document.addEventListener("visibilitychange", sync);
+    return () => document.removeEventListener("visibilitychange", sync);
+  }, [supported]);
+
+  if (!supported) return null;
+
+  const active = perm === "granted" && enabled;
+
+  const onToggle = async () => {
+    if (active) {
+      writeStaffBrowserNotifPref(false);
+      setEnabled(false);
+      return;
+    }
+    if (perm === "denied") return;
+    setBusy(true);
+    try {
+      let next = Notification.permission;
+      if (next === "default") {
+        next = await Notification.requestPermission();
+      }
+      setPerm(next);
+      if (next === "granted") {
+        writeStaffBrowserNotifPref(true);
+        setEnabled(true);
+        showStaffOsNotification({
+          title: "Tiflisi · მიმტანი",
+          body: "შეტყობინებები ჩართულია — ახალი მოთხოვნები აქ გამოჩნდება",
+          tag: "tiflisi-staff-ready",
+        });
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const label =
+    perm === "denied" ? "ბლოკირებულია" : active ? "შეტყობინება ✓" : busy ? "…" : "შეტყობინება";
+
+  return (
+    <button
+      type="button"
+      className={active ? "staff-soft-btn" : "staff-soft-btn"}
+      onClick={onToggle}
+      disabled={busy || perm === "denied"}
+      title={
+        perm === "denied"
+          ? "ბრაუზერში ნებართვა დაბლოკილია — ჩართეთ საიტის settings-ში"
+          : active
+            ? "გამორთვა"
+            : "OS შეტყობინებების ჩართვა"
+      }
+      style={{
+        padding: "9px 12px",
+        fontSize: 11,
+        textTransform: "uppercase",
+        opacity: perm === "denied" ? 0.55 : 1,
+        borderColor: active ? "rgba(61,191,176,0.4)" : undefined,
+      }}
+    >
+      {label}
+    </button>
+  );
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -5083,76 +5340,168 @@ function AdminAlerts({ store }) {
 }
 
 /** Staff: ჯერ აირჩიე დარბაზი — მერე მხოლოდ ამ ზონის მაგიდების შეტყობინებები. */
-function StaffZonePicker({ zones, tablesLoading, onChooseZone, onLogout }) {
+function StaffZonePicker({ zones, tables, notifications, tablesLoading, onChooseZone, onLogout, notifControl }) {
+  const tableCountByZone = useMemo(() => {
+    const map = {};
+    for (const t of tables || []) {
+      const z = typeof t?.zone === "string" ? t.zone.trim() : "";
+      if (!z) continue;
+      map[z] = (map[z] || 0) + 1;
+    }
+    return map;
+  }, [tables]);
+
+  const deptStats = useMemo(() => {
+    return (zones || []).map((z) => {
+      const list = (notifications || []).filter((n) => resolveNotificationZone(n, tables) === z);
+      const unread = list.filter((n) => !n.read);
+      return {
+        zone: z,
+        meta: staffZoneMeta(z),
+        tables: tableCountByZone[z] || 0,
+        total: list.length,
+        unread: unread.length,
+        waiter: unread.filter((n) => n.type === "waiter").length,
+        bill: unread.filter((n) => n.type === "bill").length,
+        order: unread.filter((n) => n.type === "order").length,
+      };
+    });
+  }, [zones, notifications, tables, tableCountByZone]);
+
   return (
-    <div className="staff-waiter-screen" style={{ minHeight: "100vh", background: "var(--obsidian)", color: "var(--cream)", position: "relative", display: "flex", flexDirection: "column" }}>
+    <div className="staff-waiter-screen staff-theme" style={{ minHeight: "100vh", position: "relative", display: "flex", flexDirection: "column" }}>
       <div className="noise" />
-      <header
-        style={{
-          padding: "16px 18px",
-          borderBottom: "1px solid rgba(61,191,176,0.12)",
-          background: "linear-gradient(180deg, rgba(15,18,20,0.98), rgba(15,18,20,0.88))",
-        }}
-      >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-          <div>
-            <div style={{ fontSize: "8px", letterSpacing: "0.35em", color: "var(--gold)", textTransform: "uppercase" }}>მიმტანი</div>
-            <div style={{ fontFamily: "var(--font-display)", fontSize: "clamp(1.2rem, 4vw, 1.5rem)", fontStyle: "italic", marginTop: 4 }}>აირჩიეთ დარბაზი</div>
+      <header className="staff-shell-header">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+              <span style={{ fontSize: 11, letterSpacing: "0.16em", color: "var(--turquoise-deep, #2a9a8d)", textTransform: "uppercase", fontWeight: 800 }}>მიმტანი</span>
+              <span style={{ width: 4, height: 4, borderRadius: "50%", background: "var(--brick, #c45844)" }} />
+              <span style={{ fontSize: 11, letterSpacing: "0.08em", color: "var(--muted)", fontWeight: 600 }}>Tiflisi</span>
+            </div>
+            <div style={{ fontFamily: "var(--font-display)", fontSize: "clamp(1.85rem, 5.8vw, 2.35rem)", fontWeight: 600, fontStyle: "italic", color: "var(--brick-deep, #5a2a22)", letterSpacing: "-0.015em", lineHeight: 1.08 }}>
+              აირჩიეთ დარბაზი
+            </div>
+            <div style={{ marginTop: 8, fontSize: 14, color: "var(--muted)", fontWeight: 500, lineHeight: 1.4 }}>
+              მხოლოდ ამ დარბაზის მაგიდების მოთხოვნები გამოჩნდება
+            </div>
           </div>
-          <button
-            type="button"
-            onClick={onLogout}
-            style={{
-              padding: "10px 16px",
-              background: "transparent",
-              border: "1px solid rgba(239,68,68,0.25)",
-              color: "rgba(239,68,68,0.75)",
-              fontSize: "9px",
-              letterSpacing: "0.15em",
-              textTransform: "uppercase",
-              cursor: "pointer",
-              fontFamily: "var(--font-body)",
-              flexShrink: 0,
-              touchAction: "manipulation",
-            }}
-          >
-            გასვლა
-          </button>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8, flexShrink: 0 }}>
+            {notifControl}
+            <button type="button" className="staff-ghost-btn" onClick={onLogout} style={{ padding: "10px 14px", fontSize: 12, textTransform: "uppercase" }}>
+              გასვლა
+            </button>
+          </div>
         </div>
       </header>
-      <div style={{ flex: 1, padding: "20px 16px", overflow: "auto", WebkitOverflowScrolling: "touch" }}>
+
+      <div style={{ flex: 1, padding: "22px 16px max(28px, env(safe-area-inset-bottom))", overflow: "auto", WebkitOverflowScrolling: "touch" }}>
         {tablesLoading && zones.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "48px 20px", color: "var(--muted)" }}>იტვირთება…</div>
+          <div className="staff-empty-state" style={{ animation: "staffFadeUp 0.4s ease both" }}>
+            <div style={{ width: 36, height: 36, margin: "0 auto 14px", borderRadius: "50%", border: "2px solid rgba(61,191,176,0.25)", borderTopColor: "#3dbfb0", animation: "borderRotate 0.8s linear infinite" }} />
+            <div style={{ fontSize: 16, fontWeight: 700, color: "var(--cream)" }}>იტვირთება…</div>
+          </div>
         ) : zones.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "48px 20px", color: "var(--subtle)", lineHeight: 1.6, fontSize: "14px" }}>
-            მაგიდები ან დარბაზის ველი ჯერ არ ჩანს. ადმინში დაამატეთ მაგიდები ზონით (Grand Hall, Private…).
+          <div className="staff-empty-state">
+            <div style={{ fontFamily: "var(--font-display)", fontSize: "1.5rem", fontStyle: "italic", color: "var(--cream)", marginBottom: 8 }}>დარბაზი არ ჩანს</div>
+            <div style={{ fontSize: 14, color: "var(--muted)", lineHeight: 1.55, fontWeight: 500 }}>
+              ადმინში დაამატეთ მაგიდები ზონით (ჰოლი, ანტრესოლი, ვერანდა…).
+            </div>
           </div>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            {zones.map((z) => (
-              <button
-                key={z}
-                type="button"
-                onClick={() => onChooseZone(z)}
-                style={{
-                  minHeight: 88,
-                  padding: "16px 14px",
-                  borderRadius: 14,
-                  border: "1px solid rgba(61,191,176,0.28)",
-                  background: "linear-gradient(145deg, rgba(61,191,176,0.14), rgba(8,12,12,0.96))",
-                  color: "var(--gold-pale)",
-                  fontFamily: "var(--font-display)",
-                  fontSize: "clamp(1.05rem, 3.5vw, 1.3rem)",
-                  fontStyle: "italic",
-                  cursor: "pointer",
-                  textAlign: "center",
-                  touchAction: "manipulation",
-                }}
-              >
-                {z}
-              </button>
-            ))}
-          </div>
+          <>
+            <div className="staff-zone-grid">
+              {zones.map((z, i) => {
+                const meta = staffZoneMeta(z);
+                const count = tableCountByZone[z] || 0;
+                const stats = deptStats.find((d) => d.zone === z);
+                const unread = stats?.unread || 0;
+                return (
+                  <button
+                    key={z}
+                    type="button"
+                    className="staff-zone-tile"
+                    data-tone={meta.tone}
+                    onClick={() => onChooseZone(z)}
+                    style={{ animationDelay: `${i * 55}ms` }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: 10 }}>
+                      <span className="staff-zone-tile__mark">{meta.mark}</span>
+                      {unread > 0 ? (
+                        <span style={{ fontSize: 12, fontWeight: 800, color: "#c45844", background: "rgba(196,88,68,0.14)", padding: "3px 9px", borderRadius: 999 }}>
+                          {unread} ახალი
+                        </span>
+                      ) : (
+                        <span className="staff-zone-tile__go">გახსნა →</span>
+                      )}
+                    </div>
+                    <div>
+                      <div className="staff-zone-tile__title">{meta.label}</div>
+                      <div className="staff-zone-tile__meta" style={{ marginTop: 10 }}>
+                        <span>{meta.hint}</span>
+                        <span style={{ color: "var(--gold)", fontWeight: 700 }}>
+                          {count} მაგიდა
+                        </span>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            <section style={{ marginTop: 22, animation: "staffFadeUp 0.45s ease both", animationDelay: "120ms" }}>
+              <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
+                <div>
+                  <div style={{ fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--gold)", fontWeight: 800 }}>დეპარტამენტები</div>
+                  <div style={{ fontFamily: "var(--font-display)", fontSize: "1.45rem", fontStyle: "italic", fontWeight: 600, color: "var(--brick-deep, #5a2a22)", marginTop: 2, letterSpacing: "-0.015em" }}>ცოცხალი მონაცემები</div>
+                </div>
+                <div style={{ fontSize: 12, color: "var(--muted)", fontWeight: 600 }}>
+                  {deptStats.reduce((s, d) => s + d.unread, 0)} ახალი სულ
+                </div>
+              </div>
+
+              <div className="staff-dept-board">
+                {deptStats.map((d) => (
+                  <button
+                    key={d.zone}
+                    type="button"
+                    className={`staff-dept-row${d.unread > 0 ? " has-unread" : ""}`}
+                    data-tone={d.meta.tone}
+                    onClick={() => onChooseZone(d.zone)}
+                  >
+                    <div className="staff-dept-row__head">
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+                        <span className="staff-zone-tile__mark">{d.meta.mark}</span>
+                        <div style={{ minWidth: 0 }}>
+                          <div className="staff-dept-row__title">{d.meta.label}</div>
+                          <div className="staff-dept-row__sub">{d.tables} მაგიდა · {d.total} ჩანაწერი</div>
+                        </div>
+                      </div>
+                      {d.unread > 0 ? (
+                        <span className="staff-dept-row__badge">{d.unread}</span>
+                      ) : (
+                        <span className="staff-dept-row__ok">სუფთა</span>
+                      )}
+                    </div>
+                    <div className="staff-dept-row__metrics">
+                      <div className="staff-dept-metric">
+                        <span>გამოძახება</span>
+                        <strong>{d.waiter}</strong>
+                      </div>
+                      <div className="staff-dept-metric">
+                        <span>ანგარიში</span>
+                        <strong>{d.bill}</strong>
+                      </div>
+                      <div className="staff-dept-metric">
+                        <span>შეკვეთა</span>
+                        <strong>{d.order}</strong>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </section>
+          </>
         )}
       </div>
     </div>
@@ -5221,7 +5570,7 @@ function StaffAlertsScreen({ store, onLogout }) {
   }, [clearListPassword, setNotifications, tables, staffZone, closeClearListPrompt]);
 
   const unread = notificationsForZone.filter((n) => !n.read).length;
-  useUnreadAlertSound(unread);
+  useStaffIncomingAlerts(notifications, tables);
 
   const filtered = useMemo(() => {
     if (filter === "waiter") return notificationsForZone.filter((n) => n.type === "waiter");
@@ -5239,109 +5588,71 @@ function StaffAlertsScreen({ store, onLogout }) {
     };
   }, [notificationsForZone]);
 
+  const notifControl = <StaffBrowserNotifControl />;
+
   if (staffZone == null) {
     return (
       <StaffZonePicker
         zones={zones}
+        tables={tables}
+        notifications={notifications}
         tablesLoading={tablesLoading}
         onChooseZone={(z) => {
           setStaffZone(z);
           writeStaffZoneSession(z);
         }}
         onLogout={pickLogout}
+        notifControl={notifControl}
       />
     );
   }
 
-  const chip = (id, labelKa, extra) => (
-    <button
-      type="button"
-      key={id}
-      onClick={() => setFilter(id)}
-      style={{
-        flex: 1,
-        minHeight: 48,
-        padding: "12px 10px",
-        border: filter === id ? "1px solid var(--gold)" : "1px solid rgba(255,255,255,0.08)",
-        background: filter === id ? "rgba(61,191,176,0.12)" : "rgba(255,255,255,0.03)",
-        color: filter === id ? "var(--gold-pale)" : "var(--muted)",
-        fontSize: "11px",
-        fontWeight: filter === id ? 600 : 400,
-        letterSpacing: "0.06em",
-        cursor: "pointer",
-        fontFamily: "var(--font-body)",
-        borderRadius: 999,
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: 4,
-        touchAction: "manipulation",
-      }}
-    >
-      <span>{labelKa}</span>
-      {extra != null && extra > 0 && (
-        <span style={{ fontSize: "10px", background: "#7f1d1d", color: "#fca5a5", padding: "2px 8px", borderRadius: 999 }}>{extra}</span>
-      )}
-    </button>
-  );
+  const zoneMeta = staffZoneMeta(staffZone);
+  const filterItems = [
+    { id: "all", label: "ყველა", count: unread > 0 ? unread : null },
+    { id: "waiter", label: "გამოძახება", count: unreadByType.waiter || null },
+    { id: "bill", label: "ანგარიში", count: unreadByType.bill || null },
+    { id: "order", label: "შეკვეთა", count: unreadByType.order || null },
+  ];
 
   return (
-    <div className="staff-waiter-screen" style={{ minHeight: "100vh", background: "var(--obsidian)", color: "var(--cream)", position: "relative", display: "flex", flexDirection: "column" }}>
+    <div className="staff-waiter-screen staff-theme" style={{ minHeight: "100vh", position: "relative", display: "flex", flexDirection: "column" }}>
       <div className="noise" />
-      <header
-        style={{
-          position: "sticky",
-          top: 0,
-          zIndex: 20,
-          padding: "16px 18px",
-          background: "linear-gradient(180deg, rgba(15,18,20,0.98), rgba(15,18,20,0.88))",
-          borderBottom: "1px solid rgba(61,191,176,0.12)",
-          backdropFilter: "blur(12px)",
-        }}
-      >
+      <header className="staff-shell-header staff-shell-header--sticky">
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: "8px", letterSpacing: "0.35em", color: "var(--gold)", textTransform: "uppercase" }}>მიმტანი</div>
-            <div style={{ fontFamily: "var(--font-display)", fontSize: "clamp(1.35rem, 4vw, 1.75rem)", fontStyle: "italic", fontWeight: 300, marginTop: 4 }}>
-              გამოძახება · ანგარიში · შეკვეთა
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 11, letterSpacing: "0.16em", color: "var(--gold)", textTransform: "uppercase", fontWeight: 800 }}>მიმტანი</span>
+              {unread > 0 ? <span className="staff-live-dot" aria-hidden /> : null}
             </div>
-            <div style={{ fontSize: "12px", color: "var(--gold-pale)", marginTop: 6, fontWeight: 500, letterSpacing: "0.04em" }}>{staffZone}</div>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6, flexShrink: 0 }}>
-            <button
-              type="button"
-              onClick={goPickZone}
+            <div style={{ fontFamily: "var(--font-display)", fontSize: "clamp(1.6rem, 4.8vw, 2.05rem)", fontWeight: 600, fontStyle: "italic", marginTop: 4, color: "var(--brick-deep, #5a2a22)", lineHeight: 1.08, letterSpacing: "-0.015em" }}>
+              მოთხოვნები
+            </div>
+            <div
               style={{
-                padding: "8px 12px",
-                background: "rgba(61,191,176,0.08)",
-                border: "1px solid rgba(61,191,176,0.3)",
-                color: "var(--gold)",
-                fontSize: "8px",
-                letterSpacing: "0.12em",
-                textTransform: "uppercase",
-                cursor: "pointer",
-                fontFamily: "var(--font-body)",
-                touchAction: "manipulation",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                marginTop: 10,
+                padding: "6px 12px",
+                borderRadius: 999,
+                background: "rgba(61,191,176,0.14)",
+                border: "1px solid rgba(61,191,176,0.28)",
+                color: "#2a9a8d",
+                fontSize: 13,
+                fontWeight: 700,
               }}
             >
+              <span aria-hidden>{zoneMeta.mark}</span>
+              {zoneMeta.label}
+            </div>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8, flexShrink: 0 }}>
+            {notifControl}
+            <button type="button" className="staff-soft-btn" onClick={goPickZone} style={{ padding: "9px 14px", fontSize: 12, textTransform: "uppercase" }}>
               დარბაზი
             </button>
-            <button
-              type="button"
-              onClick={pickLogout}
-              style={{
-                padding: "8px 12px",
-                background: "transparent",
-                border: "1px solid rgba(239,68,68,0.25)",
-                color: "rgba(239,68,68,0.75)",
-                fontSize: "8px",
-                letterSpacing: "0.12em",
-                textTransform: "uppercase",
-                cursor: "pointer",
-                fontFamily: "var(--font-body)",
-                touchAction: "manipulation",
-              }}
-            >
+            <button type="button" className="staff-ghost-btn" onClick={pickLogout} style={{ padding: "9px 14px", fontSize: 12, textTransform: "uppercase" }}>
               გასვლა
             </button>
           </div>
@@ -5352,150 +5663,148 @@ function StaffAlertsScreen({ store, onLogout }) {
         <div
           className="staff-alert-banner"
           style={{
-            margin: "12px 16px 0",
-            padding: "16px 18px",
-            borderRadius: 14,
-            background: "linear-gradient(135deg, rgba(127,29,29,0.45), rgba(61,191,176,0.12))",
-            border: "1px solid rgba(248,113,113,0.35)",
-            boxShadow: "0 0 40px rgba(248,113,113,0.12)",
-            textAlign: "center",
-            animation: "staffPulse 2s ease-in-out infinite",
+            margin: "14px 16px 0",
+            padding: "18px 18px 16px",
+            borderRadius: 18,
+            background: "linear-gradient(135deg, rgba(196,88,68,0.12) 0%, #faf6f0 48%, rgba(61,191,176,0.14) 100%)",
+            border: "1px solid rgba(196,88,68,0.24)",
+            boxShadow: "0 10px 30px rgba(196,88,68,0.1)",
           }}
         >
-          <div style={{ fontSize: "11px", letterSpacing: "0.4em", color: "#fecaca", fontWeight: 700 }}>ALERT</div>
-          <div style={{ fontFamily: "var(--font-display)", fontSize: "clamp(1.5rem, 5vw, 2rem)", marginTop: 6, color: "#fff7ed" }}>
-            {unread} ახალი მოთხოვნა
-          </div>
-          <div style={{ fontSize: "12px", color: "var(--muted)", marginTop: 8 }}>
-            მიმტანი: {unreadByType.waiter} · ანგარიში: {unreadByType.bill} · შეკვეთა: {unreadByType.order}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span className="staff-live-dot" />
+                <span style={{ fontSize: 11, letterSpacing: "0.18em", color: "#c45844", fontWeight: 800, textTransform: "uppercase" }}>ახალი</span>
+              </div>
+              <div style={{ fontFamily: "var(--font-display)", fontSize: "clamp(1.7rem, 5.2vw, 2.15rem)", marginTop: 6, color: "var(--brick-deep, #5a2a22)", fontWeight: 600, fontStyle: "italic", letterSpacing: "-0.015em" }}>
+                {unread} მოთხოვნა
+              </div>
+            </div>
+            <div style={{ textAlign: "right", fontSize: 12, color: "var(--muted)", fontWeight: 600, lineHeight: 1.55 }}>
+              <div>გამოძახება {unreadByType.waiter}</div>
+              <div>ანგარიში {unreadByType.bill}</div>
+              <div>შეკვეთა {unreadByType.order}</div>
+            </div>
           </div>
         </div>
       )}
 
-      <div style={{ padding: "16px", flex: 1, overflow: "auto", WebkitOverflowScrolling: "touch" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
-          {chip("all", "ყველა", unread > 0 ? unread : null)}
-          {chip("waiter", "გამოძახება", unreadByType.waiter || null)}
-          {chip("bill", "ანგარიში", unreadByType.bill || null)}
-          {chip("order", "შეკვეთა", unreadByType.order || null)}
+      <div style={{ padding: "16px 16px max(24px, env(safe-area-inset-bottom))", flex: 1, overflow: "auto", WebkitOverflowScrolling: "touch" }}>
+        <div className="staff-filter-rail" role="tablist" aria-label="ფილტრი" style={{ marginBottom: 14 }}>
+          {filterItems.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              role="tab"
+              aria-selected={filter === item.id}
+              aria-pressed={filter === item.id}
+              className="staff-filter-chip"
+              onClick={() => setFilter(item.id)}
+            >
+              <span>{item.label}</span>
+              {item.count != null && item.count > 0 ? <span className="staff-filter-chip__badge">{item.count}</span> : null}
+            </button>
+          ))}
         </div>
 
-        <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 8, marginBottom: 18, flexWrap: "wrap" }}>
           <button
             type="button"
+            className="staff-soft-btn"
             onClick={() =>
               setNotifications((p) =>
                 p.map((n) => (resolveNotificationZone(n, tables) === staffZone ? { ...n, read: true } : n))
               )
             }
-            style={{
-              padding: "12px 18px",
-              background: "rgba(61,191,176,0.1)",
-              border: "1px solid rgba(61,191,176,0.25)",
-              color: "var(--gold)",
-              fontSize: "10px",
-              letterSpacing: "0.12em",
-              cursor: "pointer",
-              fontFamily: "var(--font-body)",
-              borderRadius: 999,
-              touchAction: "manipulation",
-            }}
+            style={{ padding: "11px 16px", fontSize: 13, borderRadius: 999 }}
           >
             ყველა წაკითხული
           </button>
           <button
             type="button"
+            className="staff-danger-btn"
             onClick={() => {
               setClearListPassword("");
               setClearListPasswordErr(false);
               setClearListPromptOpen(true);
             }}
-            style={{
-              padding: "12px 18px",
-              background: "rgba(239,68,68,0.08)",
-              border: "1px solid rgba(239,68,68,0.2)",
-              color: "rgba(239,68,68,0.85)",
-              fontSize: "10px",
-              letterSpacing: "0.12em",
-              cursor: "pointer",
-              fontFamily: "var(--font-body)",
-              borderRadius: 999,
-              touchAction: "manipulation",
-            }}
+            style={{ padding: "11px 16px", fontSize: 13, borderRadius: 999 }}
           >
             სიის გასუფთავება
           </button>
         </div>
 
         {filtered.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "60px 20px", fontFamily: "var(--font-display)", fontSize: "1.25rem", fontStyle: "italic", color: "var(--subtle)" }}>
-            ამ მონიშნულში მოთხოვნა არაა
+          <div className="staff-empty-state" style={{ animation: "staffFadeUp 0.4s ease both" }}>
+            <div style={{ fontSize: 28, marginBottom: 10, opacity: 0.35 }}>○</div>
+            <div style={{ fontFamily: "var(--font-display)", fontSize: "1.45rem", fontStyle: "italic", color: "var(--cream)", marginBottom: 6 }}>სუფთაა</div>
+            <div style={{ fontSize: 14, color: "var(--muted)", fontWeight: 500 }}>ამ მონიშნულში მოთხოვნა არაა</div>
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {filtered.map((n) => {
+            {filtered.map((n, i) => {
               const vis = notificationVisual(n.type);
+              const accent = vis.accent === "var(--gold)" ? "#2a9a8d" : vis.accent === "#a78bfa" ? "#c45844" : vis.accent;
               return (
-              <button
-                type="button"
-                key={n.id}
-                onClick={() => setNotifications((p) => p.map((x) => (x.id === n.id ? { ...x, read: true } : x)))}
-                style={{
-                  display: "flex",
-                  gap: 14,
-                  alignItems: "flex-start",
-                  padding: "18px 16px",
-                  textAlign: "left",
-                  width: "100%",
-                  boxSizing: "border-box",
-                  background: n.read ? "rgba(255,255,255,0.02)" : "rgba(61,191,176,0.06)",
-                  border: `1px solid ${n.read ? "rgba(255,255,255,0.06)" : "rgba(61,191,176,0.2)"}`,
-                  borderLeft: `4px solid ${vis.accent}`,
-                  borderRadius: 12,
-                  cursor: "pointer",
-                  color: "inherit",
-                  font: "inherit",
-                  touchAction: "manipulation",
-                }}
-              >
-                <div
+                <button
+                  type="button"
+                  key={n.id}
+                  className={`staff-notif-card${n.read ? "" : " is-unread"}`}
+                  onClick={() => setNotifications((p) => p.map((x) => (x.id === n.id ? { ...x, read: true } : x)))}
                   style={{
-                    width: 44,
-                    height: 44,
-                    flexShrink: 0,
-                    borderRadius: 10,
-                    background: vis.sheetBg,
-                    border: `1px solid ${vis.sheetBd}`,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: "18px",
+                    position: "relative",
+                    borderLeft: `4px solid ${accent}`,
+                    animationDelay: `${Math.min(i, 8) * 40}ms`,
                   }}
                 >
-                  {vis.icon}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: "1.05rem", fontFamily: "var(--font-display)", fontStyle: "italic", color: n.read ? "var(--muted)" : "var(--cream)" }}>
-                    {n.tableName || "—"}
+                  <div
+                    style={{
+                      width: 46,
+                      height: 46,
+                      flexShrink: 0,
+                      borderRadius: 14,
+                      background: vis.sheetBg,
+                      border: `1px solid ${vis.sheetBd}`,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 18,
+                      color: accent,
+                    }}
+                  >
+                    {vis.icon}
                   </div>
-                  <div style={{ fontSize: "11px", letterSpacing: "0.06em", color: vis.accent, marginTop: 6, fontWeight: 600 }}>
-                    {staffNotificationLabel(n.type)}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
+                      <div style={{ fontSize: "1.22rem", fontFamily: "var(--font-display)", fontStyle: "italic", fontWeight: n.read ? 500 : 700, color: n.read ? "var(--muted)" : "var(--brick-deep, #5a2a22)", letterSpacing: "-0.01em" }}>
+                        {n.tableName || "—"}
+                      </div>
+                      <div style={{ fontSize: 13, color: "var(--gold)", fontWeight: 700, flexShrink: 0 }}>
+                        {n.time?.toLocaleTimeString?.() ?? ""}
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
+                      <span style={{ fontSize: 12, color: accent, fontWeight: 700, letterSpacing: "0.02em" }}>
+                        {staffNotificationLabel(n.type)}
+                      </span>
+                      {!n.read ? (
+                        <span style={{ fontSize: 11, letterSpacing: "0.08em", color: "#faf6f0", background: "#c45844", padding: "2px 8px", borderRadius: 999, fontWeight: 800 }}>
+                          ახალი
+                        </span>
+                      ) : null}
+                    </div>
+                    {n.message && n.type === "order" ? (
+                      <div style={{ fontSize: 14, color: "var(--muted)", marginTop: 8, whiteSpace: "pre-wrap", lineHeight: 1.5, wordBreak: "break-word", fontWeight: 500 }}>
+                        {n.message}
+                      </div>
+                    ) : n.message && n.message !== "Waiter Request" && n.message !== "Bill Request" ? (
+                      <div style={{ fontSize: 14, color: "var(--muted)", marginTop: 6, fontWeight: 500 }}>
+                        {n.message}
+                      </div>
+                    ) : null}
                   </div>
-                  {n.message && n.type === "order" ? (
-                    <div style={{ fontSize: "12px", color: "var(--muted)", marginTop: 8, whiteSpace: "pre-wrap", lineHeight: 1.45, wordBreak: "break-word" }}>
-                      {n.message}
-                    </div>
-                  ) : (
-                    <div style={{ fontSize: "12px", color: "var(--muted)", marginTop: 4 }}>
-                      {n.message && n.message !== "Waiter Request" && n.message !== "Bill Request" ? n.message : ""}
-                    </div>
-                  )}
-                </div>
-                <div style={{ textAlign: "right", flexShrink: 0 }}>
-                  <div style={{ fontSize: "13px", color: "var(--gold)", fontFamily: "var(--font-display)" }}>{n.time?.toLocaleTimeString?.() ?? ""}</div>
-                  {!n.read && <div style={{ fontSize: "9px", letterSpacing: "0.2em", color: "var(--gold)", marginTop: 6 }}>ახალი</div>}
-                </div>
-              </button>
+                </button>
               );
             })}
           </div>
@@ -5515,7 +5824,7 @@ function StaffAlertsScreen({ store, onLogout }) {
             alignItems: "center",
             justifyContent: "center",
             padding: 20,
-            background: "rgba(0,0,0,0.72)",
+            background: "rgba(15,26,24,0.35)",
             backdropFilter: "blur(6px)",
           }}
           onClick={closeClearListPrompt}
@@ -5523,21 +5832,24 @@ function StaffAlertsScreen({ store, onLogout }) {
           <div
             style={{
               width: "min(360px, 100%)",
-              background: "rgba(26,22,32,0.95)",
-              border: "1px solid rgba(239,68,68,0.25)",
+              background: "#fff",
+              border: "1px solid rgba(196,88,68,0.28)",
               padding: "28px 24px",
-              borderRadius: 12,
+              borderRadius: 20,
+              background: "#faf6f0",
+              boxShadow: "0 24px 64px rgba(61,50,40,0.16)",
+              animation: "staffFadeUp 0.28s ease both",
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div id="staff-clear-list-title" style={{ fontFamily: "var(--font-display)", fontSize: "1.25rem", fontStyle: "italic", color: "var(--cream)", marginBottom: 8 }}>
+            <div id="staff-clear-list-title" style={{ fontFamily: "var(--font-display)", fontSize: "1.55rem", fontWeight: 500, fontStyle: "italic", color: "var(--cream)", marginBottom: 8, letterSpacing: "-0.02em" }}>
               სიის გასუფთავება
             </div>
-            <p style={{ fontSize: "12px", color: "var(--muted)", lineHeight: 1.5, margin: "0 0 20px" }}>
+            <p style={{ fontSize: "14px", color: "var(--muted)", lineHeight: 1.55, margin: "0 0 20px", fontWeight: 500 }}>
               ამ დარბაზის შეტყობინებები წაიშლება. გასაგრძელებლად შეიყვანეთ პაროლი.
             </p>
             <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: "8px", color: "var(--gold)", letterSpacing: "3px", textTransform: "uppercase", marginBottom: 8 }}>პაროლი</div>
+              <div style={{ fontSize: "12px", color: "#2a9a8d", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8, fontWeight: 700 }}>პაროლი</div>
               <input
                 type="password"
                 value={clearListPassword}
@@ -5552,18 +5864,19 @@ function StaffAlertsScreen({ store, onLogout }) {
                   padding: "12px 0",
                   background: "transparent",
                   border: "none",
-                  borderBottom: `1px solid ${clearListPasswordErr ? "#ef4444" : "rgba(61,191,176,0.25)"}`,
+                  borderBottom: `1px solid ${clearListPasswordErr ? "#c45844" : "rgba(61,191,176,0.35)"}`,
                   color: "var(--cream)",
-                  fontSize: "14px",
-                  fontFamily: "var(--font-display)",
+                  fontSize: "17px",
+                  fontFamily: "var(--font-body)",
+                  fontWeight: 600,
                   outline: "none",
-                  letterSpacing: "1px",
+                  letterSpacing: "0.02em",
                   boxSizing: "border-box",
                 }}
               />
             </div>
             {clearListPasswordErr ? (
-              <div style={{ color: "#ef4444", fontSize: "10px", letterSpacing: "1px", marginBottom: 16 }}>არასწორი პაროლი</div>
+              <div style={{ color: "#c45844", fontSize: "13px", fontWeight: 600, marginBottom: 16 }}>არასწორი პაროლი</div>
             ) : null}
             <div style={{ display: "flex", gap: 10 }}>
               <button
@@ -5572,13 +5885,14 @@ function StaffAlertsScreen({ store, onLogout }) {
                 style={{
                   flex: 1,
                   padding: "12px",
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  color: "var(--muted)",
-                  fontSize: "10px",
-                  letterSpacing: "0.12em",
+                  background: "rgba(61,191,176,0.1)",
+                  border: "1px solid rgba(61,191,176,0.22)",
+                  color: "var(--cream)",
+                  fontSize: "13px",
+                  letterSpacing: "0.04em",
                   cursor: "pointer",
                   fontFamily: "var(--font-body)",
+                  fontWeight: 700,
                   borderRadius: 999,
                 }}
               >
@@ -5590,13 +5904,14 @@ function StaffAlertsScreen({ store, onLogout }) {
                 style={{
                   flex: 1,
                   padding: "12px",
-                  background: "rgba(239,68,68,0.12)",
-                  border: "1px solid rgba(239,68,68,0.35)",
-                  color: "rgba(239,68,68,0.9)",
-                  fontSize: "10px",
-                  letterSpacing: "0.12em",
+                  background: "rgba(196,88,68,0.12)",
+                  border: "1px solid rgba(196,88,68,0.32)",
+                  color: "#c45844",
+                  fontSize: "13px",
+                  letterSpacing: "0.04em",
                   cursor: "pointer",
                   fontFamily: "var(--font-body)",
+                  fontWeight: 700,
                   borderRadius: 999,
                 }}
               >
@@ -6176,6 +6491,11 @@ export default function App() {
   useEffect(() => {
     document.documentElement.lang = lang === "ka" ? "ka" : lang === "ru" ? "ru" : "en";
   }, [lang]);
+
+  useEffect(() => {
+    document.body.classList.toggle("staff-route", isStaffRoute);
+    return () => document.body.classList.remove("staff-route");
+  }, [isStaffRoute]);
 
   const enterWithLang = useCallback((l) => {
     setLang(l);
